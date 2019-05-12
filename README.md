@@ -155,6 +155,7 @@
     > 多个标签页之间的通信 https://segmentfault.com/q/1010000006664804
 
     > Storage事件无法触发解决 https://blog.csdn.net/jlin991/article/details/55855524
+
 4. iframe异步加载技术及性能
     > iframe异步加载技术及性能 http://www.cnblogs.com/beiyuu/archive/2011/07/18/iframe-tech-performance.html
 
@@ -182,19 +183,17 @@
     > http://www.cnblogs.com/zichi/p/5208171.html
 
     > 浅析 requestAnimationFrame https://taobaofed.org/blog/2017/03/02/thinking-in-request-animation-frame/
-
 9. HTML5 File API — 让前端操作文件变的可能
     > http://www.cnblogs.com/zichi/p/html5-file-api.html
     
     > HTML5 — 让拖放变的流行起来 http://www.cnblogs.com/zichi/p/5080147.html
-
 10. 让 HTML5 来为你定位
     > http://www.cnblogs.com/zichi/p/4975788.html
-
 11. 浏览器缓存知识小结及应用
     > https://www.cnblogs.com/lyzg/p/5125934.html
 12. HTML meta标签总结与属性使用介绍
-> HTML meta标签总结与属性使用介绍 https://segmentfault.com/a/1190000004279791
+    > HTML meta标签总结与属性使用介绍 https://segmentfault.com/a/1190000004279791
+
 ## CSS
 
 1. 使用css实现一个持续的动画效果
@@ -307,7 +306,15 @@
 > http://www.alloyteam.com/2012/10/the-css3-transform-perspective-property/
 > css3实践之摩天轮式图片轮播+3D正方体+3D标签云（perspective、transform-style、perspective-origin）http://www.cnblogs.com/zichi/p/4318780.html
 
-
-
-## 移动适配方案及相关概念
+17. 移动适配方案及相关概念
 > 移动端适配方案(上下)  https://github.com/riskers/blog/issues/17
+
+## React
+
+## Vue
+
+## 状态管理
+
+## 前端工程
+
+## Git
