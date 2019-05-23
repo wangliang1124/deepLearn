@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Pratice</title>
+    <style>
+        pre {
+            padding: 16px;
+            background-color: #eee;
+        }
+    </style>
+</head>
+
+<body>
+    <div>1. 实现一个new操作符</div>
+    <pre>
+    function New() {
+        let obj = {}
+        const constructor = Array.prototype.shift.call(arguments)
+        if (typeof constructor !== 'function') {
+            return console.warn(`${constructor} is not a constructor`)
+        }
+        obj.__proto__ = constructor.prototype
+        const ret = constructor.apply(obj, arguments)
+        if (ret !== null && (typeof ret === 'object' || typeof ret === 'function')) {
+            return ret
+        }
+        return obj
+    }
+    </pre>
+    <script>
+        // 1. 实现一个new操作符
+        function New() {
+            let obj = {}
+            const constructor = Array.prototype.shift.call(arguments)
+            if (typeof constructor !== 'function') {
+                return console.warn(`${constructor} is not a constructor`)
+            }
+            obj.__proto__ = constructor.prototype
+            const ret = constructor.apply(obj, arguments)
+            if (ret !== null && (typeof ret === 'object' || typeof ret === 'function')) {
+                return ret
+            }
+            return obj
+        }
+
+        function A() {
+            console.log(...arguments)
+        }
+        const instance = New(A, '测试', 23233)
+        console.log(instance, instance instanceof A)
+
+        // 2. 实现一个JSON.stringify
+        function stringify(obj) {
+            const type = typeof obj;
+            if (/undefined|function|symbol/.test(type)) {
+                return undefined
+            }
+            if (/string|number|boolean/.test(type) || obj === null) {
+                return `"${obj}"`
+            }
+            const arr = Array.isArray(obj) ? obj : Object.values(obj)
+            let json = []
+            for (let i = 0, len = arr.length; i < len; i++) {
+                let v = arr[i]
+                let type = typeof v;
+                if (/undefined|function|symbol/.test(type) || obj === null) {
+                    json.push(null)
+                } else {
+                    json.push(v)
+                }
+            }
+            console.log(json)
+
+            return '"[' + String(json) + ']"';
+        }
+
+        console.log(stringify(Object))
+        console.log(stringify(null))
+        console.log(stringify(2))
+        console.log(stringify(false))
+
+    </script>
+</body>
+
+</html>
