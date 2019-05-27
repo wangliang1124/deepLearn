@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>TEST</title>
+    <style>
+        body {
+            padding: 16px 32px;
+        }
+
+        pre {
+            padding: 16px;
+            line-height: 1.5;
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+
+<body>
+    <H3>11.实现一个instanceOf</H3>
+    <pre>
+    function instanceOf(source, target) {
+        var proto = source.__proto__;
+        let prototype = target.prototype;
+        while (true) {
+            if (proto === null) return false;
+            if (proto === prototype) return true;
+            proto = proto.__proto__;
+        }
+    }
+    </pre>
+
+    <script>
+        function instanceOf(source, target) {
+            var proto = source.__proto__;
+            let prototype = target.prototype;
+            while (true) {
+                if (proto === null) return false;
+                if (proto === prototype) return true;
+                proto = proto.__proto__;
+            }
+        }
+
+        function Person(name) {
+            this.name = name;
+        }
+
+        var person = new Person('哈哈哈哈')
+        console.log('instanceOf(person, Person)', instanceOf(person, Person))
+        console.log('instanceOf(person, Object)', instanceOf(person, Object))
+        console.log('instanceOf(person, Function)', instanceOf(person, Function))
+        console.log('instanceOf(Person, Function)', instanceOf(Person, Function))
+        console.log('instanceOf(Function, Object)', instanceOf(Function, Object))
+        console.log('instanceOf(Object, Function)', instanceOf(Object, Function))
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>TEST</title>
+    <style>
+        body {
+            padding: 16px 32px;
+        }
+
+        pre {
+            padding: 16px;
+            line-height: 1.5;
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+
+<body>
+    <H3>1. 实现一个new操作符</H3>
+    <pre>
+    function New() {
+        var obj = {};
+        var constructor = Array.prototype.shift.call(arguments);
+        if (typeof constructor !== "function") {
+            return console.warn(`${constructor} is not a constructor`);
+        }
+        obj.__proto__ = constructor.prototype;
+        var ret = constructor.apply(obj, arguments);
+        if (typeof ret === "function" || (typeof ret === "object" && ret !== null)) {
+            return ret;
+        }
+        return obj;
+    }
+    console.log('============== 测试 ===============')
+    function A() {
+        console.log(...arguments);
+    }
+    const instance = New(A, "测试", 23233);
+    console.log(instance, instance instanceof A);
+    </pre>
+    <script>
+        // 1. 实现一个new操作符
+        function New() {
+            var obj = {};
+            var constructor = Array.prototype.shift.call(arguments);
+            if (typeof constructor !== "function") {
+                return console.warn(`${constructor} is not a constructor`);
+            }
+            obj.__proto__ = constructor.prototype;
+            var ret = constructor.apply(obj, arguments);
+            if (typeof ret === "function" || (typeof ret === "object" && ret !== null)) {
+                return ret;
+            }
+            return obj;
+        }
+        console.log('============== 测试 ===============')
+        function A() {
+            console.log(...arguments);
+        }
+        const instance = New(A, "测试", 23233);
+        console.log(instance, instance instanceof A);
+    </script>
+
+</body>
+
+</html>
