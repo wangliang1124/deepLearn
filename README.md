@@ -451,3 +451,5 @@
 3. Daily-Interview-Question https://github.com/Advanced-Frontend/Daily-Interview-Question
 
 4. Jony的博客，记录学习工作的点点滴滴 https://github.com/forthealllight/blog
+
+5. 【面试篇】寒冬求职季之你必须要懂的原生JS(上) https://juejin.im/post/5cab0c45f265da2513734390
