@@ -218,6 +218,38 @@ test._apply(obj, [
 ]);
 ```
 
+### 用 ES6 实现 call apply bind
+ ```js
+        // call
+        Function.prototype.call2 = function(context, ...args) {
+            // 因为传进来的 context 有可能是 null
+            context = context || window;
+            // Function.prototype this 为当前运行的函数
+            // 让 fn 的上下文为 context
+            context.fn = this;
+            const result = context.fn(...args);
+            delete context.fn;
+            return result;
+        };
+        // apply
+        Function.prototype.apply2 = function(context, arr) {
+            let context = context || window; // 因为传进来的context有可能是null
+            context.fn = this;
+            arr = arr || [];
+            const result = context.fn(...arr); // 相当于执行了context.fn(arguments[1], arguments[2]);
+            delete context.fn;
+            return result; // 因为有可能this函数会有返回值return
+        }
+        // bind
+        Function.prototype.bind2 = function() {
+            var fn = this;
+            var argsParent = [...arguments];
+            return function() {
+                fn.call(...argsParent, ...arguments);
+            };
+        }
+    ```
+
 ## 5.实现一个 Function.bind
 
 ```js
@@ -473,11 +505,51 @@ function resolvePromise(promise2, x, resolve, reject) {
 }
 ```
 
+### Promise.resolve 
+### Promise.reject
+### Promise.catch
+### Promise.finally
+### Promise.race
+### Promise.all
+
 ## 9.实现防抖和节流
 
 ### 防抖 debounce
 
 ```js
+function debounce(func, wait, immediate = true) {
+    let timer;
+    // 延迟执行函数
+    const later = (context, args) => setTimeout(() => {
+        timer = null;// 倒计时结束
+        if (!immediate) {
+            func.apply(context, args);
+            //执行回调
+            context = args = null;
+        }
+    }, wait);
+    let debounced = function (...params) {
+        let context = this;
+        let args = params;
+        if (!timer) {
+            timer = later(context, args);
+            if (immediate) {
+                //立即执行
+                func.apply(context, args);
+            }
+        } else {
+            clearTimeout(timer);
+            //函数在每个等待时延的结束被调用
+            timer = later(context, args);
+        }
+    }
+    debounced.cancel = function () {
+        clearTimeout(timer);
+        timer = null;
+    };
+    return debounced;
+};
+
 ```
 
 ### 节流 throttle
@@ -612,3 +684,84 @@ function instanceOf(source, target) {
 ```
 
 > 浅谈 instanceof 和 typeof 的实现原理 https://juejin.im/post/5b0b9b9051882515773ae714
+
+## 12. 简单实现async/await中的async函数
+```js
+function spawn(genF) {
+    return new Promise(function(resolve, reject) {
+        const gen = genF();
+        function step(nextF) {
+            let next;
+            try {
+                next = nextF();
+            } catch (e) {
+                return reject(e);
+            }
+            if (next.done) {
+                return resolve(next.value);
+            }
+            Promise.resolve(next.value).then(
+                function(v) {
+                    step(function() {
+                        return gen.next(v);
+                    });
+                },
+                function(e) {
+                    step(function() {
+                        return gen.throw(e);
+                    });
+                }
+            );
+        }
+        step(function() {
+            return gen.next(undefined);
+        });
+    });
+}
+```
+
+
+20. 写一个通用的事件侦听器函数
+    > javascript 通用事件封装 http://www.cnblogs.com/isaboy/p/eventJavascript.html
+
+
+17. 如何实现数组的随机排序？
+    > 数组乱序 https://github.com/hanzichi/underscore-analysis/issues/15
+
+
+16. 如何将浮点数点左边的数每三位添加一个逗号，如 12000000.11 转化为『12,000,000.11』?
+    ```javascript
+    function commafy(num) {
+        return (
+            num &&
+            num.toString().replace(/(\d)(?=(\d{3})+\.)/g, function($1, $2) {
+                return $2 + ",";
+            })
+        );
+    }
+    let milliFormat = input => {
+        return input && input.toString().replace(/(^|\s)\d+/g, m => m.replace(/(?=(?!\b)(\d{3})+$)/g, ","));
+    };
+    console.log(milliFormat(1200000123123.223));
+    ```
+    > 千位分隔符的完整攻略 https://www.tuicool.com/articles/ArQZfui
+
+    如何遍历一个 dom 树
+    ```js
+    function traversal(node) {
+        //对node的处理
+        if (node && node.nodeType === 1) {
+            console.log(node.tagName);
+        }
+        var i = 0,
+            childNodes = node.childNodes,
+            item;
+        for (; i < childNodes.length; i++) {
+            item = childNodes[i];
+            if (item.nodeType === 1) {
+                //递归先序遍历子节点
+                traversal(item);
+            }
+        }
+    }
+    ```

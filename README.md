@@ -2,46 +2,41 @@
 
 1. 浅谈 instanceof 和 typeof 的实现原理
     > 浅谈 instanceof 和 typeof 的实现原理 https://juejin.im/post/5b0b9b9051882515773ae714
-2. Symbol 类型在实际开发中的应用、可手动实现一个简单的 Symbol
-    > ES6 系列之模拟实现 Symbol 类型 https://github.com/mqyqingfeng/Blog/issues/87
+
+2. Symbol
     > Symbol http://es6.ruanyifeng.com/#docs/symbol
+
 3. JavaScript 中的变量在内存中的具体存储形式
     > 前端基础进阶：详细图解 JavaScript 内存空间 https://juejin.im/entry/589c29a9b123db16a3c18adf
-4. 描述 new 一个对象的详细过程，手动实现一个 new 操作符
-    ```js
-        function new(func) {
-            let target = {};
-            target.__proto__ = func.prototype;
-            let res = func.call(target);
-            if (typeof(res) == "object" || typeof(res) == "function") {
-                return res;
-            }
-            return target;
-        }
-    ```
-    > JavaScript 深入之 new 的模拟实现 https://github.com/mqyqingfeng/Blog/issues/13
+
+4. 理解XSS和CSRF原理
+> https://xwjgo.github.io/2017/10/26/XSS%E5%92%8CCSRF/
+
 5. 理解 es6 class 构造以及继承的底层实现原理
+> ES6创建类的基本语法和继承实现原理 https://juejin.im/post/5ab31129f265da2378402cb3
 
-6. this 的原理以及几种不同使用场景的取值
+6. 理解 this
+> this、apply、call、bind https://juejin.im/post/59bfe84351882531b730bac2
 
-7. 闭包的实现原理和作用，可以列举几个开发中闭包的实际应用
+7. 闭包的实现原理和作用
 
 8. 为何 try 里面放 return，finally 还会执行，理解其内部机制
 
-9. JavaScript 如何实现异步编程，可以详细描述 EventLoop 机制
+9. EventLoop
 
     > JavaScript 运行机制详解：再谈 Event Loop http://www.ruanyifeng.com/blog/2014/10/event-loop.html
 
     > JavaScript：彻底理解同步、异步和事件循环(Event Loop) https://segmentfault.com/a/1190000004322358
 
-10. 微任务、宏任务与 Event-Loop
-    > 微任务、宏任务与 Event-Loop https://juejin.im/post/5b73d7a6518825610072b42b
-11. 你不知道的 javascript 之 Object.create 和 new 区别
+    > 深入探究 eventloop 与浏览器渲染的时序问题 https://github.com/jin5354/404forest/issues/61
 
-    > 你不知道的 javascript 之 Object.create 和 new 区别 https://blog.csdn.net/blueblueskyhua/article/details/73135938
+10. 微任务、宏任务与 EventLoop
+    > 微任务、宏任务与 Event-Loop https://juejin.im/post/5b73d7a6518825610072b42b
+
+11. 如何处理跨域 
+    > 前端常见跨域解决方案 https://segmentfault.com/a/1190000011145364
 
 12. JavaScript 学习笔记：视口宽高、位置与滚动高度
-
     > https://www.qdskill.com/javascript/1063.html
 
 13. 描述一种 JavaScript 中实现 memoization(避免重复运算)的策略。[进阶]
@@ -49,174 +44,36 @@
     > 斐波那契数列求和的 js 方案以及优化 https://segmentfault.com/a/1190000007115162 <br>
     > 性能优化：memoization http://taobaofed.org/blog/2016/07/14/performance-optimization-memoization/ <br>
     > Faster JavaScript Memoization For Improved Application Performance https://addyosmani.com/blog/faster-javascript-memoization/ <br>
+
 14. Promise
+    > Promise原理讲解  https://juejin.im/post/5aa7868b6fb9a028dd4de672
+   
+15. placeholer
 
-    > Promise 原理浅析 http://imweb.io/topic/565af932bb6a753a136242b0
+16. placeholer
 
-    > 解读 Promise 内部实现原理 https://juejin.im/post/5a30193051882503dc53af3c#heading-0
+17. placeholer
 
-15. JavaScript 编码规范
+18. Javascript 继承
 
-    > JavaScript 编码规范 https://github.com/fex-team/styleguide/blob/master/javascript.md
+    > 深入JavaScript继承原理 https://juejin.im/post/5a96d78ef265da4e9311b4d8
 
-    > Airbnb JavaScript Style Guide https://github.com/airbnb/javascript
+19. Javascript 创建对象的几种方式
+    > JavaScript深入之创建对象的多种方式以及优缺点 https://github.com/mqyqingfeng/Blog/issues/15
 
-16. 如何将浮点数点左边的数每三位添加一个逗号，如 12000000.11 转化为『12,000,000.11』?
-    ```javascript
-    function commafy(num) {
-        return (
-            num &&
-            num.toString().replace(/(\d)(?=(\d{3})+\.)/g, function($1, $2) {
-                return $2 + ",";
-            })
-        );
-    }
-    let milliFormat = input => {
-        return input && input.toString().replace(/(^|\s)\d+/g, m => m.replace(/(?=(?!\b)(\d{3})+$)/g, ","));
-    };
-    console.log(milliFormat(1200000123123.223));
-    ```
-    > 千位分隔符的完整攻略 https://www.tuicool.com/articles/ArQZfui
-17. 如何实现数组的随机排序？
-    > 数组乱序 https://github.com/hanzichi/underscore-analysis/issues/15
-18. Javascript 如何实现继承？
+20. placeholer
 
-    > http://www.cnblogs.com/humin/p/4556820.html
-
-19. javascript 创建对象的几种方式?
-    - 1、对象字面量的方式
-    ```javascript
-    person = { firstname: "Mark", lastname: "Yun", age: 25, eyecolor: "black" };
-    ```
-    - 2、用 function 来模拟无参的构造函数
-    ```javascript
-    function Person() {}
-    var person = new Person(); //定义一个function，如果使用new"实例化",该function可以看作是一个Class
-    person.name = "Mark";
-    person.age = "25";
-    person.work = function() {
-        alert(person.name + " hello...");
-    };
-    person.work();
-    ```
-    - 3、用 function 来模拟参构造函数来实现（用 this 关键字定义构造的上下文属性）
-    ```javascript
-    function Pet(name, age, hobby) {
-        this.name = name; //this作用域：当前对象
-        this.age = age;
-        this.hobby = hobby;
-        this.eat = function() {
-            alert("我叫" + this.name + ",我喜欢" + this.hobby + ",是个程序员");
-        };
-    }
-    var maidou = new Pet("麦兜", 25, "coding"); //实例化、创建对象
-    maidou.eat(); //调用eat方法
-    ```
-    - 4、用工厂方式来创建（内置对象）
-    ```javascript
-    var wcDog = new Object();
-    wcDog.name = "旺财";
-    wcDog.age = 3;
-    wcDog.work = function() {
-        alert("我是" + wcDog.name + ",汪汪汪......");
-    };
-    wcDog.work();
-    ```
-    - 5、用原型方式来创建
-    ```javascript
-    function Dog() {}
-    Dog.prototype.name = "旺财";
-    Dog.prototype.eat = function() {
-        alert(this.name + "是个吃货");
-    };
-    var wangcai = new Dog();
-    wangcai.eat();
-    ```
-    - 6、用混合方式来创建
-    ```javascript
-    function Car(name, price) {
-        this.name = name;
-        this.price = price;
-    }
-    Car.prototype.sell = function() {
-        alert("我是" + this.name + "，我现在卖" + this.price + "万元");
-    };
-    var camry = new Car("凯美瑞", 27);
-    camry.sell();
-    ```
-20. 写一个通用的事件侦听器函数
-    > javascript 通用事件封装 http://www.cnblogs.com/isaboy/p/eventJavascript.html
 21. 哪些操作会造成内存泄漏？
-
     > 4 种 JavaScript 内存泄漏浅析及如何用谷歌工具查内存泄露 https://github.com/wengjq/Blog/issues/1
 
-    > 4 Types of Memory Leaks in JavaScript and How to Get Rid Of Them https://mp.weixin.qq.com/s/MCmlbI2Z5TAvkCgpqDN4iA
+ 
+22. placeholder
 
-22. 请介绍一下 JS 之事件节流？什么是 JS 的函数防抖？ [进阶]
+23. placeholder
 
-    > JavaScript 函数节流和函数去抖应用场景辨析 https://github.com/hanzichi/underscore-analysis/issues/20
+24. placeholder
 
-    > underscore 函数去抖的实现 https://github.com/hanzichi/underscore-analysis/issues/21
 
-    > underscore 函数节流的实现 https://github.com/hanzichi/underscore-analysis/issues/22
-
-23. DOM 操作——怎样添加、移除、移动、复制、创建和查找节点。 [基础]
-    > 深入浅出 DOM 基础——《DOM 探索之基础详解篇》学习笔记 https://github.com/jawil/blog/issues/9
-24. 如何遍历一个 dom 树
-    ```js
-    function traversal(node) {
-        //对node的处理
-        if (node && node.nodeType === 1) {
-            console.log(node.tagName);
-        }
-        var i = 0,
-            childNodes = node.childNodes,
-            item;
-        for (; i < childNodes.length; i++) {
-            item = childNodes[i];
-            if (item.nodeType === 1) {
-                //递归先序遍历子节点
-                traversal(item);
-            }
-        }
-    }
-    ```
-26. 手写代码，简单实现call,apply,bind
-    ```js
-        // call
-        Function.prototype.call2 = function(context, ...args) {
-            // 因为传进来的 context 有可能是 null
-            context = context || window;
-            // Function.prototype this 为当前运行的函数
-            // 让 fn 的上下文为 context
-            context.fn = this;
-            const result = context.fn(...args);
-            delete context.fn;
-            return result;
-        };
-        // apply
-        Function.prototype.apply2 = function(context, arr) {
-            let context = context || window; // 因为传进来的context有可能是null
-            context.fn = this;
-            arr = arr || [];
-            const result = context.fn(...arr); // 相当于执行了context.fn(arguments[1], arguments[2]);
-            delete context.fn;
-            return result; // 因为有可能this函数会有返回值return
-        }
-        // bind
-        Function.prototype.bind2 = function() {
-            var fn = this;
-            var argsParent = [...arguments];
-            return function() {
-                fn.call(...argsParent, ...arguments);
-            };
-        }
-    ```
-    > 第 6 题：手写代码，简单实现call https://github.com/airuikun/Weekly-FE-Interview/issues/6
-27. 简单手写实现promise
-    > 简单手写实现promise https://github.com/airuikun/Weekly-FE-Interview/issues/10
-28. 简单实现async/await中的async函数
-    > 简单实现async/await中的async函数 https://github.com/airuikun/Weekly-FE-Interview/issues/14
 ## HTML
 
 1. 浏览器的渲染原理
@@ -453,3 +310,6 @@
 4. Jony的博客，记录学习工作的点点滴滴 https://github.com/forthealllight/blog
 
 5. 【面试篇】寒冬求职季之你必须要懂的原生JS(上) https://juejin.im/post/5cab0c45f265da2513734390
+
+
+  腾讯SNG-IMWeb前端工程师 电话远程面试记录   https://mp.weixin.qq.com/s/MCmlbI2Z5TAvkCgpqDN4iA
