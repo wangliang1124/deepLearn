@@ -219,36 +219,37 @@ test._apply(obj, [
 ```
 
 ### 用 ES6 实现 call apply bind
- ```js
-        // call
-        Function.prototype.call2 = function(context, ...args) {
-            // 因为传进来的 context 有可能是 null
-            context = context || window;
-            // Function.prototype this 为当前运行的函数
-            // 让 fn 的上下文为 context
-            context.fn = this;
-            const result = context.fn(...args);
-            delete context.fn;
-            return result;
-        };
-        // apply
-        Function.prototype.apply2 = function(context, arr) {
-            let context = context || window; // 因为传进来的context有可能是null
-            context.fn = this;
-            arr = arr || [];
-            const result = context.fn(...arr); // 相当于执行了context.fn(arguments[1], arguments[2]);
-            delete context.fn;
-            return result; // 因为有可能this函数会有返回值return
-        }
-        // bind
-        Function.prototype.bind2 = function() {
-            var fn = this;
-            var argsParent = [...arguments];
-            return function() {
-                fn.call(...argsParent, ...arguments);
-            };
-        }
-    ```
+
+```js
+// call
+Function.prototype.call2 = function(context, ...args) {
+    // 因为传进来的 context 有可能是 null
+    context = context || window;
+    // Function.prototype this 为当前运行的函数
+    // 让 fn 的上下文为 context
+    context.fn = this;
+    const result = context.fn(...args);
+    delete context.fn;
+    return result;
+};
+// apply
+Function.prototype.apply2 = function(context, arr) {
+    let context = context || window; // 因为传进来的context有可能是null
+    context.fn = this;
+    arr = arr || [];
+    const result = context.fn(...arr); // 相当于执行了context.fn(arguments[1], arguments[2]);
+    delete context.fn;
+    return result; // 因为有可能this函数会有返回值return
+};
+// bind
+Function.prototype.bind2 = function() {
+    var fn = this;
+    var argsParent = [...arguments];
+    return function() {
+        fn.call(...argsParent, ...arguments);
+    };
+};
+```
 
 ## 5.实现一个 Function.bind
 
@@ -505,14 +506,79 @@ function resolvePromise(promise2, x, resolve, reject) {
 }
 ```
 
-### Promise.resolve 
-### Promise.reject
-### Promise.catch
-### Promise.finally
-### Promise.race
-### Promise.all
+### Promise.resolve
 
-## 9.实现防抖和节流
+### Promise.reject
+
+### Promise.catch
+
+### Promise.prototype.finally
+
+```js
+Promise.prototype.finally = function(callback) {
+    return this.then(
+        value => {
+            return Promise.resolve(callback()).then(() => {
+                return value;
+            });
+        },
+        err => {
+            return Promise.resolve(callback()).then(() => {
+                throw err;
+            });
+        },
+    );
+};
+```
+
+### Promise.race
+
+```js
+Promise.race = function(promises) {
+    return new Promise(function(resolve) {
+        lipromisesst.forEach(promise => {
+            promise.then(val => {
+                resolve(val);
+            });
+        });
+    });
+};
+```
+
+## Promise.all
+
+```js
+Promise.all = function(promises) {
+    return new Promise((resolve, reject) => {
+        let index = 0;
+        let result = [];
+        if (promises.length === 0) {
+            resolve(result);
+        } else {
+            function processValue(i, data) {
+                result[i] = data;
+                if (++index === promises.length) {
+                    resolve(result);
+                }
+            }
+            for (let i = 0; i < promises.length; i++) {
+                //promises[i] 可能是普通值
+                Promise.resolve(promises[i]).then(
+                    data => {
+                        processValue(i, data);
+                    },
+                    err => {
+                        reject(err);
+                        return;
+                    },
+                );
+            }
+        }
+    });
+};
+```
+
+## 9.防抖和节流
 
 ### 防抖 debounce
 
@@ -520,15 +586,16 @@ function resolvePromise(promise2, x, resolve, reject) {
 function debounce(func, wait, immediate = true) {
     let timer;
     // 延迟执行函数
-    const later = (context, args) => setTimeout(() => {
-        timer = null;// 倒计时结束
-        if (!immediate) {
-            func.apply(context, args);
-            //执行回调
-            context = args = null;
-        }
-    }, wait);
-    let debounced = function (...params) {
+    const later = (context, args) =>
+        setTimeout(() => {
+            timer = null; // 倒计时结束
+            if (!immediate) {
+                func.apply(context, args);
+                //执行回调
+                context = args = null;
+            }
+        }, wait);
+    let debounced = function(...params) {
         let context = this;
         let args = params;
         if (!timer) {
@@ -542,14 +609,13 @@ function debounce(func, wait, immediate = true) {
             //函数在每个等待时延的结束被调用
             timer = later(context, args);
         }
-    }
-    debounced.cancel = function () {
+    };
+    debounced.cancel = function() {
         clearTimeout(timer);
         timer = null;
     };
     return debounced;
-};
-
+}
 ```
 
 ### 节流 throttle
@@ -685,7 +751,8 @@ function instanceOf(source, target) {
 
 > 浅谈 instanceof 和 typeof 的实现原理 https://juejin.im/post/5b0b9b9051882515773ae714
 
-## 12. 简单实现async/await中的async函数
+## 12. 简单实现 async/await 中的 async 函数
+
 ```js
 function spawn(genF) {
     return new Promise(function(resolve, reject) {
@@ -710,7 +777,7 @@ function spawn(genF) {
                     step(function() {
                         return gen.throw(e);
                     });
-                }
+                },
             );
         }
         step(function() {
@@ -720,48 +787,220 @@ function spawn(genF) {
 }
 ```
 
+## 13. 基于 Promise 的 ajax 封装
 
-20. 写一个通用的事件侦听器函数
-    > javascript 通用事件封装 http://www.cnblogs.com/isaboy/p/eventJavascript.html
-
-
-17. 如何实现数组的随机排序？
-    > 数组乱序 https://github.com/hanzichi/underscore-analysis/issues/15
-
-
-16. 如何将浮点数点左边的数每三位添加一个逗号，如 12000000.11 转化为『12,000,000.11』?
-    ```javascript
-    function commafy(num) {
-        return (
-            num &&
-            num.toString().replace(/(\d)(?=(\d{3})+\.)/g, function($1, $2) {
-                return $2 + ",";
-            })
-        );
-    }
-    let milliFormat = input => {
-        return input && input.toString().replace(/(^|\s)\d+/g, m => m.replace(/(?=(?!\b)(\d{3})+$)/g, ","));
-    };
-    console.log(milliFormat(1200000123123.223));
-    ```
-    > 千位分隔符的完整攻略 https://www.tuicool.com/articles/ArQZfui
-
-    如何遍历一个 dom 树
-    ```js
-    function traversal(node) {
-        //对node的处理
-        if (node && node.nodeType === 1) {
-            console.log(node.tagName);
+```js
+function ajax(url, method = "get", param = {}) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const paramString = getStringParam(param);
+        if (method === "get" && paramString) {
+            url.indexOf("?") > -1 ? (url += paramString) : (url += `?${paramString}`);
         }
-        var i = 0,
-            childNodes = node.childNodes,
-            item;
-        for (; i < childNodes.length; i++) {
-            item = childNodes[i];
-            if (item.nodeType === 1) {
-                //递归先序遍历子节点
-                traversal(item);
+        xhr.open(method, url);
+        xhr.onload = function() {
+            const result = {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                headers: xhr.getAllResponseHeaders(),
+                data: xhr.response || xhr.responseText,
+            };
+            if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
+                resolve(result);
+            } else {
+                reject(result);
+            }
+        };
+        // 设置请求头
+        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        // 跨域携带cookie
+        xhr.withCredentials = true;
+        // 错误处理
+        xhr.onerror = function() {
+            reject(new TypeError("请求出错"));
+        };
+        xhr.timeout = function() {
+            reject(new TypeError("请求超时"));
+        };
+        xhr.onabort = function() {
+            reject(new TypeError("请求被终止"));
+        };
+        if (method === "post") {
+            xhr.send(paramString);
+        } else {
+            xhr.send();
+        }
+    });
+}
+
+function getStringParam(param) {
+    let dataString = "";
+    for (const key in param) {
+        dataString += `${key}=${param[key]}&`;
+    }
+    return dataString;
+}
+```
+
+## 14.JSONP 的原理是什么？
+
+```js
+function jsonp(url, data) {
+    return new Promise((resolve, reject) => {
+        // 1.将传入的data数据转化为url字符串形式
+        // {id:1,name:'jack'} => id=1&name=jack
+        var dataString = url.indexof("?") == -1 ? "?" : "&";
+        for (var key in data) {
+            dataString += key + "=" + data[key] + "&";
+        }
+
+        // 2 处理url中的回调函数
+        // cbFuncName回调函数的名字 jsonp_ 前缀 + 随机数（把小数点去掉）
+        var callbackName =
+            "jsonp_" +
+            Math.random()
+                .toString(16)
+                .replace(".", "");
+        dataString += "callback=" + callbackName;
+
+        // 3.创建一个script标签并插入到页面中
+        var script = document.createElement("script");
+        script.src = url + dataString;
+
+        // 4.挂载回调函数
+        window[callbackName] = function(data) {
+            resolve(data);
+            // 处理完回调函数的数据之后，删除jsonp的script标签
+            document.body.removeChild(script);
+        };
+
+        document.body.appendChild(script);
+    });
+}
+```
+
+## 15. 如何实现数组的随机排序？
+
+```js
+// 方法一
+    function shuffle(arr){
+
+        var len = arr.length;
+        for(var i = 0; i < len - 1; i++){
+            var idx = Math.floor(Math.random() \* (len - i));
+            var temp = arr[idx];
+            arr[idx] = arr[len - i - 1];
+            arr[len - i -1] = temp;
+        }
+        return arr;
+}
+
+// 方法二
+function shuffle(arr){
+let n = arr.length, random;
+while(0!=n){
+    random = (Math.random() \* n--) >>> 0; // 无符号右移位运算符向下取整
+    [arr[n], arr[random]] = [arr[random], arr[n]] // ES6 的结构赋值实现变量互换
+}
+    return arr;
+}
+```
+
+> 数组的完全随机排列 https://www.h5jun.com/post/array-shuffle.html
+> 数组乱序 https://github.com/hanzichi/underscore-analysis/issues/15
+
+## 16. 实现异步循环打印
+
+```js
+var sleep = function(time, i) {
+    return new Promise(function(resolve, reject) {
+        setTimeout(function() {
+            resolve(i);
+        }, time);
+    });
+};
+
+var start = async function() {
+    for (let i = 0; i < 6; i++) {
+        let result = await sleep(1000, i);
+        console.log(result);
+    }
+};
+
+start();
+```
+
+## 17. 深度优先遍历
+
+```js
+/*深度优先遍历三种方式*/
+let deepTraversal1 = (node, nodeList = []) => {
+    if (node !== null) {
+        nodeList.push(node);
+        let children = node.children;
+        for (let i = 0; i < children.length; i++) {
+            deepTraversal1(children[i], nodeList);
+        }
+    }
+    return nodeList;
+};
+let deepTraversal2 = node => {
+    let nodes = [];
+    if (node !== null) {
+        nodes.push(node);
+        let children = node.children;
+        for (let i = 0; i < children.length; i++) {
+            nodes = nodes.concat(deepTraversal2(children[i]));
+        }
+    }
+    return nodes;
+};
+// 非递归
+let deepTraversal3 = node => {
+    let stack = [];
+    let nodes = [];
+    if (node) {
+        // 推入当前处理的node
+        stack.push(node);
+        while (stack.length) {
+            let item = stack.pop();
+            let children = item.children;
+            nodes.push(item);
+            // node = [] stack = [parent]
+            // node = [parent] stack = [child3,child2,child1]
+            // node = [parent, child1] stack = [child3,child2,child1-2,child1-1]
+            // node = [parent, child1-1] stack = [child3,child2,child1-2]
+            for (let i = children.length - 1; i >= 0; i--) {
+                stack.push(children[i]);
             }
         }
     }
-    ```
+    return nodes;
+};
+```
+
+## 18.广度优先遍历
+
+```js
+let widthTraversal2 = node => {
+    let nodes = [];
+    let stack = [];
+    if (node) {
+        stack.push(node);
+        while (stack.length) {
+            let item = stack.shift();
+            let children = item.children;
+            nodes.push(item);
+            // 队列，先进先出
+            // nodes = [] stack = [parent]
+            // nodes = [parent] stack = [child1,child2,child3]
+            // nodes = [parent, child1] stack = [child2,child3,child1-1,child1-2]
+            // nodes = [parent,child1,child2]
+            for (let i = 0; i < children.length; i++) {
+                stack.push(children[i]);
+            }
+        }
+    }
+    return nodes;
+};
+```
