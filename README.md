@@ -88,7 +88,10 @@
 
 3. 视口宽高、位置与滚动高度
 
-    > https://www.qdskill.com/javascript/1063.html
+    > 视口宽高、位置与滚动高度 https://www.qdskill.com/javascript/1063.html
+
+4. DOM操作成本到底高在哪儿？
+    > DOM操作成本到底高在哪儿？ https://segmentfault.com/a/1190000014070240?utm_source=index-hottest
 
 ## HTTP 协议
 
