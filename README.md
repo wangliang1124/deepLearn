@@ -103,6 +103,8 @@
 
     > HTTPS 工作原理 https://cattail.me/tech/2015/11/30/how-https-works.html
 
+    > 图文还原HTTPS原理，架构师必读！ https://mp.weixin.qq.com/s?__biz=MzI3NjU2ODA5Mg==&mid=2247483985&idx=1&sn=0b6de989219032d64648785946a974a4&chksm=eb72c322dc054a340219898f0c78a88cf0728f3562d47e306bfc912a304f3c13063e4836a5d3&mpshare=1&scene=23&srcid=0731o25oAogd05GGEfu9GW4b#rd
+    
 2. HTTP 协议
     > HTTP 协议入门 http://www.ruanyifeng.com/blog/2016/08/http.html
 
@@ -127,6 +129,9 @@
 
 6. http1.1时如何复用tcp连接
     > HTTP协议篇(一)：多路复用、数据流 https://www.cnblogs.com/XiongMaoMengNan/p/8425724.html
+
+7. HTTP Header 详解
+    >  https://kb.cnblogs.com/page/92320/
 
 ## HTML
 
