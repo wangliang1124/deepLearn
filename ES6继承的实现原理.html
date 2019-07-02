@@ -17,8 +17,9 @@
                 Object.defineProperty(constructor, properties[i].key, obj);
             }
         }
+
         //  对不同的属性做处理 如果是原型上的方法挂载Class.prototype 如果是静态方法放在 Class上
-        function _createClass(con, protoProperty, staticProperty) {
+        function createClass(con, protoProperty, staticProperty) {
             if (protoProperty) {
                 defineProperties(con.prototype, protoProperty);
             }
@@ -26,16 +27,22 @@
                 defineProperties(con, staticProperty);
             }
         }
+
+        // 类的调用检测
+        function checkInstance(instance, constructor) { //检查当前类  有没有new出来的，不是new出来的this属于window
+            if (!(instance instanceof constructor)) throw Error('without new')
+        }
+
         // 父类
         var Parent = function () {
             function Parent() {
                 // 类的调用检测
                 this.name = 'zfpx'
-                _classCallCheck(this, Parent);
+                checkInstance(this, Parent);
                 return { a: 100 }
             }
             // 用来描述这个类的原型方法和静态方法
-            _createClass(Parent, [ // 第一个数组表示的是公共方法的描述 descirptor
+            createClass(Parent, [ // 第一个数组表示的是公共方法的描述 descirptor
                 {
                     key: 'getName', value: function () {
                         return 1000
@@ -43,40 +50,43 @@
                 }
             ], [ //描述静态的方法
                     {
-                        key: 'fn', value: function () {
+                        key: 'staticFun', value: function () {
                             return 100;
                         }
                     }
                 ])
             return Parent
         }()
-        // 类的调用检测
-        function _classCallCheck(instance, constructor) { //检查当前类  有没有new出来的，不是new出来的this属于window
-            if (!(instance instanceof constructor)) throw Error('without new')
-        }
+
         // 继承共有方法和静态方法
-        function _inherits(subClass, superClass) {
+        function inheritPrototype(subClass, superClass) {
             // 子类继承父类的公有方法
             subClass.prototype = Object.create(superClass.prototype, { constructor: { value: subClass } });
             // 也要让子类继承父类的静态方法
             subClass.__proto__ = superClass;
         }
+
         var Child = function (Parent) { // 表示儿子继承Parent类，要包多一层不然传参会传到Child上
-            _inherits(Child, Parent); // 表示继承 儿子继承父亲
+            inheritPrototype(Child, Parent); // 表示继承 儿子继承父亲
             function Child() { // 类的调用检查
                 // 在子类中应该调用父类的构造函数
                 // Parent.call(this);
-                _classCallCheck(this, Child);
-                let that = this;
-                console.log(Object.getPrototypeOf(Child))
-                let obj = Object.getPrototypeOf(Child).call(this); // Child.__proto__ = Object.getPrototypeOf(Child) 继承父类的私有方法，为了保险不用Parent.call(this)，因为不一定继承父类
-                if (typeof obj === 'object') { //如果是对象把obj作为实例
-                    that = obj;
+                if (typeof new.target === 'undefined') {
+                    throw new SyntaxError('当前"类"不能作为一个普通函数执行')
                 }
-                return that;
+                // checkInstance(this, Child);
+                let self = this;
+                console.log(Object.getPrototypeOf(Child))
+                // Child.__proto__ = Object.getPrototypeOf(Child) 继承父类的私有方法，为了保险不用 Parent.call(this)，因为不一定继承父类
+                let obj = Object.getPrototypeOf(Child).call(this);
+                if (typeof obj === 'object') { //如果是对象把obj作为实例
+                    self = obj;
+                }
+                return self;
             }
             return Child
         }(Parent);
+        // Child()
         let child = new Child;
         console.log(child);
     </script>

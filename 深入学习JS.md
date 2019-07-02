@@ -508,9 +508,27 @@ function resolvePromise(promise2, x, resolve, reject) {
 
 ### Promise.resolve
 
+```js
+Promise.resolve = function(value) {
+    return new Promise((resolve, reject) => resolve(value));
+};
+```
+
 ### Promise.reject
 
-### Promise.catch
+```js
+Promise.reject = function(reason) {
+    return new Promise((resolve, reject) => reject(reason));
+};
+```
+
+### Promise.prototype.catch
+
+```js
+PromiseA.prototype.catch = function(onRejected) {
+    return this.then(null, onRejected);
+};
+```
 
 ### Promise.prototype.finally
 
