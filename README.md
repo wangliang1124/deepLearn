@@ -57,6 +57,7 @@
 13. 异步
     > Javascript异步解决方案的发展历程 https://www.jianshu.com/p/2f5d72703c46
     > S异步解决方案的发展历程以及优缺点 https://github.com/frontend9/fe9-interview/issues/24
+    
 14. Promise
 
     > Promise 原理讲解 https://juejin.im/post/5aa7868b6fb9a028dd4de672
@@ -272,8 +273,7 @@
     > Sticky Footer, Five Ways https://css-tricks.com/couple-takes-sticky-footer/
 
 16. CSS3 Transform Perspective
-
-    > CSS3 Transform 的 perspective 属性 http://www.alloyteam.com/2012/10/the-css3-transform-perspective-property/
+    > perspective https://developer.mozilla.org/zh-CN/docs/Web/CSS/perspective
 
     > CSS3 实践之摩天轮式图片轮播+3D 正方体+3D 标签云 标签云 https://www.bbsmax.com/A/QV5Z1xv6Jy/
 
