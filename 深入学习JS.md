@@ -900,7 +900,7 @@ function jsonp(url, data) {
 ## 15. 如何实现数组的随机排序？
 
 ```js
-// 方法一
+    // 方法一
     function shuffle(arr){
 
         var len = arr.length;
@@ -911,17 +911,17 @@ function jsonp(url, data) {
             arr[len - i -1] = temp;
         }
         return arr;
-}
+    }
 
-// 方法二
-function shuffle(arr){
-let n = arr.length, random;
-while(0!=n){
-    random = (Math.random() \* n--) >>> 0; // 无符号右移位运算符向下取整
-    [arr[n], arr[random]] = [arr[random], arr[n]] // ES6 的结构赋值实现变量互换
-}
-    return arr;
-}
+    // 方法二
+    function shuffle(arr){
+    let n = arr.length, random;
+    while(0!=n){
+        random = (Math.random() \* n--) >>> 0; // 无符号右移位运算符向下取整
+        [arr[n], arr[random]] = [arr[random], arr[n]] // ES6 的结构赋值实现变量互换
+    }
+        return arr;
+    }
 ```
 
 > 数组的完全随机排列 https://www.h5jun.com/post/array-shuffle.html
@@ -930,10 +930,10 @@ while(0!=n){
 ## 16. 实现异步循环打印
 
 ```js
-var sleep = function(time, i) {
+var sleep = function(time, value) {
     return new Promise(function(resolve, reject) {
         setTimeout(function() {
-            resolve(i);
+            resolve(value);
         }, time);
     });
 };
@@ -1022,3 +1022,9 @@ let widthTraversal2 = node => {
     return nodes;
 };
 ```
+## 十大经典排序算法
+> 十大经典排序算法 https://github.com/hustcc/JS-Sorting-Algorithm
+
+
+## 窥探数据结构的世界- ES6版
+> 窥探数据结构的世界- ES6版 https://juejin.im/post/5cd1ab3df265da03587c142a

@@ -14,7 +14,13 @@
 
 4. 理解 XSS 和 CSRF 原理
 
-    > https://xwjgo.github.io/2017/10/26/XSS%E5%92%8CCSRF/
+    > 浅说 XSS 和 CSRF https://juejin.im/entry/5b4b56fd5188251b1a7b2ac1
+
+    > Web安全的三个攻防姿势 https://juejin.im/post/59e6b21bf265da43247f861d
+
+    > 前端安全系列（一）：如何防止XSS攻击？ https://tech.meituan.com/2018/09/27/fe-security.html
+
+    >  浅谈CSRF攻击方式 https://www.cnblogs.com/hyddd/archive/2009/04/09/1432744.html
 
 5. 理解 es6 class 构造以及继承的底层实现原理
 
@@ -72,8 +78,6 @@
 
 17. Javascript 创建对象的几种方式
     > JavaScript 深入之创建对象的多种方式以及优缺点 https://github.com/mqyqingfeng/Blog/issues/15
-
-18. async、await的理解，内部原理
 
 ## 浏览器
 
@@ -277,6 +281,9 @@
 
     > CSS3 实践之摩天轮式图片轮播+3D 正方体+3D 标签云 标签云 https://www.bbsmax.com/A/QV5Z1xv6Jy/
 
+17. PNG图片压缩原理
+    > PNG图片压缩原理 https://github.com/airuikun/blog/issues/1
+    
 ## React
 1. 组件之间如何通信
     > React中组件通信的几种方式 https://juejin.im/post/5a2cbc57f265da431523d6de
