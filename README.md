@@ -409,6 +409,9 @@
 1.  简单实现项目代码按需加载，例如 import { Button } from 'antd'，打包的时候只打包 button
     > https://github.com/airuikun/Weekly-FE-Interview/issues/9
 
+2. Webpack HMR 原理解析
+    > Webpack HMR 原理解析 https://zhuanlan.zhihu.com/p/30669007
+    
 ## Git
 > 待完善
 

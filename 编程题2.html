@@ -121,7 +121,7 @@
             output(i)
         }
 
-        // 现有一个Page类,其原型对象上有许多以post开头的方法(如postMsg);另有一拦截函数chekc,只返回ture或false.请设计一个函数,该函数应批量改造原Page的postXXX方法,在保留其原有功能的同时,为每个postXXX方法增加拦截验证功能,当check返回true时继续执行原postXXX方法,返回false时不再执行原postXXX方法
+        // 现有一个Page类,其原型对象上有许多以post开头的方法(如postMsg);另有一拦截函数 check,只返回ture或false.请设计一个函数,该函数应批量改造原Page的postXXX方法,在保留其原有功能的同时,为每个postXXX方法增加拦截验证功能,当check返回true时继续执行原postXXX方法,返回false时不再执行原postXXX方法
         function Page() { }
 
         Page.prototype = {
@@ -324,21 +324,6 @@
 
         log('isF:' + isFunction(() => { }))
 
-        // 编写一个函数接受url中query string为参数,返回解析后的Object,query string使用application/x-www-form-urlencoded编码
-        var q = function (query) {
-            var result = {}
-            query = decodeURIComponent(query).split('?')[1]
-            if (!query) return result
-            var pairs = query.split('&')
-            for (var i = 0, len = pairs.length; i < len; i++) {
-                var arr = pairs[i].split('=')
-                result[arr[0]] = arr[1] ? arr[1].replace(/\+/g, ' ') : ''
-            }
-            return result
-        }
-        log(q('https://www.google.com/search?abc'))
-        log(q('http%3A%2F%2Fitem.taobao.com%2Fitem.htm%3Fa%3D1%26b%3D2%26c%3D%26d%3Dxxx%26e'))
-
         // 解析一个完整的url,返回Object包含域与window.location相同
         var parseURL = function (url) {
             var result = {}
@@ -352,6 +337,22 @@
                 }
             }
             return result
+        }
+
+        function URLParser(url) {
+            const a = document.createElement('a');  
+            a.href = url;
+            // 非浏览器环境  const urlObj = new URL(url);
+            return {
+                protocol: a.protocol,
+                username: a.username,
+                password: a.password,
+                hostname: a.hostname, // host 可能包括 port, hostname 不包括
+                port: a.port,
+                pathname: a.pathname,
+                search: a.search,
+                hash: a.hash,
+            }
         }
 
         log(parseURL('https://www.cnblogs.com:8080/speeding/p/5097790.html?xxx=9999#test'))

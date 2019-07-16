@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>LazyMan</title>
+</head>
+
+<body>
+</body>
+<script>
+    class LazyMan {
+        constructor(name) {
+            this.name = name;
+            console.log(`Hi, I am ${name}`)
+            this.taskQueue = []
+            setTimeout(() => {
+                this.start()
+            })
+        }
+
+        async start() {
+            for (let task of this.taskQueue) {
+                await task()
+            }
+        }
+
+        eat(dinner) {
+            this.taskQueue.push(() => {
+                console.log(`I am eating ${dinner}`)
+            })
+            return this;
+        }
+
+        wait(time) {
+            return () => new Promise(resolve => {
+                setTimeout(() => {
+                    console.log(`waiting ${time} second`)
+                    resolve()
+                }, time * 1000)
+            })
+        }
+
+        sleep(time) {
+            this.taskQueue.push(this.wait(time))
+            return this;
+        }
+
+        sleepFirst(time) {
+            this.taskQueue.unshift(this.wait(time))
+            return this
+        }
+    }
+
+    // new LazyMan('test1').sleep(2).eat('lunch')
+    // new LazyMan('test2').eat('lunch').sleep(5).eat('dinner')
+    new LazyMan('test3').eat('lunch').eat('dinner').sleepFirst(2).sleep(3).eat('junk food')
+
+</script>
+
+
+</html>
