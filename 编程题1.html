@@ -215,20 +215,6 @@
         // document.body.replaceChild(div3, div1)
         // document.body.appendChild document.body.removeChild
 
-        // 22.有这样一个URL：http://item.taobao.com/item.htm?a=1&b=2&c=&d=xxx&e，请写一段JS程序提取URL中的各个GET参数(参数名和参数个数不确定)，将其按key-value形式返回到一个json结构中，如{a:'1', b:'2', c:'', d:'xxx', e:undefined}。
-        var q = function (url) {
-            let result = {}
-            const query = url.split('?')[1]
-            if (!query) return result;
-            const pairs = query.split('&')
-            pairs.forEach(pair => {
-                const [key, value] = pair.split('=')
-                result[key] = value ? decodeURIComponent(value).replace(/\+/g, ' ') : ''
-            })
-            return result
-        }
-        log('q======', q('https://www.google.com/search?q=%E6%AD%A3%E5%88%99&oq=%E6%AD%A3%E5%88%99&aqs=chrome..69i57j0j69i59l2j0l2.480j0j9&sourceid=chrome&ie=UTF-8'))
-
         // 23.正则表达式构造函数 var reg = new RegExp("xxx") 与正则表达字面量 var reg = /xxx/ 有什么不同？匹配邮箱的正则表达式？
         var reg = /^[a-zA-Z1-9_-]+@[a-zA-Z1-9_-]+(?:\.[a-zA-Z]{2,4}){1,63}$/
         log(reg.test('wangliang@163.com.cn'))
@@ -276,41 +262,6 @@
         var test = function () { log('cloned') }
         log(clone(test))
 
-        var deepClone = function (obj) {
-            var isObject = Object.prototype.toString.call(obj) === '[object Object]'
-            var isArray = Array.isArray(obj)
-            var result
-            if (isObject) {
-                result = {}
-                for (var key in obj) {
-                    result[key] = deepClone(obj[key])
-                }
-                return result
-            } else if (isArray) {
-                result = []
-                for (var i = 0, length = obj.length; i < length; i++) {
-                    result[i] = deepClone(obj[i])
-                }
-                return result
-            } else {
-                return obj
-            }
-        }
-        var testObj = { name: 'test', score: [222, 333], obj: { hello: 'world' }, date: new Date(), reg: /./, func: function () { console.log('testObj func') }, nll: null }
-        log(deepClone(testObj))
-
-        // 2.如何消除一个数组里面重复的元素？
-        var arrarr = [1, 2, 3, 3, 4, 4, 5, 5, 6, 1, 9, 3, 25, 4]
-
-        var unique = function (arr) {
-            var result = []
-            for (var i = 0, length = arr.length; i < length; i++) {
-                if (result.indexOf(arr[i]) >= 0) continue
-                result.push(arr[i])
-            }
-            return result
-        }
-        log(unique(arrarr))
 
         // 3.小贤是一条可爱的小狗(Dog)，它的叫声很好听(wow)，每次看到主人的时候就会乖乖叫一声(yelp)。从这段描述可以得到以下对象：
         var dog = {
@@ -442,45 +393,45 @@
             log('................... yessss!')
         })
 
-            // 12.（设计题）想实现一个对页面某个节点的拖曳？如何做？（使用原生JS）
-            ; (function () {
-                var box = $('#box')[0]
-                var h2 = box.getElementsByTagName('h2')[0]
-                h2.onmousedown = function (e) {
-                    var disX = e.clientX - box.offsetLeft
-                    var disY = e.clientY - box.offsetTop
-                    this.setCapture && this.setCapture()
-                    document.onmousemove = function (e) {
-                        log('move======')
-                        var l = e.clientX - disX
-                        var t = e.clientY - disY
-                        log(l, t)
-                        // 修正 l,t
-                        var maxL = document.documentElement.clientWidth || document.body.clientWidth - box.offsetWidth
-                        var maxT = document.documentElement.clientHeight || document.body.clientHeight - box.offsetHeight
+            // // 12.（设计题）想实现一个对页面某个节点的拖曳？如何做？（使用原生JS）
+            // ; (function () {
+            //     var box = $('#box')[0]
+            //     var h2 = box.getElementsByTagName('h2')[0]
+            //     h2.onmousedown = function (e) {
+            //         var disX = e.clientX - box.offsetLeft
+            //         var disY = e.clientY - box.offsetTop
+            //         this.setCapture && this.setCapture()
+            //         document.onmousemove = function (e) {
+            //             log('move======')
+            //             var l = e.clientX - disX
+            //             var t = e.clientY - disY
+            //             log(l, t)
+            //             // 修正 l,t
+            //             var maxL = document.documentElement.clientWidth || document.body.clientWidth - box.offsetWidth
+            //             var maxT = document.documentElement.clientHeight || document.body.clientHeight - box.offsetHeight
 
-                        l = l > 0 ? l : 0
-                        l = l > maxL ? maxL : l
-                        t = t > 0 ? t : 0
-                        t = t > maxT ? maxT : t
+            //             l = l > 0 ? l : 0
+            //             l = l > maxL ? maxL : l
+            //             t = t > 0 ? t : 0
+            //             t = t > maxT ? maxT : t
 
-                        box.style.marginLeft = box.style.marginTop = 0
-                        box.style.left = l + 'px'
-                        box.style.top = t + 'px'
-                    }
-                    document.onmouseup = function () {
-                        document.onmousemove = null
-                        document.onmouseup = null
-                        this.releaseCapture && this.releaseCapture()
-                    }
-                }
-                h2.onmouseup = function () {
-                    document.onmousemove = null
-                    document.onmouseup = null
-                    this.releaseCapture && this.releaseCapture()
-                }
+            //             box.style.marginLeft = box.style.marginTop = 0
+            //             box.style.left = l + 'px'
+            //             box.style.top = t + 'px'
+            //         }
+            //         document.onmouseup = function () {
+            //             document.onmousemove = null
+            //             document.onmouseup = null
+            //             this.releaseCapture && this.releaseCapture()
+            //         }
+            //     }
+            //     h2.onmouseup = function () {
+            //         document.onmousemove = null
+            //         document.onmouseup = null
+            //         this.releaseCapture && this.releaseCapture()
+            //     }
 
-            })
+            // })
 
         // 13关闭tips提示
         function setCookie(name, value, days) { // 给cookie增加一个时间变量　

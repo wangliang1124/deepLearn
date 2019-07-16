@@ -9,7 +9,10 @@ function New() {
     }
     obj.__proto__ = constructor.prototype;
     var ret = constructor.apply(obj, arguments);
-    if (typeof ret === "function" || (typeof ret === "object" && ret !== null)) {
+    if (
+        typeof ret === "function" ||
+        (typeof ret === "object" && ret !== null)
+    ) {
         return ret;
     }
     return obj;
@@ -90,8 +93,8 @@ console.log(
         /./,
         { a: 1, b: 2, c: null },
         [1, undefined],
-        Number(1),
-    ]),
+        Number(1)
+    ])
 );
 ```
 
@@ -117,8 +120,8 @@ console.log(
         /./,
         { a: 1, b: 2, c: null },
         [1, undefined],
-        Number(1),
-    ]),
+        Number(1)
+    ])
 );
 ```
 
@@ -143,7 +146,7 @@ Function.prototype._call = function(context) {
 
 // 测试 1
 let foo = {
-    value: 1,
+    value: 1
 };
 function bar(name, age) {
     console.log(name);
@@ -163,7 +166,7 @@ function test(str, fn, obj, arr) {
 }
 
 var obj = {
-    name: "我是 obj 的 name",
+    name: "我是 obj 的 name"
 };
 
 test._call(
@@ -174,7 +177,7 @@ test._call(
         console.log(fnStr);
     },
     { color: "red" },
-    [1, 2, 3],
+    [1, 2, 3]
 );
 ```
 
@@ -214,7 +217,7 @@ test._apply(obj, [
         console.log(fnStr);
     },
     { color: "red" },
-    [1, 2, 3],
+    [1, 2, 3]
 ]);
 ```
 
@@ -264,7 +267,10 @@ Function.prototype._bind = function(context) {
 
     var bound = function() {
         var bindArgs = Array.prototype.slice.call(arguments);
-        return source.apply(this instanceof fNOP ? this : context, args.concat(bindArgs));
+        return source.apply(
+            this instanceof fNOP ? this : context,
+            args.concat(bindArgs)
+        );
     };
 
     // Function.prototype doesn't have a prototype property
@@ -302,7 +308,10 @@ var bound = function() {
     }
     var newObj = new fNOP();
     var ret = source.apply(newObj, args.concat(bindArgs));
-    if (ret !== null && (typeof ret === "object" || typeof ret === "function")) {
+    if (
+        ret !== null &&
+        (typeof ret === "object" || typeof ret === "function")
+    ) {
         return ret;
     }
     return newObj;
@@ -401,7 +410,8 @@ function Promise(executor) {
 
 Promise.prototype.then = function(onFulfilled, onRejected) {
     //PromiseA+ 2.2.1 / PromiseA+ 2.2.5 / PromiseA+ 2.2.7.3 / PromiseA+ 2.2.7.4
-    onFulfilled = typeof onFulfilled === "function" ? onFulfilled : value => value;
+    onFulfilled =
+        typeof onFulfilled === "function" ? onFulfilled : value => value;
     onRejected =
         typeof onRejected === "function"
             ? onRejected
@@ -485,7 +495,7 @@ function resolvePromise(promise2, x, resolve, reject) {
                         if (used) return;
                         used = true;
                         reject(r);
-                    },
+                    }
                 );
             } else {
                 //PromiseA+2.3.3.4
@@ -544,7 +554,7 @@ Promise.prototype.finally = function(callback) {
             return Promise.resolve(callback()).then(() => {
                 throw err;
             });
-        },
+        }
     );
 };
 ```
@@ -588,7 +598,7 @@ Promise.all = function(promises) {
                     err => {
                         reject(err);
                         return;
-                    },
+                    }
                 );
             }
         }
@@ -701,7 +711,7 @@ function deepClone(obj) {
     }
 
     // DOM Node
-    if (obj.nodeType && "cloneNode" in obj) {
+    if (obj && obj.nodeType && "cloneNode" in obj) {
         return obj.cloneNode(true);
     }
 
@@ -726,7 +736,11 @@ function deepClone(obj) {
         return new RegExp(obj.source, flags.join(""));
     }
 
-    var result = Array.isArray(obj) ? [] : obj.constructor ? new obj.constructor() : {};
+    var result = Array.isArray(obj)
+        ? []
+        : obj.constructor
+        ? new obj.constructor()
+        : {};
 
     for (var key in obj) {
         result[key] = deepClone(obj[key]);
@@ -744,7 +758,7 @@ var a = {
     birth: new Date(),
     pattern: /qiu/gim,
     container: document.body,
-    hobbys: ["book", new Date(), /aaa/gim, 111],
+    hobbys: ["book", new Date(), /aaa/gim, 111]
 };
 
 var c = new A();
@@ -795,7 +809,7 @@ function spawn(genF) {
                     step(function() {
                         return gen.throw(e);
                     });
-                },
+                }
             );
         }
         step(function() {
@@ -808,20 +822,23 @@ function spawn(genF) {
 ## 13. 基于 Promise 的 ajax 封装
 
 ```js
-function ajax(url, method = "get", param = {}) {
+function ajax(url, options = {}) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        const paramString = getStringParam(param);
-        if (method === "get" && paramString) {
-            url.indexOf("?") > -1 ? (url += paramString) : (url += `?${paramString}`);
-        }
-        xhr.open(method, url);
+        options.type = (options.type || "GET").toUpperCase();
+        const paramString = formatParams(options.data);
+        // if (method === "get" && paramString) {
+        //     url.indexOf("?") > -1
+        //         ? (url += paramString)
+        //         : (url += `?${paramString}`);
+        // }
+        // xhr.open(method, url);
         xhr.onload = function() {
             const result = {
                 status: xhr.status,
                 statusText: xhr.statusText,
                 headers: xhr.getAllResponseHeaders(),
-                data: xhr.response || xhr.responseText,
+                data: xhr.response || xhr.responseText
             };
             if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
                 resolve(result);
@@ -830,7 +847,10 @@ function ajax(url, method = "get", param = {}) {
             }
         };
         // 设置请求头
-        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhr.setRequestHeader(
+            "Content-type",
+            "application/x-www-form-urlencoded"
+        );
         // 跨域携带cookie
         xhr.withCredentials = true;
         // 错误处理
@@ -843,20 +863,26 @@ function ajax(url, method = "get", param = {}) {
         xhr.onabort = function() {
             reject(new TypeError("请求被终止"));
         };
-        if (method === "post") {
-            xhr.send(paramString);
+        if (options.method === "POST") {
+            xhr.open('POST', options.url)
+            xhr.send(paramString)
         } else {
-            xhr.send();
+            xhr.open('GET', options.url + '?' + paramString)
+            xhr.send(null)
         }
     });
 }
 
-function getStringParam(param) {
-    let dataString = "";
-    for (const key in param) {
-        dataString += `${key}=${param[key]}&`;
+function formatParams(param) {
+    let arr = [];
+    for (var key in data) {
+        if (data.hasOwnProperty(key))
+            arr.push(
+                encodeURIComponent(key) + "=" + encodeURIComponent(data[key])
+            );
     }
-    return dataString;
+    // arr.push(("v=" + Math.random()).replace(".", ""));
+    return arr.join("&");
 }
 ```
 
@@ -1022,9 +1048,117 @@ let widthTraversal2 = node => {
     return nodes;
 };
 ```
+
+## 19. 解析 url 参数
+
+```js
+var q = function(url) {
+    let result = {};
+    const query = url.split("?")[1];
+    if (!query) return result;
+    const pairs = query.split("&");
+    pairs.forEach(pair => {
+        const [key, value] = pair.split("=");
+        result[key] = value
+            ? decodeURIComponent(value).replace(/\+/g, " ")
+            : "";
+    });
+    return result;
+};
+console.log(
+    q(
+        "https://www.google.com/search?q=%E6%AD%A3%E5%88%99&oq=%E6%AD%A3%E5%88%99&aqs=chrome..69i57j0j69i59l2j0l2.480j0j9&sourceid=chrome&ie=UTF-8"
+    )
+);
+```
+
+## 数组 flatten
+
+```js
+var flatten = function(array) {
+    var result = [];
+    for (var i = 0, length = array.length; i < length; i++) {
+        var value = array[i];
+        if (Array.isArray(value)) {
+            result = result.concat(flatten(value));
+        } else if (typeof value === "number") {
+            result.push(value);
+        }
+    }
+    return result;
+};
+log(flatten([1, [2, [[3, 4], 5], 6]]));
+```
+
+## 解析 url
+
+```js
+var parseURL = function(url) {
+    var result = {};
+    var keys = [
+        "href",
+        "origin",
+        "protocol",
+        "host",
+        "hostname",
+        "port",
+        "pathname",
+        "search",
+        "hash"
+    ];
+    var regexp = /(((?:https?|ftp|file):)\/\/(([^:\/\?#]+)(:\d+)?))(\/[^?#]*)?(\?[^#]*)?(#.*)?/;
+
+    var match = regexp.exec(url);
+    if (match) {
+        for (var i = keys.length - 1; i >= 0; i--) {
+            result[keys[i]] = match[i] ? match[i] : "";
+        }
+    }
+    return result;
+};
+
+function URLParser(url) {
+    const a = document.createElement("a");
+    a.href = url;
+    // 非浏览器环境  const urlObj = new URL(url);
+    return {
+        protocol: a.protocol,
+        username: a.username,
+        password: a.password,
+        hostname: a.hostname, // host 可能包括 port, hostname 不包括
+        port: a.port,
+        pathname: a.pathname,
+        search: a.search,
+        hash: a.hash
+    };
+}
+
+console.log(
+    parseURL(
+        "https://www.cnblogs.com:8080/speeding/p/5097790.html?xxx=9999#test"
+    )
+);
+```
+
+```js
+var unique = function(arr) {
+    // 实现一
+    // return [...new Set(arr)]
+    // 实现二
+    const result = [];
+    arr.forEach(item => {
+        if (result.indexOf(item) === -1) result.push(item);
+    });
+    return result;
+};
+var arrarr = [1, 2, 3, 3, 4, 4, 5, 5, 6, 1, 9, 3, 25, 4];
+console.log(unique(arrarr));
+```
+
 ## 十大经典排序算法
+
 > 十大经典排序算法 https://github.com/hustcc/JS-Sorting-Algorithm
 
+## 窥探数据结构的世界- ES6 版
 
-## 窥探数据结构的世界- ES6版
-> 窥探数据结构的世界- ES6版 https://juejin.im/post/5cd1ab3df265da03587c142a
+> 窥探数据结构的世界- ES6 版 https://juejin.im/post/5cd1ab3df265da03587c142a

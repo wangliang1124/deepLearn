@@ -163,69 +163,6 @@
         obj.postB('checkfy')
         obj.postC('checkfy')
 
-        // 编写javascript深度克隆函数deepClone
-        function deepClone(obj) {
-            var toString = Object.prototype.toString
-
-            // null, undefined, non-object, function
-            if (!obj || typeof obj !== 'object') {
-                return obj
-            }
-            // Node
-            if (obj.nodeType && 'cloneNode' in obj) {
-                return obj.cloneNode(true)
-            }
-            // Date
-            if (toString.call(obj) === '[object Date]') {
-                return new Date(obj.getTime())
-            }
-            // RegExp
-            if (toString.call(obj) === '[object RegExp]') {
-                var flags = []
-                if (obj.global) flags.push('g')
-                if (obj.mutilline) flags.push('m')
-                if (obj.ingoreCase) flags.push('i')
-                return new RegExp(obj.source, flags.join(''))
-            }
-            var result = null
-            // Array
-            if (toString.call(obj) === '[object Array]') {
-                var length = obj.length
-                result = Array(length)
-                // for (var i = 0; i < length; i++) {
-                for (var i in obj) {
-                    // log(i)
-                    result[i] = deepClone(obj[i])
-                }
-            }
-            // Object
-            if (toString.call(obj) === '[object Object]') {
-                result = obj.constructor ? new obj.constructor : {}
-                for (var key in obj) {
-                    result[key] = deepClone(obj[key])
-                }
-            }
-            return result
-        }
-
-        function A() {
-            this.a = a
-        }
-
-        var a = {
-            name: 'qiu',
-            birth: new Date(),
-            pattern: /qiu/gim,
-            container: document.body,
-            hobbys: ['book', new Date(), /aaa/gim, 111]
-        }
-
-        var c = new A()
-        var b = deepClone(c)
-        log(b)
-        var arr = Array(10, [1, true, 3])
-        log(arr, deepClone(arr))
-
         // 补充代码,鼠标单击Button1后将Button1移动到Button2的后面
         var btn1 = document.getElementById('button1')
         var btn2 = document.getElementById('button2')
@@ -255,21 +192,6 @@
         setInterval(function () {
             remain.innerHTML = getRemainTime()
         }, 1000)
-
-        // 完成一个函数,接受数组作为参数,数组元素为整数或者数组,数组元素包含整数或数组,函数返回扁平化后的数组 如：[1, [2, [ [3, 4], 5], 6]] => [1, 2, 3, 4, 5, 6]
-        var flatten = function (array) {
-            var result = []
-            for (var i = 0, length = array.length; i < length; i++) {
-                var value = array[i]
-                if (Array.isArray(value)) {
-                    result = result.concat(flatten(value))
-                } else if (typeof value === 'number') {
-                    result.push(value)
-                }
-            }
-            return result
-        }
-        log(flatten([1, [2, [[3, 4], 5], 6]]))
 
         // 如何判断一个对象是否为数组
         var isArray = Array.isArray || function (obj) {
@@ -324,39 +246,6 @@
 
         log('isF:' + isFunction(() => { }))
 
-        // 解析一个完整的url,返回Object包含域与window.location相同
-        var parseURL = function (url) {
-            var result = {}
-            var keys = ['href', 'origin', 'protocol', 'host', 'hostname', 'port', 'pathname', 'search', 'hash'];
-            var regexp = /(((?:https?|ftp|file):)\/\/(([^:\/\?#]+)(:\d+)?))(\/[^?#]*)?(\?[^#]*)?(#.*)?/
-
-            var match = regexp.exec(url)
-            if (match) {
-                for (var i = keys.length - 1; i >= 0; i--) {
-                    result[keys[i]] = match[i] ? match[i] : ''
-                }
-            }
-            return result
-        }
-
-        function URLParser(url) {
-            const a = document.createElement('a');  
-            a.href = url;
-            // 非浏览器环境  const urlObj = new URL(url);
-            return {
-                protocol: a.protocol,
-                username: a.username,
-                password: a.password,
-                hostname: a.hostname, // host 可能包括 port, hostname 不包括
-                port: a.port,
-                pathname: a.pathname,
-                search: a.search,
-                hash: a.hash,
-            }
-        }
-
-        log(parseURL('https://www.cnblogs.com:8080/speeding/p/5097790.html?xxx=9999#test'))
-
         // 完成函数getViewportSize返回指定窗口的视口尺寸
         var getViewportSize = function () {
             var width, height
@@ -396,52 +285,6 @@
             return div.innerHTML
         }
         log(richText('<p><img></p>'))
-
-        // 观察者模式： 请实现一个 EventEmitter 类（） 继承自此类的对象都会拥有两个方法 on, off, once 和 trigger
-        var EventEmitter = function () {
-            if (!this instanceof Event) {
-                return new Event()
-            }
-            this._callbacks = {}
-        }
-        EventEmitter.prototype = {
-            constructor: EventEmitter,
-            on: function (type, handler) {
-                this._callbacks = this._callbacks || {}
-                this._callbacks[type] = this._callbacks[type] || []
-                this._callbacks[type].push(handler)
-                return this
-            },
-            off: function (type, handler) {
-                var list = this._callbacks[type]
-                if (list.length) {
-                    for (var i = list.length - 1; i >= 0; i--) {
-                        if (list[i] === handler) {
-                            list.splice(i, 1)
-                        }
-                    }
-                }
-                return this
-            },
-            trigger: function (type, data) {
-                var list = this._callbacks[type]
-                var len = list.length
-                if (len) {
-                    for (var i = 0; i < len; i++) {
-                        list[i].call(this, data)
-                    }
-                }
-            },
-            once: function (type, handler) {
-                var self = this
-                var wrapper = function () {
-                    handler.apply(self, arguments)
-                    self.off(type, wrapper)
-                }
-                this.on(type, wrapper)
-                return this
-            }
-        }
 
         // 编写一个函数将列表子元素顺序反转
         var reverse = document.getElementById('reverse')
