@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>ajax test</title>
+    <title>Ajax Promise</title>
 </head>
 
 <body>
@@ -80,64 +80,6 @@
         document.getElementById('root').innerHTML = res.data
     })
 
-</script>
-<script>
-/* 
-    // 16.讲解原生Js实现ajax的原理。
-    function ajax(options) {
-        options = options || {}
-        options.type = (options.type || 'GET').toUpperCase()
-        options.dataType = options.dataType || 'json'
-        var params = formatParams(options.data)
-        // 创建
-        var http = null
-        if (window.XMLHttpRequest) {
-            http = new XMLHttpRequest()
-        } else {
-            http = new ActiveXObject('Microsoft.XMLHTTP')
-        }
-        // 监听
-        http.onreadystatechange = function () {
-            if (http.readyState === 4) {
-                if (http.status >= 200 && http.status < 300 || http.status === 304) {
-                    options.success && options.success(http.responseText)
-                } else {
-                    options.fail && options.fail(status)
-                }
-            }
-        }
-        // 发送
-        if (options.type === 'GET') {
-            http.open('GET', options.url + '?' + params, true)
-            http.send(null)
-        } else if (options.type === 'POST') {
-            http.open('POST', options.url, true)
-            http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
-            http.send(params)
-        }
-
-        function formatParams(data) {
-            var arr = []
-            for (var key in data) {
-                if (data.hasOwnProperty(key)) arr.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
-            }
-            arr.push(('v=' + Math.random()).replace('.', ''))
-            return arr.join('&')
-        }
-    }
-    ajax({
-        type: 'get',
-        url: 'https://developer.mozilla.org/en-US/docs/Web/Guide/AJAX/Getting_Started',
-        data: { name: 'super', age: 20 },
-        dataType: 'json',
-        success: function (res) {
-            // console.log(res)
-        },
-        fail: function (status) {
-            console.log('status:' + status)
-        }
-    })
- */
 </script>
 
 </html>
