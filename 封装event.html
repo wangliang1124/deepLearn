@@ -93,10 +93,6 @@
         var children = this.children
         var result = {}
         for (var i = 0, len = children.length; i < len; i++) {
-            // if (target = children[i].firstChild) {
-            //     EventUtil.prevent(event)
-            //     // EventUtil.stop(event)
-            // }
             if (target === children[i].firstChild) {
                 console.log('===')
                 result['index'] = i + 1
