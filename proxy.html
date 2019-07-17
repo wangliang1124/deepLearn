@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <title>Learn Proxy</title>
+        <style>
+            .pre {
+                background-color: #eee;
+            }
+            .li {
+                line-height: 2;
+            }
+        </style>
+    </head>
+    <body style="padding: 0 72px 72px 72px">
+        <h1>Proxy</h1>
+
+        <h2>语法</h2>
+        <pre class="pre">
+            var proxy = new Proxy(target, handler);
+        </pre>
+        <h3>例子1</h3>
+        <pre class="pre">
+        var obj = new Proxy(
+            {},
+            {
+                get: function(target, key, receiver) {
+                    console.log(`getting ${key}!`);
+                    return Reflect.get(target, key, receiver);
+                },
+                set: function(target, key, value, receiver) {
+                    console.log(`setting ${key}!`);
+                    return Reflect.set(target, key, value, receiver);
+                }
+            }
+        );
+        </pre>
+        <h3>例子2</h3>
+        <pre class="pre">
+        var handler = {
+            get: function(target, name) {
+                if (name === "prototype") {
+                    return Object.prototype;
+                }
+                return "Hello, " + name;
+            },
+
+            apply: function(target, thisBinding, args) {
+                return args[0];
+            },
+
+            construct: function(target, args) {
+                return { value: args[1] };
+            }
+        };
+
+        var fproxy = new Proxy(function(x, y) {
+            return x + y;
+        }, handler);
+        </pre>
+        <script>
+            var obj = new Proxy(
+                {},
+                {
+                    get: function(target, key, receiver) {
+                        console.log(`getting ${key}!`);
+                        return Reflect.get(target, key, receiver);
+                    },
+                    set: function(target, key, value, receiver) {
+                        console.log(`setting ${key}!`);
+                        return Reflect.set(target, key, value, receiver);
+                    }
+                }
+            );
+            // obj.count = 1;
+
+            var handler = {
+                get: function(target, name) {
+                    if (name === "prototype") {
+                        return Object.prototype;
+                    }
+                    return "Hello, " + name;
+                },
+
+                apply: function(target, thisBinding, args) {
+                    return args[0];
+                },
+
+                construct: function(target, args) {
+                    return { value: args[1] };
+                }
+            };
+
+            var fproxy = new Proxy(function(x, y) {
+                return x + y;
+            }, handler);
+
+            fproxy(1, 2); // 1
+            new fproxy(1, 2); // {value: 2}
+            fproxy.prototype === Object.prototype; // true
+            fproxy.foo === "Hello, foo"; // true
+        </script>
+
+        <h2>应用场景</h2>
+        <h3>1 缓存代理</h3>
+        <pre class="pre">
+            const getFib = (number) => {
+                if (number <= 2) {
+                  return 1;
+                } else {
+                  return getFib(number - 1) + getFib(number - 2);
+                }
+              }
+        </pre>
+        <script>
+            const getFib = number => {
+                if (number <= 2) {
+                    return 1;
+                } else {
+                    return getFib(number - 1) + getFib(number - 2);
+                }
+            };
+        </script>
+        <pre class="pre">
+            const getCacheProxy = (fn, cache = new Map()) => {
+                return new Proxy(fn, {
+                  apply(target, context, args) {
+                    const argsString = args.join(' ');
+                    if (cache.has(argsString)) {
+                      // 如果有缓存,直接返回缓存数据
+                      console.log(`输出${args}的缓存结果: ${cache.get(argsString)}`);
+                      
+                      return cache.get(argsString);
+                    }
+                    const result = fn(...args);
+                    cache.set(argsString, result);
+              
+                    return result;
+                  }
+                })
+              }
+            const getFibProxy = getCacheProxy(getFib);
+
+        </pre>
+        <script>
+            const getCacheProxy = (fn, cache = new Map()) => {
+                return new Proxy(fn, {
+                    apply(target, context, args) {
+                        const argsString = args.join(" ");
+                        if (cache.has(argsString)) {
+                            // 如果有缓存,直接返回缓存数据
+                            console.log(
+                                `输出${args}的缓存结果: ${cache.get(
+                                    argsString
+                                )}`
+                            );
+
+                            return cache.get(argsString);
+                        }
+                        const result = fn(...args);
+                        cache.set(argsString, result);
+
+                        return result;
+                    }
+                });
+            };
+            const getFibProxy = getCacheProxy(getFib);
+        </script>
+        <h3>2 验证代理</h3>
+        <pre class="pre">
+            // 表单对象
+            const userForm = {
+                account: "",
+                password: ""
+            };
+
+            // 验证方法
+            const validators = {
+                account(value) {
+                    // account 只允许为中文
+                    const re = /^[\u4e00-\u9fa5]+$/;
+                    return {
+                        valid: re.test(value),
+                        error: '"account" is only allowed to be Chinese'
+                    };
+                },
+                password(value) {
+                    // password 的长度应该大于6个字符
+                    return {
+                        valid: value.length >= 6,
+                        error: '"password "should more than 6 character'
+                    };
+                }
+            };
+        </pre>
+        <pre class="pre">
+            const getValidateProxy = (target, validators) => {
+                return new Proxy(target, {
+                    _validators: validators,
+                    set(target, prop, value) {
+                        if (value === "") {
+                            console.error(
+                                `"${prop}" is not allowed to be empty`
+                            );
+                            return (target[prop] = false);
+                        }
+                        const validResult = this._validators[prop](value);
+                        if (validResult.valid) {
+                            return Reflect.set(target, prop, value);
+                        } else {
+                            console.error(`${validResult.error}`);
+                            return (target[prop] = false);
+                        }
+                    }
+                });
+            };
+            const userFormProxy = getValidateProxy(userForm, validators);   
+        </pre>
+        <script>
+            // 表单对象
+            const userForm = {
+                account: "",
+                password: ""
+            };
+
+            // 验证方法
+            const validators = {
+                account(value) {
+                    // account 只允许为中文
+                    const re = /^[\u4e00-\u9fa5]+$/;
+                    return {
+                        valid: re.test(value),
+                        error: '"account" is only allowed to be Chinese'
+                    };
+                },
+                password(value) {
+                    // password 的长度应该大于6个字符
+                    return {
+                        valid: value.length >= 6,
+                        error: '"password "should more than 6 character'
+                    };
+                }
+            };
+            const getValidateProxy = (target, validators) => {
+                return new Proxy(target, {
+                    _validators: validators,
+                    set(target, prop, value) {
+                        if (value === "") {
+                            console.error(
+                                `"${prop}" is not allowed to be empty`
+                            );
+                            return (target[prop] = false);
+                        }
+                        const validResult = this._validators[prop](value);
+                        if (validResult.valid) {
+                            return Reflect.set(target, prop, value);
+                        } else {
+                            console.error(`${validResult.error}`);
+                            return (target[prop] = false);
+                        }
+                    }
+                });
+            };
+            const userFormProxy = getValidateProxy(userForm, validators);
+        </script>
+        <h3>3 实现私有属性</h3>
+        <pre class="pre">
+            function getPrivateProps(obj, filterFunc) {
+                return new Proxy(obj, {
+                    get(obj, prop) {
+                        if (!filterFunc(prop)) {
+                            let value = Reflect.get(obj, prop);
+                            // 如果是方法, 将this指向修改原对象
+                            if (typeof value === "function") {
+                                value = value.bind(obj);
+                            }
+                            return value;
+                        }
+                    },
+                    set(obj, prop, value) {
+                        if (filterFunc(prop)) {
+                            throw new TypeError(`Can't set property "${prop}"`);
+                        }
+                        return Reflect.set(obj, prop, value);
+                    },
+                    has(obj, prop) {
+                        return filterFunc(prop)
+                            ? false
+                            : Reflect.has(obj, prop);
+                    },
+                    ownKeys(obj) {
+                        return Reflect.ownKeys(obj).filter(
+                            prop => !filterFunc(prop)
+                        );
+                    },
+                    getOwnPropertyDescriptor(obj, prop) {
+                        return filterFunc(prop)
+                            ? undefined
+                            : Reflect.getOwnPropertyDescriptor(obj, prop);
+                    }
+                });
+            }
+
+            function propFilter(prop) {
+                return prop.indexOf("_") === 0;
+            }
+
+            const myObj = {
+                public: "hello",
+                _private: "secret",
+                method: function() {
+                    console.log(this._private);
+                }
+            },
+            myProxy = getPrivateProps(myObj, propFilter);
+
+            console.log(JSON.stringify(myProxy)); 
+            console.log(myProxy._private); 
+            console.log("_private" in myProxy); 
+            console.log(Object.keys(myProxy)); 
+            for (let prop in myProxy) {
+                console.log(prop);
+            } 
+            myProxy._private = 1;
+        </pre>
+        <script>
+            function getPrivateProps(obj, filterFunc) {
+                return new Proxy(obj, {
+                    get(obj, prop) {
+                        if (!filterFunc(prop)) {
+                            let value = Reflect.get(obj, prop);
+                            // 如果是方法, 将this指向修改原对象
+                            if (typeof value === "function") {
+                                value = value.bind(obj);
+                            }
+                            return value;
+                        }
+                    },
+                    set(obj, prop, value) {
+                        if (filterFunc(prop)) {
+                            throw new TypeError(`Can't set property "${prop}"`);
+                        }
+                        return Reflect.set(obj, prop, value);
+                    },
+                    has(obj, prop) {
+                        return filterFunc(prop)
+                            ? false
+                            : Reflect.has(obj, prop);
+                    },
+                    ownKeys(obj) {
+                        return Reflect.ownKeys(obj).filter(
+                            prop => !filterFunc(prop)
+                        );
+                    },
+                    getOwnPropertyDescriptor(obj, prop) {
+                        return filterFunc(prop)
+                            ? undefined
+                            : Reflect.getOwnPropertyDescriptor(obj, prop);
+                    }
+                });
+            }
+
+            function propFilter(prop) {
+                return prop.indexOf("_") === 0;
+            }
+
+            const myObj = {
+                    public: "hello",
+                    _private: "secret",
+                    method: function() {
+                        console.log(this._private);
+                    }
+                },
+                myProxy = getPrivateProps(myObj, propFilter);
+
+            // console.log(JSON.stringify(myProxy)); // {"public":"hello"}
+            // console.log(myProxy._private); // undefined
+            // console.log("_private" in myProxy); // false
+            // console.log(Object.keys(myProxy)); // ["public", "method"]
+            // for (let prop in myProxy) {
+            //     console.log(prop);
+            // } // public  method
+            // myProxy._private = 1; // Uncaught TypeError: Can't set property "_private"
+        </script>
+        <h3>4 函数节流</h3>
+        <button>函数节流</button>
+        <pre class="pre">
+            const createThrottleProxy = (fn, rate) => {
+                let lastClick = Date.now() - rate;
+                return new Proxy(fn, {
+                    apply(target, context, args) {
+                        if (Date.now() - lastClick >= rate) {
+                            fn(args);
+                            lastClick = Date.now();
+                        }
+                    }
+                });
+            };
+            const handler2 = () => console.log("Do something...");
+            const handlerProxy = createThrottleProxy(handler2, 1000);
+            document.querySelector('button').addEventListener("click", handlerProxy);
+        </pre>
+        <script>
+            const createThrottleProxy = (fn, rate) => {
+                let lastClick = Date.now() - rate;
+                return new Proxy(fn, {
+                    apply(target, context, args) {
+                        if (Date.now() - lastClick >= rate) {
+                            fn(args);
+                            lastClick = Date.now();
+                        }
+                    }
+                });
+            };
+            const handler2 = () => console.log(Date.now(), "Do something...");
+            const handlerProxy = createThrottleProxy(handler2, 1000);
+            document
+                .querySelector("button")
+                .addEventListener("click", handlerProxy);
+        </script>
+        <!-- <h3>图片懒加载</h3>
+        <pre class="pre"></pre>
+        <script>
+            // const img = new Image();
+            // img.src = "/Users/wangliang/Desktop/loading.gif";
+            // document.body.appendChild(img);
+            const createImgProxy = (img, loadingImg, realImg) => {
+                let hasLoaded = false;
+                const virtualImg = new Image();
+                virtualImg.src = realImg;
+                virtualImg.onload = () => {
+                    Reflect.set(img, "src", realImg);
+                    hasLoaded = true;
+                };
+                return new Proxy(img, {
+                    get(obj, prop) {
+                        if (prop === "src" && !hasLoaded) {
+                            console.log('xxxx')
+                            return loadingImg;
+                        }
+                        return obj[prop];
+                    }
+                });
+            };
+            const img = new Image();
+            // img.src = "/Users/wangliang/Desktop/loading.gif";
+            // const img = new Image();
+            const imgProxy = createImgProxy(
+                img,
+                "/Users/wangliang/Desktop/loading.gif",
+                "https://assets.souche.com/assets/sccimg//66af72b7cf46609b757f7e4551b421aa_02.png"
+            );
+            console.log(imgProxy)
+            document.body.appendChild(imgProxy);
+        </script> -->
+        <h3>5 异步队列</h3>
+        <pre class="pre">
+            const callback = () => console.log("Do something...");
+
+            const asyncFunc = cb => {
+                setTimeout(cb, 1000);
+            };
+            asyncFunc(callback);
+            asyncFunc(callback);
+            asyncFunc(callback);
+
+            const createAsyncQueueProxy = asyncFunc => {
+                let promise = null;
+                return new Proxy(asyncFunc, {
+                    apply(target, context, [cb, ...args]) {
+                        promise = Promise.resolve(promise).then(
+                            () =>
+                                new Promise(resolve => {
+                                    Reflect.apply(asyncFunc, this, [
+                                        () => {
+                                            cb();
+                                            resolve();
+                                        },
+                                        ...args
+                                    ]);
+                                })
+                        );
+                    }
+                });
+            };
+            const timeoutProxy = createAsyncQueueProxy(asynFunc);
+            timeoutProxy(callback);
+            timeoutProxy(callback);
+            timeoutProxy(callback);
+        </pre>
+        <script>
+            const callback = () => console.log("Do something...");
+
+            const asyncFunc = cb => {
+                setTimeout(cb, 1000);
+            };
+
+            const createAsyncQueueProxy = asyncFunc => {
+                let promise = null;
+                return new Proxy(asyncFunc, {
+                    apply(target, context, [cb, ...args]) {
+                        promise = Promise.resolve(promise).then(
+                            () =>
+                                new Promise(resolve => {
+                                    Reflect.apply(asyncFunc, this, [
+                                        () => {
+                                            cb();
+                                            resolve();
+                                        },
+                                        ...args
+                                    ]);
+                                })
+                        );
+                    }
+                });
+            };
+            const timeoutProxy = createAsyncQueueProxy(asyncFunc);
+        </script>
+    </body>
+</html>

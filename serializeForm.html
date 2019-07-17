@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>SerializeForm</title>
+</head>
+<style>
+
+</style>
+<body>
+    <form id="form1">
+        <select name="age">
+            <option value="25">25</option>
+            <option value="144" selected>144</option>
+        </select>
+        <select name="friends" multiple>
+            <option value="铁锤" selected>铁锤</option>
+            <option value="秦天柱">秦天柱</option>
+            <option value="大黄蜂" selected>大黄蜂</option>
+        </select>
+        <input name="name" value="wangliang">
+        <input type="password" name="password" value="11111">
+        <input type="hidden" name="salery" value="3333">
+        <textarea name="description">description description description description </textarea>
+        <input type="checkbox" name="hobby" checked value="football">Football
+        <input type="checkbox" name="hobby" value="basketball">Basketball
+        <input type="radio" name="sex" checked value="Female">Female
+        <input type="radio" name="sex" value="Male">Male
+    </form>
+
+</body>
+<script>
+    // 编写一个函数实现form的序列化(即将一个表单中的键值序列化为可提交的字符串)
+    var serializeForm = function (form) {
+        if (!form || form.nodeName.toUpperCase() !== 'FORM') return
+        var result = []
+        var field, type, name
+        for (var i = 0, len = form.length; i < len; i++) {
+            field = form.elements[i]
+            type = field.type
+            name = field.name
+            if (field.disable || !field.name) {
+                continue
+            }
+            switch (type) {
+                case 'text':
+                case 'password':
+                case 'hidden':
+                case 'textarea':
+                    result.push(encodeURIComponent(name) + '=' + encodeURIComponent(field.value))
+                    break
+                case 'radio':
+                case 'checkbox':
+                    if (field.checked) {
+                        result.push(encodeURIComponent(name) + '=' + encodeURIComponent(field.value))
+                    }
+                    break
+                case 'select-one':
+                case 'select-multiple':
+                    var options = field.options, l = options.length
+                    for (var j = 0; j < l; j++) {
+                        var opt = options[j]
+                        if (opt.selected) {
+                            result.push(encodeURIComponent(name) + '=' + encodeURIComponent(opt.value || opt.text))
+                        }
+                    }
+                    break
+                case 'file':
+
+                case 'submit':
+
+                default:
+                    break
+            }
+        }
+        return result.join('&')
+    }
+    var form = document.getElementById('form1')
+    console.log(serializeForm(form))
+</script>
+
+</html>

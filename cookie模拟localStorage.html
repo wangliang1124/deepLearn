@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>localStorage</title>
+</head>
+
+<body>
+
+</body>
+<script>
+    function setCookie(key, value = '', days) {
+        if (!key) return
+        let date = new Date()
+        date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000); // 设置过期时间为 days 天之后
+        document.cookie = key + "=" + decodeURIComponent(value) + ";expires=" + date.toGMTString();
+    }
+
+    function getCookie(key) {
+        let result = ''
+        let cookie = document.cookie + ";"
+        let queryString = key + "="
+        let start = cookie.indexOf(queryString)
+        if (start > -1) {
+            start += queryString.length
+            let end = cookie.indexOf(";", start)
+            result = (cookie.substring(start, end))
+        }
+        // return getCookies()[key]
+        return result
+    }
+
+    function getCookies() {
+        let result = {}
+        if (!document.cookie) return result
+        document.cookie.split(';').forEach((item) => {
+            const [key, value] = item.split('=')
+            result[key.trim()] = value.trim()
+        })
+        return result
+    }
+
+    window.localStorage = window.localStorage || new LocalStorage()
+
+    function LocalStorage() {
+        const cookies = getCookies()
+        this.length = Object.keys(cookies).length
+        for (let [key, value] of Object.entries(cookies)) {
+            this[key] = value
+        }
+    }
+
+    LocalStorage.prototype = function () {
+        function getItem(key) {
+            return getCookie(key);
+        }
+
+        function setItem(key, value, days) {
+            this[key] = value
+            this.length++
+            setCookie(key, value, days)
+        }
+
+        function removeItem(key) {
+            this.length--
+            delete this[key]
+            setItem(key, '', -1);
+        }
+
+        function clear() {
+            const cookies = getCookies();
+            for (let key of Object.keys(cookies)) {
+                delete this[key]
+                removeItem(key);
+            }
+            this.length = 0
+        }
+
+        return {
+            constructor: LocalStorage,
+            getItem,
+            setItem,
+            removeItem,
+            clear,
+        }
+    }()
+
+</script>
+
+</html>

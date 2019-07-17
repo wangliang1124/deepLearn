@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>event</title>
+</head>
+
+<body>
+    <ul id="nav">
+        <li><a href="http://11111">111</a></li>
+        <li><a href="http://2222">222</a></li>
+        <li><a href="http://333">333</a></li>
+        <li><a href="http://444">444</a></li>
+    </ul>
+</body>
+<script>
+
+    // 使用原生javascript给下面列表中的li节点绑定点击事件,点击时创建一个Object对象,兼容IE和标准浏览器
+    var EventUtil = {
+        on: function (el, type, handler) {
+            if (window.addEventListener) {
+                el.addEventListener(type, handler, false)
+                return handler
+            } else if (window.attachEvent) {
+                var wrapper = function (event) {
+                    handler.call(el, event)
+                }
+                el.attachEvent('on' + type, wrapper)
+                return wrapper
+            } else {
+                el['on' + type] = handler
+                return handler
+            }
+        },
+        off: function (el, type, handler) {
+            if (window.removeEventListener) {
+                el.removeEventListener(type, handler, false)
+            } else if (window.detachEvent) {
+                el.detachEvent('on' + type, handler)
+            } else {
+                el['on' + type] = false
+            }
+        },
+        //禁用默认行为
+        prevent: function () {
+            if (window.preventDefault) {
+                window.preventDefault();
+            } else {
+                event.returnValue = false;
+            }
+        },
+        //阻止事件冒泡
+        stop: function (event) {
+            if (window.stopPropagation) {
+                event.stopPropagation();
+            } else {
+                event.cancelBubble = true;
+            }
+        },
+        //获取事件
+        getEvent: function (event) {
+            return event || window.event;
+        },
+        getTarget: function (event) {
+            return event.target || event.srcElement;
+        },
+        //获取事件类型
+        getType: function (event) {
+            return event.type;
+        },
+    }
+    var DOMUtil = {
+        text: function (el) {
+            if ('textContent' in el) {
+                return el.textContent
+            } else {
+                return el.innerText
+            }
+        },
+        prop: function (el, propName) {
+            return el.getAttribute(propName)
+        }
+    }
+    var nav = document.getElementById('nav')
+    EventUtil.on(nav, 'click', function (event) {
+        EventUtil.prevent()
+        var event = EventUtil.getEvent(event)
+        var target = EventUtil.getTarget(event)
+        // console.log(target, this.children)
+        var children = this.children
+        var result = {}
+        for (var i = 0, len = children.length; i < len; i++) {
+            // if (target = children[i].firstChild) {
+            //     EventUtil.prevent(event)
+            //     // EventUtil.stop(event)
+            // }
+            if (target === children[i].firstChild) {
+                console.log('===')
+                result['index'] = i + 1
+                result['name'] = DOMUtil.text(target)
+                result['link'] = DOMUtil.prop(target, 'href')
+            }
+        }
+        console.log(result)
+        return result
+    })
+</script>
+
+</html>

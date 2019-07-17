@@ -9,10 +9,7 @@ function New() {
     }
     obj.__proto__ = constructor.prototype;
     var ret = constructor.apply(obj, arguments);
-    if (
-        typeof ret === "function" ||
-        (typeof ret === "object" && ret !== null)
-    ) {
+    if (typeof ret === "function" || (typeof ret === "object" && ret !== null)) {
         return ret;
     }
     return obj;
@@ -93,8 +90,8 @@ console.log(
         /./,
         { a: 1, b: 2, c: null },
         [1, undefined],
-        Number(1)
-    ])
+        Number(1),
+    ]),
 );
 ```
 
@@ -120,8 +117,8 @@ console.log(
         /./,
         { a: 1, b: 2, c: null },
         [1, undefined],
-        Number(1)
-    ])
+        Number(1),
+    ]),
 );
 ```
 
@@ -146,7 +143,7 @@ Function.prototype._call = function(context) {
 
 // 测试 1
 let foo = {
-    value: 1
+    value: 1,
 };
 function bar(name, age) {
     console.log(name);
@@ -166,7 +163,7 @@ function test(str, fn, obj, arr) {
 }
 
 var obj = {
-    name: "我是 obj 的 name"
+    name: "我是 obj 的 name",
 };
 
 test._call(
@@ -177,7 +174,7 @@ test._call(
         console.log(fnStr);
     },
     { color: "red" },
-    [1, 2, 3]
+    [1, 2, 3],
 );
 ```
 
@@ -217,7 +214,7 @@ test._apply(obj, [
         console.log(fnStr);
     },
     { color: "red" },
-    [1, 2, 3]
+    [1, 2, 3],
 ]);
 ```
 
@@ -267,10 +264,7 @@ Function.prototype._bind = function(context) {
 
     var bound = function() {
         var bindArgs = Array.prototype.slice.call(arguments);
-        return source.apply(
-            this instanceof fNOP ? this : context,
-            args.concat(bindArgs)
-        );
+        return source.apply(this instanceof fNOP ? this : context, args.concat(bindArgs));
     };
 
     // Function.prototype doesn't have a prototype property
@@ -308,10 +302,7 @@ var bound = function() {
     }
     var newObj = new fNOP();
     var ret = source.apply(newObj, args.concat(bindArgs));
-    if (
-        ret !== null &&
-        (typeof ret === "object" || typeof ret === "function")
-    ) {
+    if (ret !== null && (typeof ret === "object" || typeof ret === "function")) {
         return ret;
     }
     return newObj;
@@ -410,8 +401,7 @@ function Promise(executor) {
 
 Promise.prototype.then = function(onFulfilled, onRejected) {
     //PromiseA+ 2.2.1 / PromiseA+ 2.2.5 / PromiseA+ 2.2.7.3 / PromiseA+ 2.2.7.4
-    onFulfilled =
-        typeof onFulfilled === "function" ? onFulfilled : value => value;
+    onFulfilled = typeof onFulfilled === "function" ? onFulfilled : value => value;
     onRejected =
         typeof onRejected === "function"
             ? onRejected
@@ -495,7 +485,7 @@ function resolvePromise(promise2, x, resolve, reject) {
                         if (used) return;
                         used = true;
                         reject(r);
-                    }
+                    },
                 );
             } else {
                 //PromiseA+2.3.3.4
@@ -554,7 +544,7 @@ Promise.prototype.finally = function(callback) {
             return Promise.resolve(callback()).then(() => {
                 throw err;
             });
-        }
+        },
     );
 };
 ```
@@ -598,7 +588,7 @@ Promise.all = function(promises) {
                     err => {
                         reject(err);
                         return;
-                    }
+                    },
                 );
             }
         }
@@ -736,11 +726,7 @@ function deepClone(obj) {
         return new RegExp(obj.source, flags.join(""));
     }
 
-    var result = Array.isArray(obj)
-        ? []
-        : obj.constructor
-        ? new obj.constructor()
-        : {};
+    var result = Array.isArray(obj) ? [] : obj.constructor ? new obj.constructor() : {};
 
     for (var key in obj) {
         result[key] = deepClone(obj[key]);
@@ -758,7 +744,7 @@ var a = {
     birth: new Date(),
     pattern: /qiu/gim,
     container: document.body,
-    hobbys: ["book", new Date(), /aaa/gim, 111]
+    hobbys: ["book", new Date(), /aaa/gim, 111],
 };
 
 var c = new A();
@@ -809,7 +795,7 @@ function spawn(genF) {
                     step(function() {
                         return gen.throw(e);
                     });
-                }
+                },
             );
         }
         step(function() {
@@ -822,23 +808,38 @@ function spawn(genF) {
 ## 13. 基于 Promise 的 ajax 封装
 
 ```js
-function ajax(url, options = {}) {
+function ajax(
+    options = {
+        url: "",
+        method: "GET",
+        data: {},
+    },
+) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        options.type = (options.type || "GET").toUpperCase();
+        options.method = options.method.toUpperCase();
         const paramString = formatParams(options.data);
-        // if (method === "get" && paramString) {
-        //     url.indexOf("?") > -1
-        //         ? (url += paramString)
-        //         : (url += `?${paramString}`);
-        // }
-        // xhr.open(method, url);
+
+        if (options.method === "GET") {
+            xhr.open("GET", options.url + "?" + paramString);
+            xhr.send(null);
+        }
+
+        if (options.method === "POST") {
+            xhr.open("POST", options.url);
+            // 设置请求头
+            // xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            // 跨域携带cookie
+            // xhr.withCredentials = true;
+            xhr.send(paramString);
+        }
+
         xhr.onload = function() {
             const result = {
                 status: xhr.status,
                 statusText: xhr.statusText,
                 headers: xhr.getAllResponseHeaders(),
-                data: xhr.response || xhr.responseText
+                data: xhr.response || xhr.responseText,
             };
             if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
                 resolve(result);
@@ -846,13 +847,6 @@ function ajax(url, options = {}) {
                 reject(result);
             }
         };
-        // 设置请求头
-        xhr.setRequestHeader(
-            "Content-type",
-            "application/x-www-form-urlencoded"
-        );
-        // 跨域携带cookie
-        xhr.withCredentials = true;
         // 错误处理
         xhr.onerror = function() {
             reject(new TypeError("请求出错"));
@@ -863,25 +857,14 @@ function ajax(url, options = {}) {
         xhr.onabort = function() {
             reject(new TypeError("请求被终止"));
         };
-        if (options.method === "POST") {
-            xhr.open('POST', options.url)
-            xhr.send(paramString)
-        } else {
-            xhr.open('GET', options.url + '?' + paramString)
-            xhr.send(null)
-        }
     });
 }
 
-function formatParams(param) {
+function formatParams(data) {
     let arr = [];
     for (var key in data) {
-        if (data.hasOwnProperty(key))
-            arr.push(
-                encodeURIComponent(key) + "=" + encodeURIComponent(data[key])
-            );
+        if (data.hasOwnProperty(key)) arr.push(encodeURIComponent(key) + "=" + encodeURIComponent(data[key]));
     }
-    // arr.push(("v=" + Math.random()).replace(".", ""));
     return arr.join("&");
 }
 ```
@@ -1059,16 +1042,14 @@ var q = function(url) {
     const pairs = query.split("&");
     pairs.forEach(pair => {
         const [key, value] = pair.split("=");
-        result[key] = value
-            ? decodeURIComponent(value).replace(/\+/g, " ")
-            : "";
+        result[key] = value ? decodeURIComponent(value).replace(/\+/g, " ") : "";
     });
     return result;
 };
 console.log(
     q(
-        "https://www.google.com/search?q=%E6%AD%A3%E5%88%99&oq=%E6%AD%A3%E5%88%99&aqs=chrome..69i57j0j69i59l2j0l2.480j0j9&sourceid=chrome&ie=UTF-8"
-    )
+        "https://www.google.com/search?q=%E6%AD%A3%E5%88%99&oq=%E6%AD%A3%E5%88%99&aqs=chrome..69i57j0j69i59l2j0l2.480j0j9&sourceid=chrome&ie=UTF-8",
+    ),
 );
 ```
 
@@ -1095,17 +1076,7 @@ log(flatten([1, [2, [[3, 4], 5], 6]]));
 ```js
 var parseURL = function(url) {
     var result = {};
-    var keys = [
-        "href",
-        "origin",
-        "protocol",
-        "host",
-        "hostname",
-        "port",
-        "pathname",
-        "search",
-        "hash"
-    ];
+    var keys = ["href", "origin", "protocol", "host", "hostname", "port", "pathname", "search", "hash"];
     var regexp = /(((?:https?|ftp|file):)\/\/(([^:\/\?#]+)(:\d+)?))(\/[^?#]*)?(\?[^#]*)?(#.*)?/;
 
     var match = regexp.exec(url);
@@ -1129,15 +1100,11 @@ function URLParser(url) {
         port: a.port,
         pathname: a.pathname,
         search: a.search,
-        hash: a.hash
+        hash: a.hash,
     };
 }
 
-console.log(
-    parseURL(
-        "https://www.cnblogs.com:8080/speeding/p/5097790.html?xxx=9999#test"
-    )
-);
+console.log(parseURL("https://www.cnblogs.com:8080/speeding/p/5097790.html?xxx=9999#test"));
 ```
 
 ```js
@@ -1162,3 +1129,10 @@ console.log(unique(arrarr));
 ## 窥探数据结构的世界- ES6 版
 
 > 窥探数据结构的世界- ES6 版 https://juejin.im/post/5cd1ab3df265da03587c142a
+
+
+> 描述一种 JavaScript 中实现 memoization(避免重复运算)的策略。
+> 从斐波那契数列求值优化谈 \_.memoize 方法 https://github.com/hanzichi/underscore-analysis/issues/23 <br>
+> 斐波那契数列求和的 js 方案以及优化 https://segmentfault.com/a/1190000007115162 <br>
+> 性能优化：memoization http://taobaofed.org/blog/2016/07/14/performance-optimization-memoization/ <br>
+> Faster JavaScript Memoization For Improved Application Performance https://addyosmani.com/blog/faster-javascript-memoization/ <br>

@@ -27,25 +27,7 @@
         <li>3</li>
         <li>4</li>
     </ul>
-    <form id="form1">
-        <select name="age">
-            <option value="aaa">aaa</option>
-            <option value="bbb" selected>bbb</option>
-        </select>
-        <select name="friends" multiple>
-            <option value="qiu" selected>qiu</option>
-            <option value="de">de</option>
-            <option value="qing" selected>qing</option>
-        </select>
-        <input name="name" value="qiudeqing">
-        <input type="password" name="password" value="11111">
-        <input type="hidden" name="salery" value="3333">
-        <textarea name="description">description</textarea>
-        <input type="checkbox" name="hobby" checked value="football">Football
-        <input type="checkbox" name="hobby" value="basketball">Basketball
-        <input type="radio" name="sex" checked value="Female">Female
-        <input type="radio" name="sex" value="Male">Male
-    </form>
+
     <ul id="nav">
         <li><a href="http://11111">111</a></li>
         <li><a href="http://2222">222</a></li>
@@ -297,142 +279,6 @@
         }
         reverse.appendChild(frag)
 
-        // 编写一个函数实现form的序列化(即将一个表单中的键值序列化为可提交的字符串)
-        var serializeForm = function (form) {
-            if (!form || form.nodeName.toUpperCase() !== 'FORM') return
-            var result = []
-            var field, type, name
-            for (var i = 0, len = form.length; i < len; i++) {
-                field = form.elements[i]
-                type = field.type
-                name = field.name
-                if (field.disable || !field.name) {
-                    continue
-                }
-                switch (type) {
-                    case 'text':
-                    case 'password':
-                    case 'hidden':
-                    case 'textarea':
-                        result.push(encodeURIComponent(name) + '=' + encodeURIComponent(field.value))
-                        break
-                    case 'radio':
-                    case 'checkbox':
-                        if (field.checked) {
-                            result.push(encodeURIComponent(name) + '=' + encodeURIComponent(field.value))
-                        }
-                        break
-                    case 'select-one':
-                    case 'select-multiple':
-                        var options = field.options, l = options.length
-                        for (var j = 0; j < l; j++) {
-                            var opt = options[j]
-                            if (opt.selected) {
-                                result.push(encodeURIComponent(name) + '=' + encodeURIComponent(opt.value || opt.text))
-                            }
-                        }
-                        break
-                    case 'file':
-
-                    case 'submit':
-
-                    default:
-                        break
-                }
-            }
-            return result.join('&')
-        }
-        var form = document.getElementById('form1')
-        log(serializeForm(form))
-
-        // 使用原生javascript给下面列表中的li节点绑定点击事件,点击时创建一个Object对象,兼容IE和标准浏览器
-        var EventUtil = {
-            on: function (el, type, handler) {
-                if (window.addEventListener) {
-                    el.addEventListener(type, handler, false)
-                    return handler
-                } else if (window.attachEvent) {
-                    var wrapper = function (event) {
-                        handler.call(el, event)
-                    }
-                    el.attachEvent('on' + type, wrapper)
-                    return wrapper
-                } else {
-                    el['on' + type] = handler
-                    return handler
-                }
-            },
-            off: function (el, type, handler) {
-                if (window.removeEventListener) {
-                    el.removeEventListener(type, handler, false)
-                } else if (window.detachEvent) {
-                    el.detachEvent('on' + type, handler)
-                } else {
-                    el['on' + type] = false
-                }
-            },
-            //禁用默认行为
-            prevent: function () {
-                if (window.preventDefault) {
-                    window.preventDefault();
-                } else {
-                    event.returnValue = false;
-                }
-            },
-            //阻止事件冒泡
-            stop: function (event) {
-                if (window.stopPropagation) {
-                    event.stopPropagation();
-                } else {
-                    event.cancelBubble = true;
-                }
-            },
-            //获取事件
-            getEvent: function (event) {
-                return event || window.event;
-            },
-            getTarget: function (event) {
-                return event.target || event.srcElement;
-            },
-            //获取事件类型
-            getType: function (event) {
-                return event.type;
-            },
-        }
-        var DOMUtil = {
-            text: function (el) {
-                if ('textContent' in el) {
-                    return el.textContent
-                } else {
-                    return el.innerText
-                }
-            },
-            prop: function (el, propName) {
-                return el.getAttribute(propName)
-            }
-        }
-        var nav = document.getElementById('nav')
-        EventUtil.on(nav, 'click', function (event) {
-            EventUtil.prevent()
-            var event = EventUtil.getEvent(event)
-            var target = EventUtil.getTarget(event)
-            var children = this.children
-            var result = {}
-            for (var i = 0, len = children.length; i < len; i++) {
-                // if (target = children[i].firstChild) {
-                //     EventUtil.prevent(event)
-                //     // EventUtil.stop(event)
-                // }
-                if (target === children[i]) {
-                    result['index'] = i + 1
-                    result['name'] = DOMUtil.text(target)
-                    result['link'] = DOMUtil.prop(target.getElementsByTagName('a')[0], 'href')
-                }
-            }
-            log(result)
-            return result
-        })
-
         // 有一个大数组,var a = ['1', '2', '3', ...];a的长度是100,内容填充随机整数的字符串.请先构造此数组a,然后设计一个算法将其内容去重
         var fillArray = function (input, start, end) {
             start = start ? start : 1
@@ -562,13 +408,7 @@
             return input && input.toString().replace(/(^|\s)\d+/g, m => m.replace(/(?=(?!\b)(\d{3})+$)/g, ","));
         };
         console.log(milliFormat(1200000123123.223));
-
-        // 描述一种 JavaScript 中实现 memoization(避免重复运算)的策略。
-        // 从斐波那契数列求值优化谈 \_.memoize 方法 https://github.com/hanzichi/underscore-analysis/issues/23 <br>
-        // 斐波那契数列求和的 js 方案以及优化 https://segmentfault.com/a/1190000007115162 <br>
-        // 性能优化：memoization http://taobaofed.org/blog/2016/07/14/performance-optimization-memoization/ <br>
-        // Faster JavaScript Memoization For Improved Application Performance https://addyosmani.com/blog/faster-javascript-memoization/ <br>
-
+        
         //  如何遍历一个 dom 树
         function traversal(node) {
             //对node的处理

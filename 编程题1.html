@@ -78,21 +78,10 @@
         <li class="test test1">这是第二条</li>
         <li class="test test1">这是第三条</li>
     </ul>
-    <div id="box">
-        <h2><a href="javascript:;">点击回放拖动轨迹</a></h2>
-        <p><strong>Drag:</strong><span></span></p>
-        <p><strong>offsetTop:</strong><span></span></p>
-        <p><strong>offsetLeft:</strong><span></span></p>
-    </div>
+
     <div id="tips">
         <h2>我知道了<span class="close">x</span></h2>
     </div>
-
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2015/09/09/16/05/forest-931706_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2014/08/01/00/08/pier-407252_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2014/12/15/17/16/pier-569314_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2010/12/13/10/09/abstract-2384_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2015/10/24/11/09/drop-of-water-1004250_1280.jpg">
 
     <script>
         var log = console.log.bind(console)
@@ -180,7 +169,6 @@
         }
 
         var escapeHtml = function (htmlStr) {
-            // var source = '[<|>|&|\'|\"|\`]'
             var source = '(?:' + Object.keys(escapeMap).join('|') + ')'
             var reg = RegExp(source, 'g')
             return htmlStr.replace(reg, function (match) {
@@ -393,46 +381,6 @@
             log('................... yessss!')
         })
 
-            // // 12.（设计题）想实现一个对页面某个节点的拖曳？如何做？（使用原生JS）
-            // ; (function () {
-            //     var box = $('#box')[0]
-            //     var h2 = box.getElementsByTagName('h2')[0]
-            //     h2.onmousedown = function (e) {
-            //         var disX = e.clientX - box.offsetLeft
-            //         var disY = e.clientY - box.offsetTop
-            //         this.setCapture && this.setCapture()
-            //         document.onmousemove = function (e) {
-            //             log('move======')
-            //             var l = e.clientX - disX
-            //             var t = e.clientY - disY
-            //             log(l, t)
-            //             // 修正 l,t
-            //             var maxL = document.documentElement.clientWidth || document.body.clientWidth - box.offsetWidth
-            //             var maxT = document.documentElement.clientHeight || document.body.clientHeight - box.offsetHeight
-
-            //             l = l > 0 ? l : 0
-            //             l = l > maxL ? maxL : l
-            //             t = t > 0 ? t : 0
-            //             t = t > maxT ? maxT : t
-
-            //             box.style.marginLeft = box.style.marginTop = 0
-            //             box.style.left = l + 'px'
-            //             box.style.top = t + 'px'
-            //         }
-            //         document.onmouseup = function () {
-            //             document.onmousemove = null
-            //             document.onmouseup = null
-            //             this.releaseCapture && this.releaseCapture()
-            //         }
-            //     }
-            //     h2.onmouseup = function () {
-            //         document.onmousemove = null
-            //         document.onmouseup = null
-            //         this.releaseCapture && this.releaseCapture()
-            //     }
-
-            // })
-
         // 13关闭tips提示
         function setCookie(name, value, days) { // 给cookie增加一个时间变量　
             var date = new Date()
@@ -498,66 +446,10 @@
             window.fn = fn
         })(window)
 
-            // use
-            ; (function () {
-                var t = new fn('<p><a href="{0}">{1}</a><span>{2}</span></p>')
-                console.log(t.format('http://www.alibaba.com', 'Alibaba', 'Welcome'))
-            })()
+        // use
+        var t = new fn('<p><a href="{0}">{1}</a><span>{2}</span></p>')
+        console.log(t.format('http://www.alibaba.com', 'Alibaba', 'Welcome'))
 
-        // 16.讲解原生Js实现ajax的原理。
-        function ajax(options) {
-            options = options || {}
-            options.type = (options.type || 'GET').toUpperCase()
-            options.dataType = options.dataType || 'json'
-            var params = formatParams(options.data)
-            // 创建
-            var http = null
-            if (window.XMLHttpRequest) {
-                http = new XMLHttpRequest()
-            } else {
-                http = new ActiveXObject('Microsoft.XMLHTTP')
-            }
-            // 监听
-            http.onreadystatechange = function () {
-                if (http.readyState === 4) {
-                    if (http.status >= 200 && http.status < 300 || http.status === 304) {
-                        options.success && options.success(http.responseText)
-                    } else {
-                        options.fail && options.fail(status)
-                    }
-                }
-            }
-            // 发送
-            if (options.type === 'GET') {
-                http.open('GET', options.url + '?' + params, true)
-                http.send(null)
-            } else if (options.type === 'POST') {
-                http.open('POST', options.url, true)
-                http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
-                http.send(params)
-            }
-
-            function formatParams(data) {
-                var arr = []
-                for (var key in data) {
-                    if (data.hasOwnProperty(key)) arr.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
-                }
-                arr.push(('v=' + Math.random()).replace('.', ''))
-                return arr.join('&')
-            }
-        }
-        // ajax({
-        //   type: 'get',
-        //   url: 'https://developer.mozilla.org/en-US/docs/Web/Guide/AJAX/Getting_Started',
-        //   data: { name: 'super', age: 20 },
-        //   dataType: 'json',
-        //   success: function(res) {
-        //     // console.log(res)
-        //   },
-        //   fail: function(status) {
-        //     console.log('status:' + status)
-        //   }
-        // })
 
         // 4、图片预加载：实现预加载一张图片，加载完成后显示在网页中并设定其高度为50px，宽度为50px；
         function addImg(el, src) {
@@ -566,13 +458,13 @@
             img.onload = function () {
                 // img.width = 350
                 // img.height = 150
-                img.style.width = '400px'
-                img.style.height = '200px'
+                img.style.width = '100px'
+                img.style.height = '100px'
                 el.appendChild(img)
             }
             img.src = src
         }
-        addImg(document.body, './img/tip-box.jpg')
+        addImg(document.body, './assets/img/tip-box.jpg')
 
         // 6、模拟一个HashTable类，包含有add、remove、contains、length方法；
         function HashTable() {

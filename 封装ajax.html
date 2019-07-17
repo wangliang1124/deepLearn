@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>ajax test</title>
+</head>
+
+<body>
+    <div id='root'></div>
+</body>
+<script>
+    function ajax(options = {
+        url: '',
+        method: 'GET',
+        data: {}
+    }) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            options.method = options.method.toUpperCase();
+            const paramString = formatParams(options.data);
+
+            if (options.method === "GET") {
+                xhr.open("GET", options.url + "?" + paramString);
+                xhr.send(null);
+            }
+
+            if (options.method === "POST") {
+                xhr.open("POST", options.url);
+                // 设置请求头
+                // xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                // 跨域携带cookie
+                // xhr.withCredentials = true;
+                xhr.send(paramString);
+            }
+
+            xhr.onload = function () {
+                console.log(xhr)
+                const result = {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    headers: xhr.getAllResponseHeaders(),
+                    data: xhr.response || xhr.responseText,
+                };
+                if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
+                    resolve(result);
+                } else {
+                    reject(result);
+                }
+            };
+            // 错误处理
+            xhr.onerror = function () {
+                reject(new TypeError("请求出错"));
+            };
+            xhr.timeout = function () {
+                reject(new TypeError("请求超时"));
+            };
+            xhr.onabort = function () {
+                reject(new TypeError("请求被终止"));
+            };
+        });
+    }
+
+    function formatParams(data) {
+        let arr = [];
+        for (var key in data) {
+            if (data.hasOwnProperty(key)) arr.push(encodeURIComponent(key) + "=" + encodeURIComponent(data[key]));
+        }
+        return arr.join("&");
+    }
+
+    ajax({
+        url: 'https://developer.mozilla.org/en-US/docs/Web/Guide/AJAX/Getting_Started',
+        method: 'get',
+        data: { name: 'super', age: 20 },
+    }).then((res) => {
+        console.log(res)
+        document.getElementById('root').innerHTML = res.data
+    })
+
+</script>
+<script>
+/* 
+    // 16.讲解原生Js实现ajax的原理。
+    function ajax(options) {
+        options = options || {}
+        options.type = (options.type || 'GET').toUpperCase()
+        options.dataType = options.dataType || 'json'
+        var params = formatParams(options.data)
+        // 创建
+        var http = null
+        if (window.XMLHttpRequest) {
+            http = new XMLHttpRequest()
+        } else {
+            http = new ActiveXObject('Microsoft.XMLHTTP')
+        }
+        // 监听
+        http.onreadystatechange = function () {
+            if (http.readyState === 4) {
+                if (http.status >= 200 && http.status < 300 || http.status === 304) {
+                    options.success && options.success(http.responseText)
+                } else {
+                    options.fail && options.fail(status)
+                }
+            }
+        }
+        // 发送
+        if (options.type === 'GET') {
+            http.open('GET', options.url + '?' + params, true)
+            http.send(null)
+        } else if (options.type === 'POST') {
+            http.open('POST', options.url, true)
+            http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+            http.send(params)
+        }
+
+        function formatParams(data) {
+            var arr = []
+            for (var key in data) {
+                if (data.hasOwnProperty(key)) arr.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
+            }
+            arr.push(('v=' + Math.random()).replace('.', ''))
+            return arr.join('&')
+        }
+    }
+    ajax({
+        type: 'get',
+        url: 'https://developer.mozilla.org/en-US/docs/Web/Guide/AJAX/Getting_Started',
+        data: { name: 'super', age: 20 },
+        dataType: 'json',
+        success: function (res) {
+            // console.log(res)
+        },
+        fail: function (status) {
+            console.log('status:' + status)
+        }
+    })
+ */
+</script>
+
+</html>
