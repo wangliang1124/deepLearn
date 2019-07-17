@@ -138,6 +138,9 @@
 7. HTTP Header 详解
     >  https://kb.cnblogs.com/page/92320/
 
+8. 基于 Token 的身份验证
+    > 基于 Token 的身份验证 https://ninghao.net/blog/2834
+
 ## HTML
 
 1. placeholder
