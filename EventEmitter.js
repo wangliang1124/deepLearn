@@ -13,10 +13,10 @@ EventEmitter.prototype = {
     },
 
     off: function(type, handler) {
-        const eventHandlers = this.eventQueue[type];
-        for (let i = eventHandlers.length - 1; i >= 0; i--) {
-            if (eventHandlers[i] === handler) {
-                eventHandlers.splice(i, 1);
+        const handlers = this.eventQueue[type];
+        for (let i = handlers.length - 1; i >= 0; i--) {
+            if (handlers[i] === handler) {
+                handlers.splice(i, 1);
             }
         }
 
@@ -24,9 +24,10 @@ EventEmitter.prototype = {
     },
 
     emit: function(type, data) {
-        const eventHandlers = this.eventQueue[type];
-        for (let i = 0; i < eventHandlers.length; i++) {
-            const handler = eventHandlers[i];
+        const handlers = this.eventQueue[type];
+        if (!handlers || handlers.length === 0) return;
+        for (let i = 0; i < handlers.length; i++) {
+            const handler = handlers[i];
             handler && handler(data);
         }
         return this;
