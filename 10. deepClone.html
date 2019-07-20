@@ -20,7 +20,7 @@
 </head>
 
 <body>
-    <H3></H3>
+    <H3>深克隆 deepClone</H3>
     <pre>
 
     </pre>
@@ -58,28 +58,30 @@
                 obj.constructor ? new obj.constructor() : {};
 
             for (var key in obj) {
+                console.log(key)
                 result[key] = deepClone(obj[key]);
             }
 
             return result;
         }
 
-        function A() {
-            this.a = a;
+        function Test(props) {
+            this.props = props;
         }
 
-        var a = {
-            name: 'qiu',
+        var test = {
+            name: 'wangliang',
             birth: new Date(),
-            pattern: /qiu/gim,
+            pattern: /wangliang/gim,
             container: document.body,
             hobbys: ['book', new Date(), /aaa/gim, 111]
         };
 
-        var c = new A();
-        var b = deepClone(c);
-        console.log(c.a === b.a);
-        console.log(c, b);
+        var source = new Test(test);
+        var clone = deepClone(source);
+        console.log(source.props.birth === clone.props.birth);
+        console.log(source);
+        console.log(clone);
     </script>
 </body>
 

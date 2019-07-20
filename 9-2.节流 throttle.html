@@ -7,6 +7,10 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>TEST</title>
     <style>
+        html {
+            height: 400%;
+        }
+
         body {
             padding: 16px 32px;
         }
@@ -20,12 +24,13 @@
 </head>
 
 <body>
-    <H3></H3>
+    <H3>节流 throttle</H3>
     <pre>
 
     </pre>
 
     <script>
+        // underscore throttle
         function throttle(func, wait, options) {
             var timeout, context, args, result;
             var previous = 0;
@@ -74,6 +79,65 @@
 
             return throttled;
         }
+
+        // 利用时间戳实现
+        function throttle(func, wait) {
+            var previous = 0;
+            return function () {
+                var now = Date.now();
+                if (now - previous >= wait) {
+                    func.apply(this, arguments);
+                    previous = Date.now();
+                }
+            }
+        }
+
+        // 利用定时器实现
+        function throttle(func, wait) {
+            var timer = null;
+            return function () {
+                var context = this;
+                var args = arguments;
+                if (!timer) {
+                    timer = setTimeout(function () {
+                        func.apply(context, args);
+                        timer = null;
+                    }, wait);
+                }
+            }
+        }
+
+
+        // 时间戳 + 定时器
+        function throttle(func, wait) {
+            var timeout = null;
+            var previous = 0;
+            return function () {
+                var now = Date.now();
+                var remaining = wait - (now - previous);
+                var context = this;
+                var args = arguments;
+                if (remaining <= 0 || remaining > wait) {
+                    if (timeout) {
+                        clearTimeout(timeout);
+                        timeout = null;
+                    }
+                    previous = now;
+                    func.apply(context, args);
+                } else if (!timeout) {
+                    timeout = setTimeout(function () {
+                        previous = Date.now();
+                        func.apply(context, args);
+                        timeout = null;
+                    }, remaining);
+                }
+            }
+        }
+
+        function handle() {
+            console.log('====== throttle ======', Date.now());
+        }
+        window.addEventListener('scroll', throttle(handle, 1000));
     </script>
 </body>
 

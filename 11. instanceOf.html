@@ -25,11 +25,11 @@
     function instanceOf(source, target) {
         var proto = source.__proto__;
         let prototype = target.prototype;
-        while (true) {
-            if (proto === null) return false;
+        while (proto) {
             if (proto === prototype) return true;
             proto = proto.__proto__;
         }
+        return false;
     }
     </pre>
 
@@ -37,11 +37,11 @@
         function instanceOf(source, target) {
             var proto = source.__proto__;
             let prototype = target.prototype;
-            while (true) {
-                if (proto === null) return false;
+            while (proto) {
                 if (proto === prototype) return true;
                 proto = proto.__proto__;
             }
+            return false;
         }
 
         function Person(name) {

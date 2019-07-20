@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>jsonp</title>
+</head>
+
+<body>
+
+</body>
+<script>
+    function jsonp(url, data) {
+        return new Promise((resolve, reject) => {
+            // 1.将传入的data数据转化为url字符串形式
+            var queryString = url.indexOf("?") == -1 ? "?" : "&";
+            for (var key in data) {
+                queryString += key + "=" + data[key] + "&";
+            }
+            // 2.处理url中的回调函数
+            var callbackName =
+                "jsonp_callback_" +
+                Math.random()
+                    .toString(16)
+                    .replace(".", "");
+            queryString += "callback=" + callbackName;
+
+            // 3.创建一个script标签并插入到页面中
+            var script = document.createElement("script");
+            script.src = url + queryString;
+
+            // 4.挂载回调函数
+            window[callbackName] = function (data) {
+                resolve(data);
+                // 处理完回调函数的数据之后，删除jsonp的script标签
+                document.body.removeChild(script);
+            };
+
+            document.body.appendChild(script);
+        });
+    }
+
+    jsonp('http://127.0.0.1:3000/show', { name: 'super', age: 20 }).then((res) => {
+        console.log(res)
+    })
+</script>
+
+</html>

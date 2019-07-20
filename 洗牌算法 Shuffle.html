@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Shuffle</title>
+</head>
+<style>
+    body {
+        padding: 16px 32px;
+    }
+    div {
+        line-height: 2
+    }
+</style>
+
+<body>
+    <div>
+        <a href="https://www.h5jun.com/post/array-shuffle.html">数组的完全随机排列</a>
+    </div>
+    <div>
+        <a href="https://github.com/hanzichi/underscore-analysis/issues/15">JavaScript
+            数组乱序</a>
+    </div>
+    <div>
+        <a href="https://www.kirupa.com/html5/shuffling_array_js.htm">Shuffling an Array in JavaScript</a>
+    </div>
+</body>
+<script>
+    function append(value) {
+        const el = document.createElement('div')
+        el.innerHTML = value
+        document.body.appendChild(el)
+    }
+</script>
+<script>
+    // 方法一
+    function shuffle(arr) {
+        var len = arr.length;
+        for (var i = 0; i < len - 1; i++) {
+            var idx = Math.floor(Math.random() * (len - i));
+            var temp = arr[idx];
+            arr[idx] = arr[len - i - 1];
+            arr[len - i - 1] = temp;
+        }
+        return arr;
+    }
+
+    // 方法二
+    function shuffle(arr) {
+        let len = arr.length, random;
+        while (len) {
+            random = (Math.random() * len--) >>> 0; // 无符号右移位运算符向下取整
+            [arr[len], arr[random]] = [arr[random], arr[len]] // ES6 的结构赋值实现变量互换
+        }
+        return arr;
+    }
+
+    var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48, 3, 44, 38, 5, 47, 15, 36];
+    console.log(shuffle(arr))
+    append(JSON.stringify(arr))
+    // var arr = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    // var res = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    // var t = 10000;
+    // for (var i = 0; i < t; i++) {
+    //     var sorted = shuffle(arr.slice());
+    //     sorted.forEach(function (v, i) {
+    //         res[i] += v;
+    //     });
+    // }
+
+    // res = res.map(function (v) {
+    //     return v / t;
+    // });
+
+    // console.log(res);
+</script>
+
+
+</html>
