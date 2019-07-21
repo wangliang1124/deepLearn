@@ -11,11 +11,18 @@
             margin: 40px;
             background-color: tomato;
         }
+
+        input[type="button"] {
+            display: inline-block;
+            width: 100px;
+        }
     </style>
 </head>
 
 <body>
-    <div id="target">我是内容</div>
+    <div>
+        <div id="target">我是内容</div>
+    </div>
     <div>
         <input type="button" id="button1" value="1" />
         <input type="button" id="button2" value="2" />
@@ -29,405 +36,445 @@
     </ul>
 
     <ul id="nav">
-        <li><a href="http://11111">111</a></li>
+        <li><a href="http://11111">111</a><a href="http://11111">111</a><a href="http://11111">111</a></li>
         <li><a href="http://2222">222</a></li>
         <li><a href="http://333">333</a></li>
         <li><a href="http://444">444</a></li>
     </ul>
+</body>
+<script>
+    var log = console.log.bind(console)
 
-    <script>
-        var log = console.log.bind(console)
+    // 请用原生js实现一个函数,给页面制定的任意一个元素添加一个透明遮罩(透明度可变,默认0.2),使这个区域点击无效,要求兼容IE8+及各主流浏览器,遮罩层效果如下图所示:
+    function addMask(el, opacity) {
+        opacity = opacity || 0.2
+        var style = window.getComputedStyle(el, null)
+        var rect = el.getBoundingClientRect()
+        var mr = parseInt(style.marginRight)
+        var ml = parseInt(style.marginLeft)
+        var mb = parseInt(style.marginBottom)
+        var mt = parseInt(style.marginTop)
+        // console.log(style, rect, el.offsetLeft)
+        var mask = document.createElement('div')
 
-        // 请用原生js实现一个函数,给页面制定的任意一个元素添加一个透明遮罩(透明度可变,默认0.2),使这个区域点击无效,要求兼容IE8+及各主流浏览器,遮罩层效果如下图所示:
-        function addMask(el, opacity) {
-            opacity = opacity || 0.2
-            var style = window.getComputedStyle(el, null)
-            var rect = el.getBoundingClientRect()
-            var mr = parseInt(style.marginRight)
-            var ml = parseInt(style.marginLeft)
-            var mb = parseInt(style.marginBottom)
-            var mt = parseInt(style.marginTop)
-            // console.log(style, rect, el.offsetLeft)
-            var mask = document.createElement('div')
+        mask.style.position = 'absolute'
 
-            mask.style.position = 'absolute'
+        mask.style.left = el.offsetLeft - mr + 'px'
+        mask.style.top = el.offsetTop - mt + 'px'
 
-            mask.style.left = el.offsetLeft - mr + 'px'
-            mask.style.top = el.offsetTop - mt + 'px'
+        mask.style.width = rect.width + mr + ml + 'px'
+        mask.style.height = rect.height + mt + mb + 'px'
 
-            mask.style.width = rect.width + mr + ml + 'px'
-            mask.style.height = rect.height + mt + mb + 'px'
+        mask.style.backgroundColor = '#000'
+        mask.style.zIndex = 1
+        mask.style.opacity = opacity
 
-            mask.style.backgroundColor = '#000'
-            mask.style.zIndex = 1
-            mask.style.opacity = opacity
+        el.parentNode.appendChild(mask)
 
-            el.parentNode.appendChild(mask)
+    }
+    var target = document.getElementById('target')
+    addMask(target)
 
+    target.addEventListener('click', function () {
+        console.log('click')
+    }, false)
+
+    // 请用代码写出(今天是星期x)其中x表示当天是星期几,如果当天是星期一,输出应该是"今天是星期一"
+    var days = ['日', '一', '二', '三', '四', '五', '六'];
+    var date = new Date()
+    console.log('今天是星期' + days[date.getDay()])
+
+    // 下面这段代码想要循环延时输出结果0 1 2 3 4,请问输出结果是否正确,如果不正确,请说明为什么,并修改循环内的代码使其输出正确结果
+    for (var i = 0; i < 5; ++i) {
+        setTimeout(function () {
+            console.log(i + ' ')
+        }, 100)
+    }
+
+    // 方法一
+    for (var i = 0; i < 5; ++i) {
+        (function (i) {
+            setTimeout(function () {
+                console.log(i + ' ')
+            }, 1000 * i)
+        })(i)
+    }
+
+    // 方法二
+    for (let i = 0; i < 5; ++i) {
+        setTimeout(function () {
+            console.log(i + ' ')
+        }, 1000 * i)
+    }
+
+    // 现有一个Page类,其原型对象上有许多以post开头的方法(如postMsg);另有一拦截函数 check,只返回ture或false.请设计一个函数,该函数应批量改造原Page的postXXX方法,在保留其原有功能的同时,为每个postXXX方法增加拦截验证功能,当check返回true时继续执行原postXXX方法,返回false时不再执行原postXXX方法
+    function Page() { }
+
+    Page.prototype = {
+        constructor: Page,
+        postA: function (a) {
+            console.log('a:' + a)
+        },
+        postB: function (b) {
+            console.log('b:' + b)
+        },
+        postC: function (c) {
+            console.log('c:' + c)
+        },
+        check: function () {
+            return Math.random() > 0.5
         }
-        var target = document.getElementById('target')
-        addMask(target)
+    }
 
-        target.addEventListener('click', function () {
-            console.log('click')
-        }, false)
+    var checkify = function (obj) {
+        for (var key in obj) {
+            if (key.indexOf('post') === 0 && typeof obj[key] === 'function') {
+                (function (key) {
+                    var fn = obj[key]
+                    log(key)
+                    obj[key] = function () {
+                        if (obj.check()) fn.apply(obj, arguments)
+                    }
+                })(key)
+            }
+        }
+    }
 
-        // 请用代码写出(今天是星期x)其中x表示当天是星期几,如果当天是星期一,输出应该是"今天是星期一"
-        var days = ['日', '一', '二', '三', '四', '五', '六'];
+    checkify(Page.prototype)
+    // log(Page.prototype)
+
+    var obj = new Page()
+    // log(obj)
+    obj.postA('checkfy')
+    obj.postB('checkfy')
+    obj.postC('checkfy')
+
+    // 补充代码,鼠标单击Button1后将Button1移动到Button2的后面
+    var btn1 = document.getElementById('button1')
+    var btn2 = document.getElementById('button2')
+
+    btn1.onclick = function () {
+        // btn1.parentNode.appendChild(btn1)
+        btn1.parentNode.insertBefore(btn2, btn1)
+    }
+
+    // 网页中实现一个计算当年还剩多少时间的倒数计时程序,要求网页上实时动态显示"××年还剩××天××时××分××秒"
+    function getRemainTime() {
         var date = new Date()
-        console.log('今天是星期' + days[date.getDay()])
-
-        // 下面这段代码想要循环延时输出结果0 1 2 3 4,请问输出结果是否正确,如果不正确,请说明为什么,并修改循环内的代码使其输出正确结果
-        for (var i = 0; i < 5; ++i) {
-            setTimeout(function () {
-                console.log(i + ' ')
-            }, 100)
-        }
-
-        // 方法一
-        for (var i = 0; i < 5; ++i) {
-            (function (i) {
-                setTimeout(function () {
-                    console.log(i + ' ')
-                }, 1000)
-            })(i)
-        }
-
-        // 方法二
-        var output = function (i) {
-            setTimeout(function () {
-                console.log(i + ' ')
-            }, 1000)
-        }
-        for (var i = 0; i < 5; ++i) {
-            output(i)
-        }
-
-        // 现有一个Page类,其原型对象上有许多以post开头的方法(如postMsg);另有一拦截函数 check,只返回ture或false.请设计一个函数,该函数应批量改造原Page的postXXX方法,在保留其原有功能的同时,为每个postXXX方法增加拦截验证功能,当check返回true时继续执行原postXXX方法,返回false时不再执行原postXXX方法
-        function Page() { }
-
-        Page.prototype = {
-            constructor: Page,
-            postA: function (a) {
-                console.log('a:' + a)
-            },
-            postB: function (b) {
-                console.log('b:' + b)
-            },
-            postC: function (c) {
-                console.log('c:' + c)
-            },
-            check: function () {
-                return Math.random() > 0.5
-            }
-        }
-
-        var checkify = function (obj) {
-            for (var key in obj) {
-                if (key.indexOf('post') === 0 && typeof obj[key] === 'function') {
-                    (function (key) {
-                        var fn = obj[key]
-                        log(key)
-                        obj[key] = function () {
-                            if (obj.check()) fn.apply(obj, arguments)
-                        }
-                    })(key)
-                }
-            }
-        }
-
-        checkify(Page.prototype)
-        // log(Page.prototype)
-
-        var obj = new Page()
-        // log(obj)
-        obj.postA('checkfy')
-        obj.postB('checkfy')
-        obj.postC('checkfy')
-
-        // 补充代码,鼠标单击Button1后将Button1移动到Button2的后面
-        var btn1 = document.getElementById('button1')
-        var btn2 = document.getElementById('button2')
-
-        btn1.onclick = function () {
-            // btn1.parentNode.appendChild(btn1)
-            btn1.parentNode.insertBefore(btn2, btn1)
-        }
-
-        // 网页中实现一个计算当年还剩多少时间的倒数计时程序,要求网页上实时动态显示"××年还剩××天××时××分××秒"
-        function getRemainTime() {
-            var date = new Date()
-            var year = date.getFullYear()
-            var remain = new Date(year + 1, 0, 1).getTime() - date.getTime()
-            var text = `${year}年还剩`
-            text += Math.floor(remain / (24 * 60 * 60 * 1000)) + '天'
-            remain = remain % (24 * 60 * 60 * 1000)
-            text += Math.floor(remain / (60 * 60 * 1000)) + '时'
-            remain = remain % (60 * 60 * 1000)
-            text += Math.floor(remain / (60 * 1000)) + '分'
-            remain = remain % (60 * 1000)
-            text += Math.floor(remain / 1000) + '秒'
-            return text
-        }
-        var remain = document.getElementById('remain')
+        var year = date.getFullYear()
+        var remain = new Date(year + 1, 0, 1).getTime() - date.getTime()
+        var text = `${year}年还剩`
+        text += Math.floor(remain / (24 * 60 * 60 * 1000)) + '天'
+        remain = remain % (24 * 60 * 60 * 1000)
+        text += Math.floor(remain / (60 * 60 * 1000)) + '时'
+        remain = remain % (60 * 60 * 1000)
+        text += Math.floor(remain / (60 * 1000)) + '分'
+        remain = remain % (60 * 1000)
+        text += Math.floor(remain / 1000) + '秒'
+        return text
+    }
+    var remain = document.getElementById('remain')
+    remain.innerHTML = getRemainTime()
+    setInterval(function () {
         remain.innerHTML = getRemainTime()
-        setInterval(function () {
-            remain.innerHTML = getRemainTime()
-        }, 1000)
+    }, 1000)
 
-        // 如何判断一个对象是否为数组
-        var isArray = Array.isArray || function (obj) {
-            return Object.prototype.toString.call(obj) === '[object Array]'
-        }
+    // 如何判断一个对象是否为数组
+    var isArray = Array.isArray || function (obj) {
+        return Object.prototype.toString.call(obj) === '[object Array]'
+    }
 
-        log(isArray(Array.prototype))
+    log(isArray(Array.prototype))
 
-        // 请评价以下事件监听器代码并给出改进意见
+    // 请评价以下事件监听器代码并给出改进意见
+    if (window.addEventListener) {
+        var addListener = function (el, type, listener, useCapture) {
+            el.addEventListener(type, listener, useCapture);
+        };
+    } else if (document.all) {
+        addListener = function (el, type, listener) {
+            el.attachEvent('on' + type, function () {
+                listener.apply(el);
+            });
+        };
+    }
+
+    var addListener = (function () {
         if (window.addEventListener) {
-            var addListener = function (el, type, listener, useCapture) {
-                el.addEventListener(type, listener, useCapture);
-            };
-        } else if (document.all) {
-            addListener = function (el, type, listener) {
-                el.attachEvent('on' + type, function () {
-                    listener.apply(el);
-                });
-            };
-        }
-
-        var addListener = (function () {
-            if (window.addEventListener) {
-                return function (el, type, handler) {
-                    el.addEventListener(type, handler, false)
-                    return handler
+            return function (el, type, handler) {
+                el.addEventListener(type, handler, false)
+                return handler
+            }
+        } else if (window.attachEvent) {
+            return function (el, type, handler) {
+                handler = function () {
+                    var event = event || window.event
+                    event.target = event.srcElement
+                    handler.call(el, event)
                 }
-            } else if (window.attachEvent) {
-                return function (el, type, handler) {
-                    handler = function () {
-                        var event = event || window.event
-                        event.target = event.srcElement
-                        handler.call(el, event)
-                    }
-                    el.attachEvent('on' + type, handler)
-                    return handler
+                el.attachEvent('on' + type, handler)
+                return handler
+            }
+        } else {
+            return function (el, type, handler) {
+                el['on' + type] = handler
+            }
+        }
+    }())
+
+    // 如何判断一个对象是否为函数
+    var isFunction = function (obj) {
+        if (typeof /./ !== 'function') {
+            return typeof obj === 'function'
+        }
+        return Object.prototype.toString.call(obj) === '[object Function]'
+    }
+
+    log('isF:' + isFunction(() => { }))
+
+    // 完成函数getViewportSize返回指定窗口的视口尺寸
+    var getViewportSize = function () {
+        var width, height
+        width = window.innerWidth || document.documentElement.clientWidth || documentElement.body.clientWidth
+        height = window.innerHeight || document.documentElement.clientHeight || documentElement.body.clientHeight
+        return {
+            width,
+            height
+        }
+    }
+    log(getViewportSize())
+
+    // 完成函数getScrollOffset返回窗口滚动条偏移量
+    var getScrollOffset = function () {
+        var offsetLeft, offsetTop
+        var isCSS1Compat = document.compatMode === 'CSS1Compat'
+        offsetLeft = window.pageXOffset || (isCSS1Compat ? document.documentElement.scrollLeft : document.body.scrollLeft)
+        offsetTop = window.pageYOffset || (isCSS1Compat ? document.documentElement.scrollTop : document.body.scrollTop)
+        return {
+            offsetLeft,
+            offsetTop
+        }
+    }
+    log(getScrollOffset())
+
+    // 现有一个字符串richText,是一段富文本,需要显示在页面上.有个要求,需要给其中只包含一个img元素的p标签增加一个叫pic的class.请编写代码实现.可以使用jQuery或KISSY.
+    var richText = function (text) {
+        var div = document.createElement('div')
+        div.innerHTML = text
+        var p = div.getElementsByTagName('p')
+        for (var i = 0, l = p.length; i < l; i++) {
+            var img = p[i].getElementsByTagName('img')
+            if (img.length === 1) {
+                p[i].classList.add('pic')
+            }
+        }
+        return div.innerHTML
+    }
+    log(richText('<p><img></p>'))
+
+    // 编写一个函数将列表子元素顺序反转
+    var reverse = document.getElementById('reverse')
+    var children = reverse.children,
+        len = children.length
+    log(reverse.children, children)
+    var frag = document.createDocumentFragment()
+    for (len = len - 1; len >= 0; len--) {
+        frag.appendChild(children[len])
+    }
+    reverse.appendChild(frag)
+
+    // 有一个大数组,var a = ['1', '2', '3', ...];a的长度是100,内容填充随机整数的字符串.请先构造此数组a,然后设计一个算法将其内容去重
+    var fillArray = function (input, start, end) {
+        start = start ? start : 1
+        end = end ? end : 100
+        if (end < start) {
+            end = start + 100
+        }
+        for (var i = 0; i < 100; i++) {
+            input.push('' + Math.floor(Math.random() * (end - start + 1) + start))
+        }
+        return input
+    }
+
+    var unique = function (arr) {
+        var result = []
+        var len = arr.length
+        for (let i = 0; i < len; i++) {
+            for (let j = i + 1; j < len; j++) {
+                if (arr[i] === arr[j]) {
+                    j = ++i
+                    break
                 }
-            } else {
-                return function (el, type, handler) {
-                    el['on' + type] = handler
-                }
             }
-        }())
-
-        // 如何判断一个对象是否为函数
-        var isFunction = function (obj) {
-            if (typeof /./ !== 'function') {
-                return typeof obj === 'function'
-            }
-            return Object.prototype.toString.call(obj) === '[object Function]'
+            result.push(arr[i])
         }
+        return result
+    }
 
-        log('isF:' + isFunction(() => { }))
+    var unique = function (arr) {
+        // 实现一
+        // return arr.filter((item, index, arr) => {
+        //   return arr.indexOf(item) === index
+        // })
+        // 实现二
+        const result = []
+        arr.forEach((item) => {
+            if (result.indexOf(item) === -1) result.push(item)
+        })
+        return result
+    }
 
-        // 完成函数getViewportSize返回指定窗口的视口尺寸
-        var getViewportSize = function () {
-            var width, height
-            width = window.innerWidth || document.documentElement.clientWidth || documentElement.body.clientWidth
-            height = window.innerHeight || document.documentElement.clientHeight || documentElement.body.clientHeight
-            return {
-                width,
-                height
-            }
-        }
-        log(getViewportSize())
-
-        // 完成函数getScrollOffset返回窗口滚动条偏移量
-        var getScrollOffset = function () {
-            var offsetLeft, offsetTop
-            var isCSS1Compat = document.compatMode === 'CSS1Compat'
-            offsetLeft = window.pageXOffset || (isCSS1Compat ? document.documentElement.scrollLeft : document.body.scrollLeft)
-            offsetTop = window.pageYOffset || (isCSS1Compat ? document.documentElement.scrollTop : document.body.scrollTop)
-            return {
-                offsetLeft,
-                offsetTop
-            }
-        }
-        log(getScrollOffset())
-
-        // 现有一个字符串richText,是一段富文本,需要显示在页面上.有个要求,需要给其中只包含一个img元素的p标签增加一个叫pic的class.请编写代码实现.可以使用jQuery或KISSY.
-        var richText = function (text) {
-            var div = document.createElement('div')
-            div.innerHTML = text
-            var p = div.getElementsByTagName('p')
-            for (var i = 0, l = p.length; i < l; i++) {
-                var img = p[i].getElementsByTagName('img')
-                if (img.length === 1) {
-                    p[i].classList.add('pic')
-                }
-            }
-            return div.innerHTML
-        }
-        log(richText('<p><img></p>'))
-
-        // 编写一个函数将列表子元素顺序反转
-        var reverse = document.getElementById('reverse')
-        var children = reverse.children,
-            len = children.length
-        log(reverse.children, children)
-        var frag = document.createDocumentFragment()
-        for (len = len - 1; len >= 0; len--) {
-            frag.appendChild(children[len])
-        }
-        reverse.appendChild(frag)
-
-        // 有一个大数组,var a = ['1', '2', '3', ...];a的长度是100,内容填充随机整数的字符串.请先构造此数组a,然后设计一个算法将其内容去重
-        var fillArray = function (input, start, end) {
-            start = start ? start : 1
-            end = end ? end : 100
-            if (end < start) {
-                end = start + 100
-            }
-            for (var i = 0; i < 100; i++) {
-                input.push('' + Math.floor(Math.random() * (end - start + 1) + start))
-            }
-            return input
-        }
-
-        var unique = function (arr) {
-            var result = []
-            var len = arr.length
-            for (let i = 0; i < len; i++) {
-                for (let j = i + 1; j < len; j++) {
-                    if (arr[i] === arr[j]) {
-                        j = ++i
-                        break
-                    }
-                }
+    var unique = function (arr) {
+        const result = []
+        arr.sort(function (a, b) {
+            return a - b
+        })
+        for (let i = 0; i < arr.length; i++) {
+            // if (arr[i] !== arr[i + 1]) {
+            if (arr[i] !== result[result.length - 1]) {
                 result.push(arr[i])
             }
-            return result
         }
+        return result
+    }
 
-        var unique = function (arr) {
-            // 实现一
-            // return arr.filter((item, index, arr) => {
-            //   return arr.indexOf(item) === index
-            // })
-            // 实现二
-            const result = []
-            arr.forEach((item) => {
-                if (result.indexOf(item) === -1) result.push(item)
+    var unique = function (arr) {
+        const result = []
+        arr.forEach(item => {
+            if (!result.includes(item)) {
+                result.push(item)
+            }
+        })
+        return result
+    }
+    var unique = function (arr) {
+        arr.sort(function (a, b) {
+            return a - b
+        })
+        return arr.reduce((memo, current) => {
+            if (memo.length === 0 || memo[memo.length - 1] !== current) {
+                memo.push(current)
+            }
+            return memo
+        }, [])
+    }
+
+    var unique = function (arr) {
+        const result = []
+        const hash = {}
+        for (let i = 0; i < arr.length; i++) {
+            var item = arr[i]
+            var key = typeof item + JSON.stringify(item)
+            if (!hash[key]) {
+                hash[key] = 1
+                result.push(item)
+            }
+        }
+        return result
+    }
+    var unique = function (arr) {
+        // const tmp = new Map()
+        // return arr.filter(item => {
+        //   return !tmp.has(item) && tmp.set(item, 1)
+        // })
+        const result = []
+        const tmp = new Map()
+        for (let i = 0; i < arr.length; i++) {
+            if (!tmp.has(arr[i])) {
+                tmp.set(arr[i], 1)
+                result.push(arr[i])
+            }
+        }
+        return result
+    }
+    var unique = function (arr) {
+        const set = new Set(arr)
+        return Array.from(set)
+        // return [...new Set(arr)]
+    }
+    var input = []
+    fillArray(input, 1, 200)
+    log(input)
+    var result = unique(input)
+    log(result.length, result)
+
+    // 如何将浮点数点左边的数每三位添加一个逗号，如 12000000.11 转化为『12,000,000.11』?
+    // 千位分隔符的完整攻略 https://www.tuicool.com/articles/ArQZfui
+    function commafy(num) {
+        return (
+            num &&
+            num.toString().replace(/(\d)(?=(\d{3})+\.)/g, function ($1, $2) {
+                return $2 + ",";
             })
-            return result
-        }
+        );
+    }
+    let milliFormat = input => {
+        return input && input.toString().replace(/(^|\s)\d+/g, m => m.replace(/(?=(?!\b)(\d{3})+$)/g, ","));
+    };
+    console.log(milliFormat(1200000123123.223));
 
-        var unique = function (arr) {
-            const result = []
-            arr.sort(function (a, b) {
-                return a - b
-            })
-            for (let i = 0; i < arr.length; i++) {
-                // if (arr[i] !== arr[i + 1]) {
-                if (arr[i] !== result[result.length - 1]) {
-                    result.push(arr[i])
-                }
+    //  如何遍历一个 dom 树
+    function traversal(node) {
+        var nodeList = []
+        //对node的处理
+        if (node && node.nodeType === 1) {
+            // console.log(node.tagName);
+            nodeList.push(node);
+        }
+        var i = 0,
+            childNodes = node.childNodes,
+            item;
+        for (; i < childNodes.length; i++) {
+            item = childNodes[i];
+            if (item.nodeType === 1) {
+                //递归先序遍历子节点
+                nodeList = nodeList.concat(traversal(item));
             }
-            return result
         }
-
-        var unique = function (arr) {
-            const result = []
-            arr.forEach(item => {
-                if (!result.includes(item)) {
-                    result.push(item)
-                }
-            })
-            return result
-        }
-        var unique = function (arr) {
-            arr.sort(function (a, b) {
-                return a - b
-            })
-            return arr.reduce((memo, current) => {
-                if (memo.length === 0 || memo[memo.length - 1] !== current) {
-                    memo.push(current)
-                }
-                return memo
-            }, [])
-        }
-
-        var unique = function (arr) {
-            const result = []
-            const hash = {}
-            for (let i = 0; i < arr.length; i++) {
-                var item = arr[i]
-                var key = typeof item + JSON.stringify(item)
-                if (!hash[key]) {
-                    hash[key] = 1
-                    result.push(item)
-                }
-            }
-            return result
-        }
-        var unique = function (arr) {
-            // const tmp = new Map()
-            // return arr.filter(item => {
-            //   return !tmp.has(item) && tmp.set(item, 1)
-            // })
-            const result = []
-            const tmp = new Map()
-            for (let i = 0; i < arr.length; i++) {
-                if (!tmp.has(arr[i])) {
-                    tmp.set(arr[i], 1)
-                    result.push(arr[i])
-                }
-            }
-            return result
-        }
-        var unique = function (arr) {
-            const set = new Set(arr)
-            return Array.from(set)
-            // return [...new Set(arr)]
-        }
-        var input = []
-        fillArray(input, 1, 200)
-        log(input)
-        var result = unique(input)
-        log(result.length, result)
-
-        // 如何将浮点数点左边的数每三位添加一个逗号，如 12000000.11 转化为『12,000,000.11』?
-        // 千位分隔符的完整攻略 https://www.tuicool.com/articles/ArQZfui
-        function commafy(num) {
-            return (
-                num &&
-                num.toString().replace(/(\d)(?=(\d{3})+\.)/g, function ($1, $2) {
-                    return $2 + ",";
-                })
-            );
-        }
-        let milliFormat = input => {
-            return input && input.toString().replace(/(^|\s)\d+/g, m => m.replace(/(?=(?!\b)(\d{3})+$)/g, ","));
-        };
-        console.log(milliFormat(1200000123123.223));
-
-        //  如何遍历一个 dom 树
-        function traversal(node) {
-            //对node的处理
-            if (node && node.nodeType === 1) {
-                console.log(node.tagName);
-            }
-            var i = 0,
-                childNodes = node.childNodes,
-                item;
-            for (; i < childNodes.length; i++) {
-                item = childNodes[i];
-                if (item.nodeType === 1) {
-                    //递归先序遍历子节点
-                    traversal(item);
+        return nodeList
+    }
+    // 深度优先-非递归
+    function traversal(node) {
+        let stack = [];
+        let nodes = [];
+        if (node) {
+            // 推入当前处理的node
+            stack.push(node);
+            while (stack.length) {
+                let item = stack.pop();
+                let children = item.children;
+                nodes.push(item);
+                for (let i = children.length - 1; i >= 0; i--) {
+                    stack.push(children[i]);
                 }
             }
         }
+        return nodes;
+    };
 
-    </script>
-</body>
+    // 广度优先遍历
+    let BFS = node => {
+        let nodes = [];
+        let stack = [];
+        if (node) {
+            stack.push(node);
+            while (stack.length) {
+                let item = stack.shift();
+                let children = item.children;
+                nodes.push(item);
+                for (let i = 0; i < children.length; i++) {
+                    stack.push(children[i]);
+                }
+            }
+        }
+        return nodes;
+    };
+    console.time()
+    console.log(traversal(document.body))
+    console.timeEnd()
+    console.time()
+    console.log(BFS(document.body))
+    console.timeEnd()
+</script>
 
 </html>
