@@ -290,7 +290,8 @@
         if (end < start) {
             end = start + 100
         }
-        for (var i = 0; i < 100; i++) {
+        var range = end - start + 1;
+        for (var i = 0; i < range; i++) {
             input.push('' + Math.floor(Math.random() * (end - start + 1) + start))
         }
         return input
@@ -393,7 +394,7 @@
         // return [...new Set(arr)]
     }
     var input = []
-    fillArray(input, 1, 200)
+    fillArray(input, 1, 20)
     log(input)
     var result = unique(input)
     log(result.length, result)
