@@ -130,33 +130,24 @@
             if (type === "string") {
                 return `"${obj}"`;
             }
-            let result = "";
+            let result = [];
             switch (Object.prototype.toString.call(obj)) {
                 case "[object Array]":
-                    result += "[";
                     for (let v of obj) {
-                        const val = stringify(v);
-                        result += `${val === undefined ? null : val},`;
+                        let value = stringify(v);
+                        value = `${value === undefined ? 'null' : value},`;
+                        result.push(value)
                     }
-                    // 去掉最后一个逗号
-                    if (result !== "[") {
-                        result = result.slice(0, -1);
-                    }
-                    return (result += "]");
+                    return "[" + result.join() + "]";
+
                 case "[object Object]":
-                    result += "{";
-                    for (let key in obj) {
-                        if (obj.hasOwnProperty(key)) {
-                            const val = stringify(obj[key]);
-                            if (val !== undefined) {
-                                result += `"${key}": ${val},`;
-                            }
+                    for (let [key, value] of Object.entries(obj)) {
+                        value = stringify(value)
+                        if (value !== undefined) {
+                            result.push(`"${key}":${value}`)
                         }
                     }
-                    if (result !== "{") {
-                        result = result.slice(0, -1);
-                    }
-                    return (result += "}");
+                    return '{' + result.join() + '}'
                 case "[object Date]":
                     return `"${obj.toJSON ? obj.toJSON() : obj.toString()}"`;
                 default:
