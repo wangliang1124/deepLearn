@@ -4,7 +4,16 @@ function swap(arr, a, b) {
     return void 0;
 }
 
-// 冒泡排序
+/* 
+    1、冒泡排序（Bubble Sort）
+    冒泡排序是一种简单的排序算法。它重复地走访过要排序的数列，一次比较两个元素，如果它们的顺序错误就把它们交换过来。走访数列的工作是重复地进行直到没有再需要交换，也就是说该数列已经排序完成。这个算法的名字由来是因为越小的元素会经由交换慢慢“浮”到数列的顶端。 
+
+    1.1 算法描述
+    比较相邻的元素。如果第一个比第二个大，就交换它们两个；
+    对每一对相邻元素作同样的工作，从开始第一对到结尾的最后一对，这样在最后的元素应该会是最大的数；
+    针对所有的元素重复以上的步骤，除了最后一个；
+    重复步骤1~3，直到排序完成。
+*/
 function bubbleSort(arr) {
     const len = arr.length;
     for (let i = 0; i < len; i++) {
@@ -20,7 +29,16 @@ function bubbleSort(arr) {
 var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
 console.log(bubbleSort(arr)); // [2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
 
-// 选择排序
+/* 
+    2、选择排序（Selection Sort）
+    选择排序(Selection-sort)是一种简单直观的排序算法。它的工作原理：首先在未排序序列中找到最小（大）元素，存放到排序序列的起始位置，然后，再从剩余未排序元素中继续寻找最小（大）元素，然后放到已排序序列的末尾。以此类推，直到所有元素均排序完毕。 
+
+    2.1 算法描述
+    n个记录的直接选择排序可经过n-1趟直接选择排序得到有序结果。具体算法描述如下：
+    初始状态：无序区为R[1..n]，有序区为空；
+    第i趟排序(i=1,2,3…n-1)开始时，当前有序区和无序区分别为R[1..i-1]和R(i..n）。该趟排序从当前无序区中-选出关键字最小的记录 R[k]，将它与无序区的第1个记录R交换，使R[1..i]和R[i+1..n)分别变为记录个数增加1个的新有序区和记录个数减少1个的新无序区；
+    n-1趟结束，数组有序化了。
+*/
 function selectionSort(arr) {
     let len = arr.length;
     let minIndex = 0; // 用于保存最小值的索引
@@ -45,22 +63,35 @@ function selectionSort(arr) {
 var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
 console.log(selectionSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
 
-// 插入排序
+/* 
+    3、插入排序（Insertion Sort）
+    插入排序（Insertion-Sort）的算法描述是一种简单直观的排序算法。它的工作原理是通过构建有序序列，对于未排序数据，在已排序序列中从后向前扫描，找到相应位置并插入。
+
+    3.1 算法描述
+    一般来说，插入排序都采用in-place在数组上实现。具体算法描述如下：
+
+    从第一个元素开始，该元素可以认为已经被排序；
+    取出下一个元素，在已经排序的元素序列中从后向前扫描；
+    如果该元素（已排序）大于新元素，将该元素移到下一位置；
+    重复步骤3，直到找到已排序的元素小于或者等于新元素的位置；
+    将新元素插入到该位置后；
+    重复步骤2~5。
+*/
 function insertionSort(arr) {
     let len = arr.length;
-    let pIndex, current; // 前一个元素的索引，当前元素的值
+    let preIndex, currentValue; // 前一个元素的索引，当前元素的值
     for (let i = 1; i < len; i++) {
-        pIndex = i - 1;
-        current = arr[i];
+        preIndex = i - 1;
+        currentValue = arr[i];
 
         // 依次把当前元素和前面的元素进行比较
-        while (pIndex >= 0 && arr[pIndex] > current) {
+        while (preIndex >= 0 && arr[preIndex] > currentValue) {
             // 比当前的元素大，向后移一位
-            arr[pIndex + 1] = arr[pIndex];
-            pIndex--;
+            arr[preIndex + 1] = arr[preIndex];
+            preIndex--;
         }
         // 插入当前元素到合适的位置
-        arr[pIndex + 1] = current;
+        arr[preIndex + 1] = currentValue;
     }
     return arr;
 }
@@ -68,7 +99,79 @@ function insertionSort(arr) {
 var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
 console.log(insertionSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
 
-// 快速排序 -- 这个方法不改变原数组
+/* 
+    4、希尔排序（Shell Sort）
+    1959年Shell发明，第一个突破O(n2)的排序算法，是简单插入排序的改进版。它与插入排序的不同之处在于，它会优先比较距离较远的元素。希尔排序又叫缩小增量排序。
+
+    4.1 算法描述
+    先将整个待排序的记录序列分割成为若干子序列分别进行直接插入排序，具体算法描述：
+
+    选择一个增量序列t1，t2，…，tk，其中ti>tj，tk=1；
+    按增量序列个数k，对序列进行k 趟排序；
+    每趟排序，根据对应的增量ti，将待排序列分割成若干长度为m 的子序列，分别对各子表进行直接插入排序。仅增量因子为1 时，整个序列作为一个表来处理，表长度即为整个序列的长度。
+ */
+function shellSort(arr) {
+    let len = arr.length;
+    let gap = Math.floor(len / 3) + 1;
+
+    while (gap > 0) {
+        for (let i = gap; i < len; i++) {
+            let preIndex = i - gap;
+            let currentValue = arr[i];
+            for (; preIndex >= 0 && arr[preIndex] > currentValue; preIndex -= gap) {
+                arr[preIndex + gap] = arr[preIndex];
+            }
+            arr[preIndex + gap] = currentValue;
+        }
+        gap = Math.floor(gap / 3);
+    }
+    return arr;
+}
+var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
+console.log(shellSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
+
+// 归并排序
+function mergeSort(arr) {
+    let len = arr.length;
+    if (len < 2) {
+        return arr;
+    }
+    let middleIndex = Math.floor(len / 2); // 获取中间元素的索引
+    let left = arr.slice(0, middleIndex); // 获取左半部分的元素
+    let right = arr.slice(middleIndex); // 获取右半部分的元素
+
+    return merge(mergeSort(left), mergeSort(right));
+}
+
+function merge(left, right) {
+    // 保存结果的数组
+    let result = [];
+
+    while (left.length && right.length) {
+        if (left[0] < right[0]) {
+            result.push(left.shift());
+        } else {
+            result.push(right.shift());
+        }
+    }
+
+    // 如果左半边还有元素
+    if (left.length) {
+        result = result.concat(left);
+    }
+
+    // 如果右半边还有元素
+    if (right.length) {
+        result = result.concat(right);
+    }
+
+    return result;
+}
+
+var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
+console.log(mergeSort(arr));
+
+// 快速排序
 function quickSort(arr) {
     let len = arr.length;
 
@@ -92,99 +195,53 @@ function quickSort(arr) {
     return quickSort(left).concat(baseValue, quickSort(right));
 }
 
+function quick(array, left, right) {
+    var index;
+    if (array.length > 1) {
+        index = partition(array, left, right);
+    }
+    if (left < index - 1) {
+        quick(array, left, index - 1);
+    }
+    if (index < right) {
+        quick(array, index, right);
+    }
+    return array;
+}
+
+function partition(array, left, right) {
+    var pivot = array[Math.floor((right + left) / 2)],
+        i = left,
+        j = right;
+    while (i <= j) {
+        while (array[i] < pivot) {
+            i++;
+        }
+        while (array[j] > pivot) {
+            j--;
+        }
+        if (i <= j) {
+            [array[i], array[j]] = [array[j], array[i]];
+            i++;
+            j--;
+        }
+    }
+    return i;
+}
+
 var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
+console.log(quick(arr, 0, arr.length - 1)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
 console.log(quickSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
 
-// 希尔排序
-function shellSort(arr) {
-    let len = arr.length,
-        temp,
-        gap = 1;
+/* 
+    7、堆排序（Heap Sort）
+    堆排序（Heapsort）是指利用堆这种数据结构所设计的一种排序算法。堆积是一个近似完全二叉树的结构，并同时满足堆积的性质：即子结点的键值或索引总是小于（或者大于）它的父节点。
 
-    while (gap < len / 3) {
-        gap = gap * 3 + 1;
-    }
-
-    for (gap; gap > 0; gap = Math.floor(gap / 3)) {
-        for (let i = gap; i < len; i++) {
-            temp = arr[i];
-            for (var j = i - gap; j >= 0 && arr[j] > temp; j -= gap) {
-                arr[j + gap] = arr[j];
-            }
-            arr[j + gap] = temp;
-        }
-    }
-    return arr;
-}
-var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
-console.log(shellSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
-
-// 归并排序
-function mergeSort(arr) {
-    let len = arr.length;
-    if (len < 2) {
-        return arr;
-    }
-    let middleIndex = Math.floor(len / 2); // 获取中间元素的索引
-    let left = arr.slice(0, middleIndex); // 获取左半部分的元素
-    let right = arr.slice(middleIndex); // 获取右半部分的元素
-
-    let merges = function(left, right) {
-        // 保存结果的数组
-        let result = [];
-
-        while (left.length && right.length) {
-            if (left[0] < right[0]) {
-                result.push(left.shift());
-            } else {
-                result.push(right.shift());
-            }
-        }
-
-        // 如果左半边还有元素
-        while (left.length) {
-            result.push(left.shift());
-        }
-
-        // 如果右半边还有元素
-        while (right.length) {
-            result.push(right.shift());
-        }
-
-        return result;
-    };
-
-    return merges(mergeSort(left), mergeSort(right));
-}
-
-var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
-console.log(mergeSort(arr));
-
-/** 
-    arr 待排序的数组
-    index 元素的下标
-    len 数组的长度
-**/
-function heapify(arr, index, len) {
-    let left = 2 * index + 1;
-    let right = 2 * index + 2;
-    let largest = index;
-
-    if (left < len && arr[left] > arr[largest]) {
-        largest = left;
-    }
-
-    if (right < len && arr[right] > arr[largest]) {
-        largest = right;
-    }
-
-    if (largest !== index) {
-        swap(arr, index, largest);
-        heapify(arr, largest, len);
-    }
-}
-
-// 堆排序
+    7.1 算法描述
+    将初始待排序关键字序列(R1,R2….Rn)构建成大顶堆，此堆为初始的无序区；
+    将堆顶元素R[1]与最后一个元素R[n]交换，此时得到新的无序区(R1,R2,……Rn-1)和新的有序区(Rn),且满足R[1,2…n-1]<=R[n]；
+    由于交换后新的堆顶R[1]可能违反堆的性质，因此需要对当前无序区(R1,R2,……Rn-1)调整为新堆，然后再次将R[1]与无序区最后一个元素交换，得到新的无序区(R1,R2….Rn-2)和新的有序区(Rn-1,Rn)。不断重复此过程直到有序区的元素个数为n-1，则整个排序过程完成。
+*/
 function heapSort(arr) {
     let len = arr.length;
     for (let i = Math.floor(len / 2); i >= 0; i--) {
@@ -198,28 +255,59 @@ function heapSort(arr) {
     return arr;
 }
 
+/** 
+    arr 待排序的数组
+    index 元素的下标
+    len 数组的长度
+**/
+function heapify(arr, index, len) {
+    let left = 2 * index + 1;
+    let right = 2 * index + 2;
+    let maxIndex = index; // 保存最大值的索引
+
+    if (left < len && arr[left] > arr[maxIndex]) {
+        maxIndex = left;
+    }
+
+    if (right < len && arr[right] > arr[maxIndex]) {
+        maxIndex = right;
+    }
+
+    if (maxIndex !== index) {
+        swap(arr, index, maxIndex);
+        heapify(arr, maxIndex, len);
+    }
+}
+
 var arr = [91, 60, 96, 13, 35, 65, 46, 65, 10, 30, 20, 31, 77, 81, 22];
 console.log(heapSort(arr)); //[10, 13, 20, 22, 30, 31, 35, 46, 60, 65, 65, 77, 81, 91, 96]
 
-// 计数排序
-function countingSort(arr) {
-    let index = 0;
-    let len = arr.length;
-    let min = Math.min.apply(null, arr); // 最小值
-    let max = Math.max.apply(null, arr); // 最大值
-    let result = []; // 结果数组
+/* 
+    8、计数排序（Counting Sort）
+    计数排序不是基于比较的排序算法，其核心在于将输入的数据值转化为键存储在额外开辟的数组空间中。 作为一种线性时间复杂度的排序，计数排序要求输入的数据必须是有确定范围的整数。
 
-    // 向新数组中填充0
-    for (let i = min; i <= max; i++) {
-        result[i] = 0;
+    8.1 算法描述
+    找出待排序的数组中最大和最小的元素；
+    统计数组中每个值为i的元素出现的次数，存入数组C的第i项；
+    对所有的计数累加（从C中的第一个元素开始，每一项和前一项相加）；
+    反向填充目标数组：将每个元素i放在新数组的第C(i)项，每放一个元素就将C(i)减去1。
+*/
+function countingSort(arr) {
+    let min = Infinity,
+        max = -Infinity;
+    let counter = [];
+
+    for (let i = 0; i < arr.length; i++) {
+        const curr = arr[i];
+        if (min > curr) min = curr;
+        if (max < curr) max = curr;
+        counter[curr] = counter[curr] ? counter[curr] + 1 : 1;
     }
-    // 把各个数组中对应的元素计数加一
-    for (let i = 0; i < len; i++) {
-        result[arr[i]]++;
-    }
+
     // 按照计数的元素进行排序
+    let index = 0;
     for (let i = min; i <= max; i++) {
-        while (result[i]-- > 0) {
+        while (counter[i]-- > 0) {
             arr[index++] = i;
         }
     }
@@ -229,88 +317,88 @@ function countingSort(arr) {
 var arr = [2, 2, 3, 8, 7, 1, 2, 2, 2, 7, 3, 9, 8, 2, 1, 4, 2, 4, 6, 9, 2];
 console.log(countingSort(arr)); //[1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 6, 7, 7, 8, 8, 9, 9]
 
-// 桶排序 -- 不改变原数组
+/* 
+    9、桶排序（Bucket Sort）
+    桶排序是计数排序的升级版。它利用了函数的映射关系，高效与否的关键就在于这个映射函数的确定。桶排序 (Bucket sort)的工作的原理：假设输入数据服从均匀分布，将数据分到有限数量的桶里，每个桶再分别排序（有可能再使用别的排序算法或是以递归方式继续使用桶排序进行排）。
+
+    9.1 算法描述
+    设置一个定量的数组当作空桶；
+    遍历输入数据，并且把数据一个一个放到对应的桶里去；
+    对每个不是空的桶进行排序；
+    从不是空的桶里把排好序的数据拼接起来。 
+*/
 function bucketSort(arr, size = 5) {
     let len = arr.length;
     if (len < 2) {
         return arr;
     }
 
-    // 获取最大值和最小值
-    const max = Math.max.apply(null, arr);
+    const buckets = [];
     const min = Math.min.apply(null, arr);
 
-    // 计算出桶的数量  size是截距
-    const bucketCount = Math.floor((max - min) / size) + 1;
-    // 根据桶的个数创建指定长度的数组
-    const buckets = new Array(bucketCount);
-    // 将每个桶塞到大桶里面去
-    for (let i = 0; i < bucketCount; i++) {
-        buckets[i] = [];
-    }
     // 利用映射函数将数据分配到各个桶里面去
-    for (let i = 0; i < arr.length; i++) {
-        // 逢size进1
+    for (let i = 0; i < len; i++) {
         let index = Math.floor((arr[i] - min) / size);
-        buckets[index].push(arr[i]);
-    }
-    //对每个桶中的数据进行排序--借助于快速排序算法
-    for (let i = 0; i < buckets.length; i++) {
-        buckets[i] = quickSort(buckets[i]);
+        if (buckets[index]) {
+            // 插入排序
+            let bucket = buckets[index];
+            let j = bucket.length - 1;
+            while (j >= 0 && bucket[j] > arr[i]) {
+                bucket[j + 1] = bucket[j];
+                j--;
+            }
+            bucket[j + 1] = arr[i];
+        } else {
+            buckets[index] = [arr[i]];
+        }
     }
 
-    // flatten数组--有点不足就是会将原数组中的String改变为Number
-    return buckets
-        .join(",")
-        .split(",")
-        .filter(v => v !== "")
-        .map(Number);
+    let result = [];
+    while (buckets.length) {
+        let bucket = buckets.shift();
+        if (bucket) {
+            result = result.concat(bucket);
+        }
+    }
+    return result;
 }
 
 var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
 console.log(bucketSort(arr, 4)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
 
-// 基数排序
+/* 
+    10、基数排序（Radix Sort）
+    基数排序是按照低位先排序，然后收集；再按照高位排序，然后再收集；依次类推，直到最高位。有时候有些属性是有优先级顺序的，先按低优先级排序，再按高优先级排序。最后的次序就是高优先级高的在前，高优先级相同的低优先级高的在前。
+
+    10.1 算法描述
+    取得数组中的最大数，并取得位数；
+    arr为原始数组，从最低位开始取每个位组成radix数组；
+    对radix进行计数排序（利用计数排序适用于小范围数的特点）；
+*/
 function radixSort(arr) {
-    const SIZE = 10;
-    let len = arr.length;
-    let buckets = [];
-    let max = Math.max.apply(null, arr); // 数组中的最大值
-    let maxLength = String(max).length; // 最大数字的长度
+    let mod = 10;
+    let dev = 1;
+    let maxDigit = String(Math.max.apply(null, arr)).length; // 最大数字的长度
+    let counter = [];
 
-    // 进行循环将桶中的数组填充成数组
-    for (let i = 0; i < SIZE; i++) {
-        buckets[i] = [];
-    }
-
-    // 进行循环--对数据进行操作--放桶的行为
-    for (let i = 0; i < maxLength; i++) {
-        // 第二轮循环是将数据按照个位数进行分类
-        for (let j = 0; j < len; j++) {
-            let value = String(arr[j]);
-            // 判断长度--进行分类
-            if (value.length >= i + 1) {
-                let num = Number(value[value.length - 1 - i]); // 依次的从右到左获取各个数字
-                //放入对应的桶中
-                buckets[num].push(arr[j]);
-            } else {
-                // 长度不满足的时候，就放在第一个桶中
-                buckets[0].push(arr[i]);
+    for (let i = 0; i < maxDigit; i++, dev *= 10, mod *= 10) {
+        for (let j = 0; j < arr.length; j++) {
+            let bucket = Math.floor((arr[j] % mod) / dev);
+            if (counter[bucket] == null) {
+                counter[bucket] = [];
             }
+            counter[bucket].push(arr[j]);
         }
-        // 将原数组清空
-        arr.length = 0;
 
-        //这次循环是依次取出上面分类好的数组存放到原数组中
-        for (let j = 0; j < SIZE; j++) {
-            // 获取各个桶的长度
-            let l = buckets[j].length;
-            // 循环取出数据
-            for (let k = 0; k < l; k++) {
-                arr.push(buckets[j][k]);
+        let pos = 0;
+        for (let j = 0; j < counter.length; j++) {
+            if (counter[j]) {
+                let value = counter[j].shift();
+                while (value) {
+                    arr[pos++] = value;
+                    value = counter[j].shift();
+                }
             }
-            // 将对应的桶清空，方便下次存放数据
-            buckets[j] = [];
         }
     }
     return arr;
