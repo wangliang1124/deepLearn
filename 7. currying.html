@@ -48,11 +48,10 @@
 
         // 方法三
         function currying(func) {
-            var len = func.length;
             var args = Array.prototype.slice.call(arguments, 1);
             return function () {
                 var newArgs = args.concat([].slice.call(arguments));
-                if (newArgs.length === len) {
+                if (newArgs.length === func.length) {
                     return func.apply(this, newArgs);
                 }
                 newArgs.unshift(func);

@@ -27,42 +27,43 @@
 
     <script>
         function deepClone(obj) {
-            var toString = Object.prototype.toString;
-
-            // null, undefined, non-object, function
-            if (!obj || typeof obj !== 'object') {
+            if (!obj || typeof obj !== "object") {
                 return obj;
             }
 
-            // DOM Node
             if (obj.nodeType && 'cloneNode' in obj) {
-                return obj.cloneNode(true);
+                return obj.cloneNode(true)
             }
 
-            // Date
-            if (toString.call(obj) === '[object Date]') {
-                return new Date(obj.getTime());
+            var result;
+            switch (Object.prototype.toString.call(obj)) {
+                case "[object Array]":
+                    result = [];
+                    for (let v of obj) {
+                        result.push(deepClone(v));
+                    }
+                    return result;
+
+                case "[object Object]":
+                    result = obj.constructor ? new obj.constructor() : {};
+                    for (let [k, v] of Object.entries(obj)) {
+                        result[k] = deepClone(v);
+                    }
+                    return result;
+
+                case "[object Date]":
+                    return new Date(obj.getTime());
+
+                case "[object RegExp]":
+                    var flags = "";
+                    if (obj.global) flags += "g";
+                    if (obj.multiline) flags += "m";
+                    if (obj.ignoreCase) flags += "i";
+                    return new RegExp(obj.source, flags);
+
+                default:
+                    return obj;
             }
-
-            // RegExp
-            if (toString.call(obj) === '[object RegExp]') {
-                var flags = [];
-                if (obj.global) { flags.push('g'); }
-                if (obj.multiline) { flags.push('m'); }
-                if (obj.ignoreCase) { flags.push('i'); }
-
-                return new RegExp(obj.source, flags.join(''));
-            }
-
-            var result = Array.isArray(obj) ? [] :
-                obj.constructor ? new obj.constructor() : {};
-
-            for (var key in obj) {
-                console.log(key)
-                result[key] = deepClone(obj[key]);
-            }
-
-            return result;
         }
 
         function Test(props) {

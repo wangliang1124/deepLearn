@@ -44,6 +44,9 @@
 
     jsonp('http://127.0.0.1:3000/show', { name: 'super', age: 20 }).then((res) => {
         console.log(res)
+    }).catch((err)=>{
+        console.log('xx===')
+        console.log(err)
     })
 </script>
 
