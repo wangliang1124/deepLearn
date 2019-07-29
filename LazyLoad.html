@@ -13,7 +13,6 @@
 <html>
 
 <body>
-
     <img src="default.jpg" data-src="http://ww4.sinaimg.cn/large/006y8mN6gw1fa5obmqrmvj305k05k3yh.jpg" alt="">
     <img src="default.jpg" data-src="http://ww4.sinaimg.cn/large/006y8mN6gw1fa5obmqrmvj305k05k3yh.jpg" alt="">
     <img src="default.jpg" data-src="http://ww1.sinaimg.cn/large/006y8mN6gw1fa7kaed2hpj30sg0l9q54.jpg" alt="">
@@ -25,43 +24,40 @@
     <img src="default.jpg" data-src="http://ww1.sinaimg.cn/large/006y8mN6gw1fa7kaed2hpj30sg0l9q54.jpg" alt="">
     <img src="default.jpg" data-src="http://ww4.sinaimg.cn/large/006y8mN6gw1fa5obmqrmvj305k05k3yh.jpg" alt="">
     <img src="default.jpg" data-src="http://ww4.sinaimg.cn/large/006y8mN6gw1fa5obmqrmvj305k05k3yh.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2015/09/09/16/05/forest-931706_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2014/08/01/00/08/pier-407252_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2014/12/15/17/16/pier-569314_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2010/12/13/10/09/abstract-2384_1280.jpg" alt="">
-    <img src="loading.gif" data-src="https://cdn.pixabay.com/photo/2015/10/24/11/09/drop-of-water-1004250_1280.jpg">
+    <img src="default.jpg" data-src="https://cdn.pixabay.com/photo/2015/09/09/16/05/forest-931706_1280.jpg" alt="">
+    <img src="default.jpg" data-src="https://cdn.pixabay.com/photo/2014/08/01/00/08/pier-407252_1280.jpg" alt="">
+    <img src="default.jpg" data-src="https://cdn.pixabay.com/photo/2014/12/15/17/16/pier-569314_1280.jpg" alt="">
+    <img src="default.jpg" data-src="https://cdn.pixabay.com/photo/2010/12/13/10/09/abstract-2384_1280.jpg" alt="">
+    <img src="default.jpg" data-src="https://cdn.pixabay.com/photo/2015/10/24/11/09/drop-of-water-1004250_1280.jpg">
 </body>
 <script>
     var num = document.getElementsByTagName('img').length;
     var img = document.getElementsByTagName("img");
-    var n = 0; //存储图片加载到的位置，避免每次都从第一张图片开始遍历
+    var current = 0; //存储图片加载到的位置，避免每次都从第一张图片开始遍历
 
-    lazyload(); //页面载入完毕加载可是区域内的图片
+    lazyLoad(); //页面载入完毕加载可是区域内的图片
 
-    window.addEventListener('scroll', throttle(lazyload, 200))
+    window.addEventListener('scroll', throttle(lazyLoad, 200))
 
-    function lazyload() { //监听页面滚动事件
-        var seeHeight = document.body.clientHeight; //可见区域高度
-        var scrollTop = document.documentElement.scrollTop || document.body.scrollTop; //滚动条距离顶部高度
-        for (var i = n; i < num; i++) {
-            console.log(seeHeight, img[i].getBoundingClientRect().top)
-            if (img[i].getBoundingClientRect().top < seeHeight) {
-                if (img[i].getAttribute("src") == "default.jpg") {
-                    img[i].src = img[i].getAttribute("data-src");
+    function lazyLoad() {
+        var visibleHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+        for (var i = current; i < num; i++) {
+            if (img[i].getBoundingClientRect().top < visibleHeight) {
+                if (img[i].getAttribute('src') === 'default.jpg') {
+                    img[i].src = img[i].getAttribute('data-src')
                 }
-                n = i + 1;
+                current = i + 1
             }
         }
     }
 
-
-    function throttle(event, time) {
+    function throttle(func, time) {
         let timer = null;
         return function (...args) {
             if (!timer) {
                 timer = setTimeout(() => {
                     timer = null;
-                    event.apply(this, args);
+                    func.apply(this, args);
                 }, time);
             }
         }

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>EventEmitter</title>
+</head>
+
+<body>
+    <button>
+        我是按钮
+    </button>
+    <script type="module">
+        import EventEmitter from './EventEmitter.js'
+
+        function handleClick() {
+            EventEmitter.emit('click', { a: 'test', b: [1, 2, 3] }, '6666')
+        }
+
+        let button = document.querySelector('button')
+        button.onclick = handleClick
+    </script>
+</body>
+<script type="module">
+    import EventEmitter from './EventEmitter.js'
+
+    // test
+    function test() {
+        console.log('clicked===', arguments)
+    }
+
+    EventEmitter.on('click', test)
+
+</script>
+
+</html>

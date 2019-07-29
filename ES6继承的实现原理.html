@@ -19,12 +19,12 @@
         }
 
         //  对不同的属性做处理 如果是原型上的方法挂载Class.prototype 如果是静态方法放在 Class上
-        function createClass(con, protoProperty, staticProperty) {
+        function createClass(constructor, protoProperty, staticProperty) {
             if (protoProperty) {
-                defineProperties(con.prototype, protoProperty);
+                defineProperties(constructor.prototype, protoProperty);
             }
             if (staticProperty) {
-                defineProperties(con, staticProperty);
+                defineProperties(constructor, staticProperty);
             }
         }
 
