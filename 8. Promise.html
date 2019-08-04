@@ -208,7 +208,7 @@
 
         Promise.race = function (promises) {
             return new Promise(function (resolve) {
-                lipromisesst.forEach(promise => {
+                promises.forEach(promise => {
                     promise.then(val => {
                         resolve(val);
                     });

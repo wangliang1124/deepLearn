@@ -16,7 +16,7 @@
         if (!key) return
         let date = new Date()
         date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000); // 设置过期时间为 days 天之后
-        document.cookie = key + "=" + decodeURIComponent(value) + ";expires=" + date.toGMTString();
+        document.cookie = key + "=" + encodeURIComponent(value) + ";expires=" + date.toUTCString();
     }
 
     function getCookie(key) {
@@ -27,7 +27,7 @@
         if (start > -1) {
             start += queryString.length
             let end = cookie.indexOf(";", start)
-            result = (cookie.substring(start, end))
+            result = decodeURIComponent(cookie.substring(start, end));
         }
         // return getCookies()[key]
         return result
@@ -38,7 +38,7 @@
         if (!document.cookie) return result
         document.cookie.split(';').forEach((item) => {
             const [key, value] = item.split('=')
-            result[key.trim()] = value.trim()
+            result[key.trim()] = decodeURIComponent(value.trim());
         })
         return result
     }
@@ -73,7 +73,6 @@
         function clear() {
             const cookies = getCookies();
             for (let key of Object.keys(cookies)) {
-                delete this[key]
                 removeItem(key);
             }
             this.length = 0

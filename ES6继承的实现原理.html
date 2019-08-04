@@ -37,21 +37,20 @@
         var Parent = function () {
             function Parent() {
                 // 类的调用检测
-                this.name = 'zfpx'
+                this.name = 'wangliang'
                 checkInstance(this, Parent);
-                return { a: 100 }
             }
             // 用来描述这个类的原型方法和静态方法
-            createClass(Parent, [ // 第一个数组表示的是公共方法的描述 descirptor
+            createClass(Parent, [ // 原型上的方法
                 {
                     key: 'getName', value: function () {
-                        return 1000
+                        return this.name
                     }
                 }
-            ], [ //描述静态的方法
+            ], [ // 静态方法
                     {
-                        key: 'staticFun', value: function () {
-                            return 100;
+                        key: 'getFuncName', value: function () {
+                            return this.name;
                         }
                     }
                 ])
@@ -64,19 +63,21 @@
             subClass.prototype = Object.create(superClass.prototype, { constructor: { value: subClass } });
             // 也要让子类继承父类的静态方法
             subClass.__proto__ = superClass;
+            // 或者
+            // for (let [key, value] of Object.entries(superClass)) {
+            //     defineProperties(subClass, [{ key, value }])
+            // }
         }
 
         var Child = function (Parent) { // 表示儿子继承Parent类，要包多一层不然传参会传到Child上
-            inheritPrototype(Child, Parent); // 表示继承 儿子继承父亲
             function Child() { // 类的调用检查
                 // 在子类中应该调用父类的构造函数
                 // Parent.call(this);
                 if (typeof new.target === 'undefined') {
                     throw new SyntaxError('当前"类"不能作为一个普通函数执行')
                 }
-                // checkInstance(this, Child);
                 let self = this;
-                console.log(Object.getPrototypeOf(Child))
+                // console.log(Object.getPrototypeOf(Child))
                 // Child.__proto__ = Object.getPrototypeOf(Child) 继承父类的私有方法，为了保险不用 Parent.call(this)，因为不一定继承父类
                 let obj = Object.getPrototypeOf(Child).call(this);
                 if (typeof obj === 'object') { //如果是对象把obj作为实例
@@ -84,11 +85,12 @@
                 }
                 return self;
             }
+            inheritPrototype(Child, Parent); // 表示继承 儿子继承父亲
             return Child
         }(Parent);
-        // Child()
+
         let child = new Child;
-        console.log(child);
+        console.log(child.getName(), Child.getFuncName(), '\n', Object.keys(Child), '\n', Reflect.ownKeys(Child));
     </script>
 </body>
 

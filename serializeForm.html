@@ -29,6 +29,7 @@
         <input type="checkbox" name="hobby" value="basketball">Basketball
         <input type="radio" name="sex" checked value="Female">Female
         <input type="radio" name="sex" value="Male">Male
+        <input type="file" name="fileName">
     </form>
 
 </body>
@@ -79,6 +80,7 @@
         return result.join('&')
     }
     var form = document.getElementById('form1')
+    console.log(form.elements)
     console.log(serializeForm(form))
 </script>
 
