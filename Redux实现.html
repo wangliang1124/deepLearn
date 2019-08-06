@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Redux</title>
+</head>
+
+<body>
+    <script>
+        const createStore = function (reducer, initState, enhancer) {
+            // 检查你的state和enhance参数有没有传反
+            if (typeof initialState === 'function' && typeof enhancer === 'undefined') {
+                enhancer = initialState
+                initialState = undefined
+            }
+            // 如果有传入合法的enhance，则通过enhancer再调用一次createStore
+            if (typeof enhancer !== 'undefined') {
+                if (typeof enhancer !== 'function') {
+                    throw new Error('Expected the enhancer to be a function.')
+                }
+                return enhancer(createStore)(reducer, initialState)
+            }
+
+            let state = initState;
+            let listeners = [];
+
+            function subscribe(listener) {
+                listeners.push(listener);
+                return function unsubscribe() {
+                    const index = listeners.indexOf(listener)
+                    listeners.splice(index, 1)
+                }
+            }
+
+            function dispatch(action) {
+                /*请按照我的计划修改 state*/
+                state = reducer(state, action);
+                for (let i = 0; i < listeners.length; i++) {
+                    const listener = listeners[i];
+                    listener();
+                }
+            }
+
+            function getState() {
+                return state;
+            }
+
+            function replaceReducer(nextReducer) {
+                reducer = nextReducer
+                /*刷新一遍 state 的值，新来的 reducer 把自己的默认状态放到 state 树上去*/
+                dispatch({ type: Symbol() })
+            }
+
+            /* 注意！！！只修改了这里，用一个不匹配任何计划的 type，来获取初始值 */
+            dispatch({ type: Symbol() })
+
+            return {
+                subscribe,
+                dispatch,
+                getState,
+                replaceReducer
+            }
+        }
+
+        function combineReducers(reducers) {
+            /* reducerKeys = ['counter', 'info']*/
+            const reducerKeys = Object.keys(reducers)
+
+            /*返回合并后的新的reducer函数*/
+            return function combination(state = {}, action) {
+                /*生成的新的state*/
+                const nextState = {}
+
+                /*遍历执行所有的reducers，整合成为一个新的state*/
+                for (let i = 0; i < reducerKeys.length; i++) {
+                    const key = reducerKeys[i]
+                    const reducer = reducers[key]
+                    /*之前的 key 的 state*/
+                    const previousStateForKey = state[key]
+                    /*执行 分 reducer，获得新的state*/
+                    const nextStateForKey = reducer(previousStateForKey, action)
+
+                    nextState[key] = nextStateForKey
+                }
+                return nextState;
+            }
+        }
+
+        const applyMiddleware = function (...middlewares) {
+            /*返回一个重写createStore的方法*/
+            return function createStoreGenerator(originCreateStore) {
+                /*返回重写后新的 createStore*/
+                return function createStore(reducer, initState, enhancer) {
+                    /*1. 生成store*/
+                    const store = originCreateStore(reducer, initState, enhancer);
+                    /*给每个 middleware 传下store，相当于 const logger = loggerMiddleware(store);*/
+                    /* const chain = [exception, time, logger]*/
+                    const chain = middlewares.map(middleware => middleware(store));
+                    let dispatch = store.dispatch;
+                    /* 实现 exception(time((logger(dispatch))))*/
+                    chain.reverse().map(middleware => {
+                        dispatch = middleware(dispatch);
+                    });
+
+                    /*2. 重写 dispatch*/
+                    store.dispatch = dispatch;
+                    return store;
+                }
+            }
+        }
+
+        let initState = {
+            counter: {
+                count: 0
+            },
+            info: {
+                name: '前端九部',
+                description: '我们都是前端爱好者！'
+            }
+        }
+        /*注意：action = {type:'',other:''}, action 必须有一个 type 属性*/
+        function counterReducer(state, action) {
+            switch (action.type) {
+                case 'INCREMENT':
+                    return {
+                        count: state.count + 1
+                    }
+                case 'DECREMENT':
+                    return {
+                        ...state,
+                        count: state.count - 1
+                    }
+                default:
+                    return state;
+            }
+        }
+
+        function InfoReducer(state, action) {
+            switch (action.type) {
+                case 'SET_NAME':
+                    return {
+                        ...state,
+                        name: action.name
+                    }
+                case 'SET_DESCRIPTION':
+                    return {
+                        ...state,
+                        description: action.description
+                    }
+                default:
+                    return state;
+            }
+        }
+
+        const reducer = combineReducers({
+            counter: counterReducer,
+            info: InfoReducer
+        });
+        /*把plan函数*/
+        let store = createStore(reducer, initState);
+
+        store.subscribe(() => {
+            let state = store.getState();
+            console.log(state);
+        });
+        /*自增*/
+        store.dispatch({
+            type: 'INCREMENT'
+        });
+        // /*自减*/
+        // store.dispatch({
+        //     type: 'DECREMENT'
+        // });
+        // /*我想随便改 计划外的修改是无效的！*/
+        // store.dispatch({
+        //     count: 'abc'
+        // });
+    </script>
+</body>
+
+</html>

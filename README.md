@@ -302,9 +302,12 @@
 
     > 从路由原理出发，深入阅读理解react-router 4.0的源码 https://github.com/forthealllight/blog/issues/26
 
-3. Redux数据流
+3. Redux 
     > 通过了解 Redux 简单源码，掌握 Redux 数据流原理  https://juejin.im/post/5b627b5be51d4534c34a62fa
 
+    > 完全理解 redux（从零实现一个 redux） https://github.com/brickspert/blog/issues
+
+    > Redux入坑进阶-源码解析 https://github.com/ecmadao/Coding-Guide/blob/master/Notes/React/Redux/Redux%E5%85%A5%E5%9D%91%E8%BF%9B%E9%98%B6-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.md
 
 4. Redux如何实现多个组件之间的通信，多个组件使用相同状态如何进行管理
     > 用Redux来进行组件间通讯 https://segmentfault.com/a/1190000008411613
@@ -319,7 +322,11 @@
 
     > 谈谈React虚拟DOM和diff算法 https://juejin.im/post/5ceca77c6fb9a07eec59aa35
 
+    > 深度剖析：如何实现一个 Virtual DOM 算法 https://github.com/livoras/blog/issues/13
+
 7. connect原理
+    > 动手实现 React-redux（三）：connect 和 mapStateToProps http://huziketang.mangojuice.top/books/react/lesson38
+    
     > redux中的connect用法介绍及原理解析 https://juejin.im/post/59eb2302f265da431a425650
 
 8. React事件机制
