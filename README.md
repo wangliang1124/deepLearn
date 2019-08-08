@@ -356,6 +356,8 @@
 
 15. RN如何实现一个原生的组件
     > React Native 封装原生UI组件(iOS) https://www.jianshu.com/p/e16c91acce03
+    
+    > React Native 集成到原生项目 https://www.jianshu.com/p/3dc9d70a790f
 
     > ReactNative之原生模块开发并发布——iOS篇 http://www.liuchungui.com/blog/2016/05/02/reactnativezhi-yuan-sheng-mo-kuai-kai-fa-bing-fa-bu-iospian/
 
@@ -367,6 +369,8 @@
 
 18. RN和原生通信
     > React Native 与 iOS 和 Android 通信 https://juejin.im/post/5c6ca781f265da2da8356c81
+
+    > ReactNative与原生代码的通信(iOS篇) https://www.jianshu.com/p/99c32dc5cf29
 
     > React Native通信机制详解 http://blog.cnbang.net/tech/2698/ 
 
