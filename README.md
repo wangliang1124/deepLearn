@@ -52,6 +52,8 @@
 
     > 微任务、宏任务与 Event-Loop https://juejin.im/post/5b73d7a6518825610072b42b
 
+    > Tasks, microtasks, queues and schedules https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/
+
 11. 如何处理跨域
 
     > 前端常见跨域解决方案 https://segmentfault.com/a/1190000011145364
@@ -63,8 +65,7 @@
     > 深入理解 JavaScript 执行上下文和执行栈 https://juejin.im/post/5c77365c6fb9a049b2228e4a#heading-0
 
 13. 异步
-    > Javascript异步解决方案的发展历程 https://www.jianshu.com/p/2f5d72703c46
-    > S异步解决方案的发展历程以及优缺点 https://github.com/frontend9/fe9-interview/issues/24
+    > 异步解决方案的发展历程以及优缺点 https://github.com/frontend9/fe9-interview/issues/24
     
 14. Promise
 
@@ -73,6 +74,8 @@
 15. 继承
 
     > 深入 JavaScript 继承原理 https://juejin.im/post/5a96d78ef265da4e9311b4d8
+    
+    > JavaScript深入之继承的多种方式和优缺点 https://github.com/mqyqingfeng/Blog/issues/16
 
 16. 内存泄漏
 
@@ -94,6 +97,7 @@
 2. 浏览器缓存
 
     > 浏览器缓存知识小结及应用 https://www.cnblogs.com/lyzg/p/5125934.html
+
     > 深入理解浏览器的缓存机制 https://www.jianshu.com/p/54cc04190252
 
 3. 视口宽高、位置与滚动高度
