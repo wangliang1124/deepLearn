@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Cross-origin</title>
+</head>
+
+<body>
+    <iframe id="iframe" src="http://127.0.0.1:8081/CrossOrigin-b.html" style="display:none;"></iframe>
+    <script>
+        var iframe = document.getElementById('iframe');
+
+        // 向b.html传hash值
+        setTimeout(function () {
+            iframe.src = iframe.src + '#user=admin';
+        }, 1000);
+
+        // 开放给同域c.html的回调方法
+        function onCallback(res) {
+            console.log('data from c.html ---> ' + res);
+        }
+    </script>
+
+
+    <script>
+        var proxy = function (url, callback) {
+            var state = 0;
+            var iframe = document.createElement('iframe');
+
+            // 加载跨域页面
+            iframe.src = url;
+
+            // onload事件会触发2次，第1次加载跨域页，并留存数据于window.name
+            iframe.onload = function () {
+                if (state === 1) {
+                    // 第2次onload(同域proxy页)成功后，读取同域window.name中数据
+                    callback(iframe.contentWindow.name);
+                    destoryFrame();
+
+                } else if (state === 0) {
+                    // 第1次onload(跨域页)成功后，切换到同域代理页面
+                    iframe.contentWindow.location = 'http://127.0.0.1:8080/CrossOrigin-c.html';
+                    state = 1;
+                }
+            };
+
+            document.body.appendChild(iframe);
+
+            // 获取数据以后销毁这个iframe，释放内存；这也保证了安全（不被其他域frame js访问）
+            function destoryFrame() {
+                iframe.contentWindow.document.write('');
+                iframe.contentWindow.close();
+                document.body.removeChild(iframe);
+            }
+        };
+
+        // 请求跨域b页面数据
+        proxy('http://127.0.0.1:8081/CrossOrigin-b.html', function (data) {
+            console.log(data);
+        });
+    </script>
+</body>
+
+</html>

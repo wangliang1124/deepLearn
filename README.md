@@ -56,6 +56,8 @@
 
     > 前端常见跨域解决方案 https://segmentfault.com/a/1190000011145364
 
+    > 不要再问我跨域的问题了 https://segmentfault.com/a/1190000015597029
+    
 12. Execution Context
 
     > 深入理解 JavaScript 执行上下文和执行栈 https://juejin.im/post/5c77365c6fb9a049b2228e4a#heading-0
@@ -84,7 +86,10 @@
 1. 浏览器工作原理
 
     > 浏览器的工作原理 https://www.html5rocks.com/zh/tutorials/internals/howbrowserswork/
+
     > How browsers work http://taligarsiel.com/Projects/howbrowserswork1.htm
+
+    > 浏览器渲染详细过程：重绘、重排和 composite 只是冰山一角 https://juejin.im/entry/590801780ce46300617c89b8
 
 2. 浏览器缓存
 
@@ -386,7 +391,7 @@
 22. 调用 setState 之后发生了什么？
     > setState 之后发生了什么 https://undefinedblog.com/what-happened-after-set-state/
     
-23. react diff 原理（常考，大厂必考）
+23. react diff 原理
     > React diff原理探究以及应用实践 https://juejin.im/post/5cb5b4926fb9a068b52fb823#comment
 
     > React Diff理解 https://juejin.im/post/5b3658f0518825522609e4c0#comment

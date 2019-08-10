@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Cross-origin</title>
+</head>
+
+<body>
+    <iframe id="iframe" src="http://127.0.0.1:8080/CrossOrigin-c.html" style="display:none;"></iframe>
+    <script>
+        var iframe = document.getElementById('iframe');
+
+        // 监听a.html传来的hash值，再传给c.html
+        window.onhashchange = function () {
+            console.log('data from a', location.hash)
+            iframe.src = iframe.src + '#hha=test';
+        };
+    </script>
+
+    <script>
+        window.name = 'cross origin data from b.html!';
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>内存泄露</title>
+</head>
+
+<body>
+    <div id="nodes"></div>
+    <script>
+        // var x = [];
+        // function createSomeNodes() {
+        //     var div,
+        //         i = 100,
+        //         frag = document.createDocumentFragment();
+        //     for (; i > 0; i--) {
+        //         div = document.createElement("div");
+        //         div.appendChild(document.createTextNode(i + " - " + new Date().toTimeString()));
+        //         frag.appendChild(div);
+        //     }
+        //     document.getElementById("nodes").appendChild(frag);
+        // }
+        // function grow() {
+        //     console.log('===')
+        //     x.push(new Array(1000000000).join('x'));
+        //     createSomeNodes();
+        //     setTimeout(grow, 1000);
+        // }
+
+        // grow()
+
+        var theThing = null;
+        var replaceThing = function () {
+            console.log('xxx')
+            var originalThing = theThing;
+            var unused = function () {
+                if (originalThing)
+                    console.log("hi");
+            };
+            theThing = {
+                longStr: new Array(1000000000).join('*'),
+                someMethod: function () {
+                    console.log(someMessage);
+                }
+            };
+            // originalThing = null
+            // return unused
+        };
+        setInterval(replaceThing, 1000);
+    </script>
+</body>
+
+</html>
