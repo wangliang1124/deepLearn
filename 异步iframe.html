@@ -11,47 +11,55 @@
     <div id="iframe-wrapper"></div>
     <img src="http://n.sinaimg.cn/tech/640/w396h244/20180420/yeMq-fznefkf4584324.gif" alt="">
     <script>
-    // console.log(document.getElementById('iframe0').contentWindow.document)
-    //doesn't block the load event
-    function createIframe() {
-        var i = document.createElement("iframe")
-        i.src = "https://segmentfault.com/"
-        i.scrolling = "auto"
-        i.frameborder = "0"
-        i.width = "200px"
-        i.height = "100px"
-        document.getElementById("iframe-wrapper").appendChild(i)
-    }
-    // Check for browser support of event handling capability
-    if (window.addEventListener) window.addEventListener("load", createIframe, false)
-    else if (window.attachEvent) window.attachEvent("onload", createIframe)
-    else window.onload = createIframe
-    </script>
-    <iframe id="iframe1" src="" width="200" height="100" border="2"></iframe>
-    <script>
-    function setIframeSrc() {
-        var s = "https://segmentfault.com/";
-        var iframe1 = document.getElementById('iframe1');
-        if (-1 == navigator.userAgent.indexOf("MSIE")) {
-            iframe1.src = s;
-        } else {
-            iframe1.location = s;
+        // console.log(document.getElementById('iframe0').contentWindow.document)
+        //doesn't block the load event
+        function createIframe() {
+            var i = document.createElement("iframe")
+            i.src = "https://segmentfault.com/"
+            i.scrolling = "auto"
+            i.frameborder = "0"
+            i.width = "200px"
+            i.height = "100px"
+            document.getElementById("iframe-wrapper").appendChild(i)
         }
-    }
-    setTimeout(setIframeSrc, 5);
+        // Check for browser support of event handling capability
+        if (window.addEventListener) {
+            window.addEventListener("load", createIframe, false)
+        } else if (window.attachEvent) {
+            window.attachEvent("onload", createIframe)
+        } else {
+            window.onload = createIframe
+        }
+    </script>
+    <div>
+
+        <iframe id="iframe1" src="" width="200" height="100" border="2"></iframe>
+    </div>
+    <script>
+        function setIframeSrc() {
+            var url = "https://segmentfault.com/";
+            var iframe1 = document.getElementById('iframe1');
+            if (-1 == navigator.userAgent.indexOf("MSIE")) {
+                iframe1.src = url;
+            } else {
+                iframe1.location = url;
+            }
+        }
+        setTimeout(setIframeSrc, 0);
     </script>
     <script>
-    (function(d) {
-        var iframe = d.body.appendChild(d.createElement('iframe')),
-            doc = iframe.contentWindow.document;
+        (function (document) {
+            var iframe = document.body.appendChild(document.createElement('iframe')),
+                doc = iframe.contentWindow.document;
 
-        // style the iframe with some CSS
-        iframe.style.cssText = "position:absolute;width:200px;height:100px;left:300px;";
+            // style the iframe with some CSS
+            // iframe.style.cssText = "position:absolute;width:200px;height:100px;left:300px;";
 
-        doc.open().write('<body onload="' + 'var d = document;d.getElementsByTagName(\'head\')[0].' + 'appendChild(d.createElement(\'script\')).src' + '=\'\/path\/to\/file\'">');
+            // doc.open().write('<body onload="' + 'var docEl = document;docEl.getElementsByTagName(\'head\')[0].' + 'appendChild(docEl.createElement(\'script\')).src' + '=\'\/path\/to\/file\'">');
+            doc.open().write('<body onload="' + 'var docEl = document;docEl.getElementsByTagName(\'head\')[0].' + 'appendChild(docEl.createElement(\'script\')).src' + '=\'https:\/\/segmentfault.com\/\'">');
 
-        doc.close(); //iframe onload event happens
-    })(document);
+            doc.close(); //iframe onload event happens
+        })(document);
     </script>
 </body>
 
