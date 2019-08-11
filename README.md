@@ -48,6 +48,8 @@
 
     > 深入探究 eventloop 与浏览器渲染的时序问题 https://github.com/jin5354/404forest/issues/61
 
+    > 从event loop规范探究javaScript异步及浏览器更新渲染时机 https://github.com/aooy/blog/issues/5
+
 10. 微任务、宏任务与 EventLoop
 
     > 微任务、宏任务与 Event-Loop https://juejin.im/post/5b73d7a6518825610072b42b
@@ -74,7 +76,7 @@
 15. 继承
 
     > 深入 JavaScript 继承原理 https://juejin.im/post/5a96d78ef265da4e9311b4d8
-    
+
     > JavaScript深入之继承的多种方式和优缺点 https://github.com/mqyqingfeng/Blog/issues/16
 
 16. 内存泄漏
@@ -102,10 +104,14 @@
 
 3. 视口宽高、位置与滚动高度
 
-    > 视口宽高、位置与滚动高度 https://www.qdskill.com/javascript/1063.html
+    > JavaScript视口宽高、元素位置、滚动高度、尺寸属性 https://www.jianshu.com/p/62f691f4811c
 
 4. DOM操作成本到底高在哪儿？
     > DOM操作成本到底高在哪儿？ https://segmentfault.com/a/1190000014070240?utm_source=index-hottest
+
+5. 从输入URL到页面加载发生了什么？ 
+    > 【原】老生常谈-从输入url到页面展示到底发生了什么 http://www.cnblogs.com/xianyulaodi/p/6547807.html
+
 
 ## HTTP 协议
 
@@ -141,6 +147,8 @@
 5. HTTP 请求报文和 HTTP 响应报文
     > HTTP 请求报文和 HTTP 响应报文 https://www.cnblogs.com/biyeymyhjob/archive/2012/07/28/2612910.html
 
+    > 一篇文章带你详解 HTTP 协议（网络协议篇一） https://www.jianshu.com/p/6e9e4156ece3
+
 6. http1.1时如何复用tcp连接
     > HTTP协议篇(一)：多路复用、数据流 https://www.cnblogs.com/XiongMaoMengNan/p/8425724.html
 
@@ -149,6 +157,11 @@
 
 8. 基于 Token 的身份验证
     > 基于 Token 的身份验证 https://ninghao.net/blog/2834
+
+9. TCP协议
+    > 一篇文章带你熟悉 TCP/IP 协议（网络协议篇二） https://www.jianshu.com/p/9f3e879a4c9c
+
+    > 通俗大白话来理解TCP协议的三次握手和四次分手 https://github.com/jawil/blog/issues/14
 
 ## HTML
 
@@ -434,7 +447,16 @@
 
 2. Webpack HMR 原理解析
     > Webpack HMR 原理解析 https://zhuanlan.zhihu.com/p/30669007
-    
+
+## 正则表达式
+
+> 正则表达式 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Regular_Expressions
+
+> javascript正则表达式 https://www.cnblogs.com/rubylouvre/archive/2010/03/09/1681222.html
+
+> JavaScript正则进阶之路——活学妙用奇淫正则表达式 https://github.com/jawil/blog/issues/20
+
+
 ## Git
 > 待完善
 
