@@ -28,6 +28,7 @@
             if (options.method === "GET") {
                 let url = options.url + (options.url.indexOf('?') > -1 ? '&' : "?") + paramString
                 xhr.open("GET", url);
+                // xhr.setRequestHeader("User-Agent", "Mozilla/5.0 (Linux; X11)");
                 xhr.send(null);
             }
 

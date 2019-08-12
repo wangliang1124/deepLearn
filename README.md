@@ -136,8 +136,6 @@
 
     > 理解公钥与私钥 https://songlee24.github.io/2015/05/03/public-key-and-private-key/
 
-    > 公钥和私钥的完全解释（包括对称算法和非对称算法、RSA 解释） https://www.jianshu.com/p/7615d036969f
-
     > 数字签名是什么？ http://www.ruanyifeng.com/blog/2011/08/what_is_a_digital_signature.html
 
 4. http 状态码有那些？分别代表是什么意思？
@@ -155,8 +153,10 @@
 7. HTTP Header 详解
     >  https://kb.cnblogs.com/page/92320/
 
-8. 基于 Token 的身份验证
+8. Token
     > 基于 Token 的身份验证 https://ninghao.net/blog/2834
+    
+    > 彻底理解cookie，session，token https://www.cnblogs.com/moyand/p/9047978.html
 
 9. TCP协议
     > 一篇文章带你熟悉 TCP/IP 协议（网络协议篇二） https://www.jianshu.com/p/9f3e879a4c9c
