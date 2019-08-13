@@ -5,23 +5,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Redux</title>
+    <title>Redux实现</title>
 </head>
 
 <body>
     <script>
         const createStore = function (reducer, initState, enhancer) {
-            // 检查你的state和enhance参数有没有传反
-            if (typeof initialState === 'function' && typeof enhancer === 'undefined') {
-                enhancer = initialState
-                initialState = undefined
+            // 检查你的 state 和 enhancer 参数有没有传反
+            if (typeof initState === 'function' && typeof enhancer === 'undefined') {
+                enhancer = initState
+                initState = undefined
             }
-            // 如果有传入合法的enhance，则通过enhancer再调用一次createStore
+            // 如果有传入合法的 enhancer, 则通过 enhancer 再调用一次 createStore
             if (typeof enhancer !== 'undefined') {
                 if (typeof enhancer !== 'function') {
                     throw new Error('Expected the enhancer to be a function.')
                 }
-                return enhancer(createStore)(reducer, initialState)
+                return enhancer(createStore)(reducer, initState)
             }
 
             let state = initState;
@@ -36,7 +36,6 @@
             }
 
             function dispatch(action) {
-                /*请按照我的计划修改 state*/
                 state = reducer(state, action);
                 for (let i = 0; i < listeners.length; i++) {
                     const listener = listeners[i];
@@ -89,13 +88,13 @@
             }
         }
 
-        const applyMiddleware = function (...middlewares) {
+        function applyMiddleware(...middlewares) {
             /*返回一个重写createStore的方法*/
-            return function createStoreGenerator(originCreateStore) {
+            return function (createStore) {
                 /*返回重写后新的 createStore*/
-                return function createStore(reducer, initState, enhancer) {
+                return function (reducer, initState, enhancer) {
                     /*1. 生成store*/
-                    const store = originCreateStore(reducer, initState, enhancer);
+                    const store = createStore(reducer, initState, enhancer);
                     /*给每个 middleware 传下store，相当于 const logger = loggerMiddleware(store);*/
                     /* const chain = [exception, time, logger]*/
                     const chain = middlewares.map(middleware => middleware(store));
@@ -112,12 +111,41 @@
             }
         }
 
+        /*核心的代码在这里，通过闭包隐藏了 actionCreator 和 dispatch*/
+        function bindActionCreator(actionCreator, dispatch) {
+            return function () {
+                return dispatch(actionCreator.apply(this, arguments))
+            }
+        }
+
+        /* actionCreators 必须是 function 或者 object */
+        function bindActionCreators(actionCreators, dispatch) {
+            if (typeof actionCreators === 'function') {
+                return bindActionCreator(actionCreators, dispatch)
+            }
+
+            if (typeof actionCreators !== 'object' || actionCreators === null) {
+                throw new Error()
+            }
+
+            const keys = Object.keys(actionCreators)
+            const boundActionCreators = {}
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i]
+                const actionCreator = actionCreators[key]
+                if (typeof actionCreator === 'function') {
+                    boundActionCreators[key] = bindActionCreator(actionCreator, dispatch)
+                }
+            }
+            return boundActionCreators
+        }
+        /* ====================================================== test ======================================================================== */
         let initState = {
             counter: {
                 count: 0
             },
             info: {
-                name: '前端九部',
+                name: '无线研发',
                 description: '我们都是前端爱好者！'
             }
         }
@@ -126,7 +154,7 @@
             switch (action.type) {
                 case 'INCREMENT':
                     return {
-                        count: state.count + 1
+                        count: state.count + action.count || 1
                     }
                 case 'DECREMENT':
                     return {
@@ -159,25 +187,68 @@
             counter: counterReducer,
             info: InfoReducer
         });
+        // 装饰模式
+        const loggerMiddleware = (store) => (next) => (action) => {
+            console.log('====== logger =======')
+            console.log('this state', store.getState());
+            console.log('action', action);
+            next(action);
+            console.log('next state', store.getState());
+            console.log('====== logger =======')
+        }
+
         /*把plan函数*/
-        let store = createStore(reducer, initState);
+        let store = createStore(reducer, initState, applyMiddleware(loggerMiddleware));
 
         store.subscribe(() => {
             let state = store.getState();
-            console.log(state);
+            console.log('====== linstener =====', state);
         });
-        /*自增*/
+
+
+        /*返回 action 的函数就叫 actionCreator*/
+        function increment(count) {
+            return {
+                type: 'INCREMENT',
+                count
+            }
+        }
+
+        function setName(name) {
+            return {
+                type: 'SET_NAME',
+                name: name
+            }
+        }
+
+        // const actions = {
+        //     increment: function () {
+        //         return store.dispatch(increment.apply(this, arguments))
+        //     },
+        //     setName: function () {
+        //         return store.dispatch(setName.apply(this, arguments))
+        //     }
+        // }
+
+        const actions = bindActionCreators({ increment, setName }, store.dispatch)
+
+        actions.increment(100)
+        actions.setName('北京无线开发')
+
+        // /*自增*/
+        // store.dispatch({
+        //     type: 'INCREMENT',
+        //     count: 100
+        // });
+
+        /*自减*/
         store.dispatch({
-            type: 'INCREMENT'
+            type: 'DECREMENT'
         });
-        // /*自减*/
-        // store.dispatch({
-        //     type: 'DECREMENT'
-        // });
-        // /*我想随便改 计划外的修改是无效的！*/
-        // store.dispatch({
-        //     count: 'abc'
-        // });
+        /*我想随便改 计划外的修改是无效的！*/
+        store.dispatch({
+            count: 'abc'
+        });
     </script>
 </body>
 
