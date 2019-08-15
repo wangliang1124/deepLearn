@@ -16,11 +16,11 @@
 
     > 浅说 XSS 和 CSRF https://juejin.im/entry/5b4b56fd5188251b1a7b2ac1
 
-    > Web安全的三个攻防姿势 https://juejin.im/post/59e6b21bf265da43247f861d
+    > Web 安全的三个攻防姿势 https://juejin.im/post/59e6b21bf265da43247f861d
 
-    > 前端安全系列（一）：如何防止XSS攻击？ https://tech.meituan.com/2018/09/27/fe-security.html
+    > 前端安全系列（一）：如何防止 XSS 攻击？ https://tech.meituan.com/2018/09/27/fe-security.html
 
-    >  浅谈CSRF攻击方式 https://www.cnblogs.com/hyddd/archive/2009/04/09/1432744.html
+    > 浅谈 CSRF 攻击方式 https://www.cnblogs.com/hyddd/archive/2009/04/09/1432744.html
 
 5. 理解 es6 class 构造以及继承的底层实现原理
 
@@ -48,7 +48,7 @@
 
     > 深入探究 eventloop 与浏览器渲染的时序问题 https://github.com/jin5354/404forest/issues/61
 
-    > 从event loop规范探究javaScript异步及浏览器更新渲染时机 https://github.com/aooy/blog/issues/5
+    > 从 event loop 规范探究 javaScript 异步及浏览器更新渲染时机 https://github.com/aooy/blog/issues/5
 
 10. 微任务、宏任务与 EventLoop
 
@@ -61,14 +61,15 @@
     > 前端常见跨域解决方案 https://segmentfault.com/a/1190000011145364
 
     > 不要再问我跨域的问题了 https://segmentfault.com/a/1190000015597029
-    
+
 12. Execution Context
 
     > 深入理解 JavaScript 执行上下文和执行栈 https://juejin.im/post/5c77365c6fb9a049b2228e4a#heading-0
 
 13. 异步
+
     > 异步解决方案的发展历程以及优缺点 https://github.com/frontend9/fe9-interview/issues/24
-    
+
 14. Promise
 
     > Promise 原理讲解 https://juejin.im/post/5aa7868b6fb9a028dd4de672
@@ -77,7 +78,7 @@
 
     > 深入 JavaScript 继承原理 https://juejin.im/post/5a96d78ef265da4e9311b4d8
 
-    > JavaScript深入之继承的多种方式和优缺点 https://github.com/mqyqingfeng/Blog/issues/16
+    > JavaScript 深入之继承的多种方式和优缺点 https://github.com/mqyqingfeng/Blog/issues/16
 
 16. 内存泄漏
 
@@ -104,14 +105,14 @@
 
 3. 视口宽高、位置与滚动高度
 
-    > JavaScript视口宽高、元素位置、滚动高度、尺寸属性 https://www.jianshu.com/p/62f691f4811c
+    > JavaScript 视口宽高、元素位置、滚动高度、尺寸属性 https://www.jianshu.com/p/62f691f4811c
 
-4. DOM操作成本到底高在哪儿？
-    > DOM操作成本到底高在哪儿？ https://segmentfault.com/a/1190000014070240?utm_source=index-hottest
+4. DOM 操作成本到底高在哪儿？
 
-5. 从输入URL到页面加载发生了什么？ 
-    > 【原】老生常谈-从输入url到页面展示到底发生了什么 http://www.cnblogs.com/xianyulaodi/p/6547807.html
+    > DOM 操作成本到底高在哪儿？ https://segmentfault.com/a/1190000014070240?utm_source=index-hottest
 
+5. 从输入 URL 到页面加载发生了什么？
+    > 【原】老生常谈-从输入 url 到页面展示到底发生了什么 http://www.cnblogs.com/xianyulaodi/p/6547807.html
 
 ## HTTP 协议
 
@@ -123,9 +124,10 @@
 
     > HTTPS 工作原理 https://cattail.me/tech/2015/11/30/how-https-works.html
 
-    > 图文还原HTTPS原理，架构师必读！ https://mp.weixin.qq.com/s?__biz=MzI3NjU2ODA5Mg==&mid=2247483985&idx=1&sn=0b6de989219032d64648785946a974a4&chksm=eb72c322dc054a340219898f0c78a88cf0728f3562d47e306bfc912a304f3c13063e4836a5d3&mpshare=1&scene=23&srcid=0731o25oAogd05GGEfu9GW4b#rd
-    
+    > 图文还原 HTTPS 原理，架构师必读！ https://mp.weixin.qq.com/s?__biz=MzI3NjU2ODA5Mg==&mid=2247483985&idx=1&sn=0b6de989219032d64648785946a974a4&chksm=eb72c322dc054a340219898f0c78a88cf0728f3562d47e306bfc912a304f3c13063e4836a5d3&mpshare=1&scene=23&srcid=0731o25oAogd05GGEfu9GW4b#rd
+
 2. HTTP 协议
+
     > HTTP 协议入门 http://www.ruanyifeng.com/blog/2016/08/http.html
 
     > 深入理解 HTTP 协议 https://juejin.im/post/5ba65296f265da0ac8493503#heading-0
@@ -143,25 +145,30 @@
     > http 状态码是什么，有什么用，在哪里查看，分别代表什么意思？ https://juejin.im/post/590082e6a22b9d0065be1a5c
 
 5. HTTP 请求报文和 HTTP 响应报文
+
     > HTTP 请求报文和 HTTP 响应报文 https://www.cnblogs.com/biyeymyhjob/archive/2012/07/28/2612910.html
 
     > 一篇文章带你详解 HTTP 协议（网络协议篇一） https://www.jianshu.com/p/6e9e4156ece3
 
-6. http1.1时如何复用tcp连接
-    > HTTP协议篇(一)：多路复用、数据流 https://www.cnblogs.com/XiongMaoMengNan/p/8425724.html
+6. http1.1 时如何复用 tcp 连接
+
+    > HTTP 协议篇(一)：多路复用、数据流 https://www.cnblogs.com/XiongMaoMengNan/p/8425724.html
 
 7. HTTP Header 详解
-    >  https://kb.cnblogs.com/page/92320/
+
+    > https://kb.cnblogs.com/page/92320/
 
 8. Token
-    > 基于 Token 的身份验证 https://ninghao.net/blog/2834
-    
-    > 彻底理解cookie，session，token https://www.cnblogs.com/moyand/p/9047978.html
 
-9. TCP协议
+    > 基于 Token 的身份验证 https://ninghao.net/blog/2834
+
+    > 彻底理解 cookie，session，token https://www.cnblogs.com/moyand/p/9047978.html
+
+9. TCP 协议
+
     > 一篇文章带你熟悉 TCP/IP 协议（网络协议篇二） https://www.jianshu.com/p/9f3e879a4c9c
 
-    > 通俗大白话来理解TCP协议的三次握手和四次分手 https://github.com/jawil/blog/issues/14
+    > 通俗大白话来理解 TCP 协议的三次握手和四次分手 https://github.com/jawil/blog/issues/14
 
 ## HTML
 
@@ -302,159 +309,184 @@
     > Sticky Footer, Five Ways https://css-tricks.com/couple-takes-sticky-footer/
 
 16. CSS3 Transform Perspective
+
     > perspective https://developer.mozilla.org/zh-CN/docs/Web/CSS/perspective
 
     > CSS3 实践之摩天轮式图片轮播+3D 正方体+3D 标签云 标签云 https://www.bbsmax.com/A/QV5Z1xv6Jy/
 
-17. PNG图片压缩原理
-    > PNG图片压缩原理 https://github.com/airuikun/blog/issues/1
-    
+17. PNG 图片压缩原理
+
+    > PNG 图片压缩原理 https://github.com/airuikun/blog/issues/1
+
 ## React
+
 1. 组件之间如何通信
-    > React中组件通信的几种方式 https://juejin.im/post/5a2cbc57f265da431523d6de
+
+    > React 中组件通信的几种方式 https://juejin.im/post/5a2cbc57f265da431523d6de
 
     > React 组件间通讯 http://taobaofed.org/blog/2016/11/17/react-components-communication/
 
-2. 如何配置React-Router
+2. 如何配置 React-Router
+
     > 路由配置 https://react-guide.github.io/react-router-cn/docs/guides/basics/RouteConfiguration.html
 
     > React Router 使用教程 http://www.ruanyifeng.com/blog/2016/05/react_router.html
 
     > 单页面应用路由实现原理 https://github.com/youngwind/blog/issues/109
 
-    > 从路由原理出发，深入阅读理解react-router 4.0的源码 https://github.com/forthealllight/blog/issues/26
+    > 从路由原理出发，深入阅读理解 react-router 4.0 的源码 https://github.com/forthealllight/blog/issues/26
 
-3. Redux 
-    > 通过了解 Redux 简单源码，掌握 Redux 数据流原理  https://juejin.im/post/5b627b5be51d4534c34a62fa
+3. React 事件机制
 
-    > 完全理解 redux（从零实现一个 redux） https://github.com/brickspert/blog/issues
+    > React 事件系统分析与最佳实践 https://zhuanlan.zhihu.com/p/27132447
 
-    > Redux入坑进阶-源码解析 https://github.com/ecmadao/Coding-Guide/blob/master/Notes/React/Redux/Redux%E5%85%A5%E5%9D%91%E8%BF%9B%E9%98%B6-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.md
+    > React 事件机制 - 源码概览（上） https://juejin.im/post/5bd32493f265da0ae472cc8e
 
-4. Redux如何实现多个组件之间的通信，多个组件使用相同状态如何进行管理
-    > 用Redux来进行组件间通讯 https://segmentfault.com/a/1190000008411613
+4. React 怎么做数据的检查和变化
 
-    > 彻底弄懂React-Redux组件通信 https://blog.csdn.net/DFF1993/article/details/80410154
+    > React 高效渲染策略 https://github.com/fi3ework/blog/issues/15
 
-5. Redux中间件是什么东西，接受几个参数（两端的柯里化函数）
-    > 函数的柯里化与Redux中间件及applyMiddleware源码分析  https://juejin.im/post/5b6845daf265da0fa8676459
+5. 虚拟 DOM
 
-    > redux中间件原理及实现 https://www.jianshu.com/p/8c2a37247020
+    > React 虚拟 DOM 浅析 http://www.alloyteam.com/2015/10/react-virtual-analysis-of-the-dom/
 
-6. Redux中异步的请求怎么处理
-    > Redux 异步流最佳实践 https://juejin.im/entry/59fd15b951882534af2552af
+    > 谈谈 React 虚拟 DOM 和 diff 算法 https://juejin.im/post/5ceca77c6fb9a07eec59aa35
 
-7. connect原理
-    > 动手实现 React-redux（三）：connect 和 mapStateToProps http://huziketang.mangojuice.top/books/react/lesson38
-    
-    > redux中的connect用法介绍及原理解析 https://juejin.im/post/59eb2302f265da431a425650
+6. react diff 原理
 
-8. React事件机制
-    > React 事件系统分析与最佳实践 https://zhuanlan.zhihu.com/p/27132447 
-
-    > React事件机制 - 源码概览（上） https://juejin.im/post/5bd32493f265da0ae472cc8e
-
-9. React怎么做数据的检查和变化
-    > React高效渲染策略  https://github.com/fi3ework/blog/issues/15
-
-10. 虚拟 DOM
-    > React虚拟DOM浅析 http://www.alloyteam.com/2015/10/react-virtual-analysis-of-the-dom/
-
-    > 谈谈React虚拟DOM和diff算法 https://juejin.im/post/5ceca77c6fb9a07eec59aa35
-
-11. react diff 原理
     > 深度剖析：如何实现一个 Virtual DOM 算法 https://github.com/livoras/blog/issues/13
 
-    > React diff原理探究以及应用实践 https://juejin.im/post/5cb5b4926fb9a068b52fb823#comment
+    > React diff 原理探究以及应用实践 https://juejin.im/post/5cb5b4926fb9a068b52fb823#comment
 
-    > React Diff理解 https://juejin.im/post/5b3658f0518825522609e4c0#comment
+    > React Diff 理解 https://juejin.im/post/5b3658f0518825522609e4c0#comment
 
     > React 源码剖析系列 － 不可思议的 react diff https://zhuanlan.zhihu.com/p/20346379
 
-12. React 中 keys 的作用是什么？
-    > React技术内幕 key带来了什么  https://juejin.im/post/59abb01c518825243f1b6dad
+7. React 中 keys 的作用是什么？
 
+    > React 技术内幕 key 带来了什么 https://juejin.im/post/59abb01c518825243f1b6dad
 
-13. WebView和原生是如何通信
-    > IOS、Android与H5通信-JsBridge原理(总结) https://juejin.im/post/5abfbb7251882555731c434a
+8. WebView 和原生是如何通信
 
-    > 好好和h5沟通！几种常见的hybrid通信方式 http://zjutkz.net/2016/04/17/%E5%A5%BD%E5%A5%BD%E5%92%8Ch5%E6%B2%9F%E9%80%9A%EF%BC%81%E5%87%A0%E7%A7%8D%E5%B8%B8%E8%A7%81%E7%9A%84hybrid%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F/
+    > IOS、Android 与 H5 通信-JsBridge 原理(总结) https://juejin.im/post/5abfbb7251882555731c434a
 
-14. RN遇到的兼容性问题
-    > React+RN开发过程中的一些问题总结 https://github.com/amandakelake/blog/issues/52
+    > 好好和 h5 沟通！几种常见的 hybrid 通信方式 http://zjutkz.net/2016/04/17/%E5%A5%BD%E5%A5%BD%E5%92%8Ch5%E6%B2%9F%E9%80%9A%EF%BC%81%E5%87%A0%E7%A7%8D%E5%B8%B8%E8%A7%81%E7%9A%84hybrid%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F/
 
-15. RN如何实现一个原生的组件
-    > React Native 封装原生UI组件(iOS) https://www.jianshu.com/p/e16c91acce03
-    
+9. RN 遇到的兼容性问题
+
+    > React+RN 开发过程中的一些问题总结 https://github.com/amandakelake/blog/issues/52
+
+10. RN 如何实现一个原生的组件
+
+    > React Native 封装原生 UI 组件(iOS) https://www.jianshu.com/p/e16c91acce03
+
     > React Native 集成到原生项目 https://www.jianshu.com/p/3dc9d70a790f
 
-    > ReactNative之原生模块开发并发布——iOS篇 http://www.liuchungui.com/blog/2016/05/02/reactnativezhi-yuan-sheng-mo-kuai-kai-fa-bing-fa-bu-iospian/
+    > ReactNative 之原生模块开发并发布——iOS 篇 http://www.liuchungui.com/blog/2016/05/02/reactnativezhi-yuan-sheng-mo-kuai-kai-fa-bing-fa-bu-iospian/
 
-16. RN的原理，为什么可以同时在安卓和IOS端运行
+11. RN 的原理，为什么可以同时在安卓和 IOS 端运行
+
     > React Native for Android 原理分析与实践：实现原理 https://juejin.im/post/5a6460f8f265da3e4f0a446d
 
-17. RN如何调用原生的一些功能
-    > RN调用原生流程总结 https://www.jianshu.com/p/b078ab50baf3 
+12. RN 如何调用原生的一些功能
 
-18. RN和原生通信
+    > RN 调用原生流程总结 https://www.jianshu.com/p/b078ab50baf3
+
+13. RN 和原生通信
+
     > React Native 与 iOS 和 Android 通信 https://juejin.im/post/5c6ca781f265da2da8356c81
 
-    > ReactNative与原生代码的通信(iOS篇) https://www.jianshu.com/p/99c32dc5cf29
+    > ReactNative 与原生代码的通信(iOS 篇) https://www.jianshu.com/p/99c32dc5cf29
 
-    > React Native通信机制详解 http://blog.cnbang.net/tech/2698/ 
+    > React Native 通信机制详解 http://blog.cnbang.net/tech/2698/
 
-20. React 中 refs 的作用是什么？
-    >  React之ref详细用法 https://segmentfault.com/a/1190000008665915
+14. React 中 refs 的作用是什么？
 
-21. React 中有三种构建组件的方式
-    > React创建组件的三种方式及其区别 https://cloud.tencent.com/developer/article/1165838
+    > React 之 ref 详细用法 https://segmentfault.com/a/1190000008665915
 
-22. 调用 setState 之后发生了什么？
+15. React 中有三种构建组件的方式
+
+    > React 创建组件的三种方式及其区别 https://cloud.tencent.com/developer/article/1165838
+
+16. 调用 setState 之后发生了什么？
+
     > setState 之后发生了什么 https://undefinedblog.com/what-happened-after-set-state/
-    
-24. 为什么建议传递给 setState 的参数是一个 callback 而不是一个对象
+
+17. 为什么建议传递给 setState 的参数是一个 callback 而不是一个对象
+
     > https://juejin.im/post/58cfcf6e44d9040068478fc6
 
-25. (在构造函数中)调用 super(props) 的目的是什么
-    > React构造函数中为什么要写 super(props) https://blog.csdn.net/huangpb123/article/details/85009024
+18. (在构造函数中)调用 super(props) 的目的是什么
 
-26. 在 React 当中 Element 和 Component 有何区别？createElement 和 cloneElement 有什么区别？
-    > React中元素与组件的区别 https://segmentfault.com/a/1190000008587988
+    > React 构造函数中为什么要写 super(props) https://blog.csdn.net/huangpb123/article/details/85009024
 
-    > 比较与理解React的Components，Elements和Instances https://github.com/creeperyang/blog/issues/30
+19. 在 React 当中 Element 和 Component 有何区别？createElement 和 cloneElement 有什么区别？
 
-27. Controlled Component 与 Uncontrolled Component 之间的区别是什么？
-    > React中受控与非受控组件 https://segmentfault.com/a/1190000012404114
+    > React 中元素与组件的区别 https://segmentfault.com/a/1190000008587988
+
+    > 比较与理解 React 的 Components，Elements 和 Instances https://github.com/creeperyang/blog/issues/30
+
+20. Controlled Component 与 Uncontrolled Component 之间的区别是什么？
+    > React 中受控与非受控组件 https://segmentfault.com/a/1190000012404114
 
 ## 状态管理
+
 1. Vuex、Flux、Redux、Redux-saga、Dva、MobX
+
     > Vuex、Flux、Redux、Redux-saga、Dva、MobX https://zhuanlan.zhihu.com/p/53599723
 
-2. Redux
-    > Redux for react native 指南 https://juejin.im/post/5bac26ad6fb9a05d353c8040
+2. React Hooks
+
+    > 30 分钟精通 React Hooks https://juejin.im/post/5be3ea136fb9a049f9121014
+
+3. Redux
+
+    > 完全理解 redux（从零实现一个 redux） https://github.com/brickspert/blog/issues/22
+
+    > Redux 入坑进阶-源码解析 https://github.com/ecmadao/Coding-Guide/blob/master/Notes/React/Redux/Redux%E5%85%A5%E5%9D%91%E8%BF%9B%E9%98%B6-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.md
+
+4. Redux 如何实现多个组件之间的通信，多个组件使用相同状态如何进行管理
+
+    > 用 Redux 来进行组件间通讯 https://segmentfault.com/a/1190000008411613
+
+    > 彻底弄懂 React-Redux 组件通信 https://blog.csdn.net/DFF1993/article/details/80410154
+
+5. Redux 中间件是什么东西，接受几个参数（两端的柯里化函数）
+
+    > redux 中间件原理及实现 https://www.jianshu.com/p/8c2a37247020
+
+6. Redux 中异步的请求怎么处理
+
+    > Redux 异步流最佳实践 https://juejin.im/entry/59fd15b951882534af2552af
+
+7. React-Redux
+
+    > React-Redux 源码分析 https://juejin.im/post/59cb5eba5188257e84671aca
 
 ## 设计模式
+
 1. 观察者模式
     > 观察者模式 vs 发布-订阅模式 https://juejin.im/post/5a14e9edf265da4312808d86
 
 ## 前端工程
 
 1.  简单实现项目代码按需加载，例如 import { Button } from 'antd'，打包的时候只打包 button
+
     > https://github.com/airuikun/Weekly-FE-Interview/issues/9
 
-2. Webpack HMR 原理解析
+2.  Webpack HMR 原理解析
     > Webpack HMR 原理解析 https://zhuanlan.zhihu.com/p/30669007
 
 ## 正则表达式
 
 > 正则表达式 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Regular_Expressions
 
-> javascript正则表达式 https://www.cnblogs.com/rubylouvre/archive/2010/03/09/1681222.html
+> javascript 正则表达式 https://www.cnblogs.com/rubylouvre/archive/2010/03/09/1681222.html
 
-> JavaScript正则进阶之路——活学妙用奇淫正则表达式 https://github.com/jawil/blog/issues/20
-
+> JavaScript 正则进阶之路——活学妙用奇淫正则表达式 https://github.com/jawil/blog/issues/20
 
 ## Git
+
 > 待完善
 
 ## Reference
