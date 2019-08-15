@@ -336,15 +336,13 @@
 
     > 彻底弄懂React-Redux组件通信 https://blog.csdn.net/DFF1993/article/details/80410154
 
-5. react异步渲染的概念,介绍Time Slicing 和 Suspense
-    > 如何评价React的新功能Time Slice 和Suspense？ https://www.zhihu.com/question/268028123
+5. Redux中间件是什么东西，接受几个参数（两端的柯里化函数）
+    > 函数的柯里化与Redux中间件及applyMiddleware源码分析  https://juejin.im/post/5b6845daf265da0fa8676459
 
-6. 虚拟DOM
-    > React虚拟DOM浅析 http://www.alloyteam.com/2015/10/react-virtual-analysis-of-the-dom/
+    > redux中间件原理及实现 https://www.jianshu.com/p/8c2a37247020
 
-    > 谈谈React虚拟DOM和diff算法 https://juejin.im/post/5ceca77c6fb9a07eec59aa35
-
-    > 深度剖析：如何实现一个 Virtual DOM 算法 https://github.com/livoras/blog/issues/13
+6. Redux中异步的请求怎么处理
+    > Redux 异步流最佳实践 https://juejin.im/entry/59fd15b951882534af2552af
 
 7. connect原理
     > 动手实现 React-redux（三）：connect 和 mapStateToProps http://huziketang.mangojuice.top/books/react/lesson38
@@ -359,19 +357,28 @@
 9. React怎么做数据的检查和变化
     > React高效渲染策略  https://github.com/fi3ework/blog/issues/15
 
-10. Redux中异步的请求怎么处理
-    > Redux 异步流最佳实践 https://juejin.im/entry/59fd15b951882534af2552af
+10. 虚拟 DOM
+    > React虚拟DOM浅析 http://www.alloyteam.com/2015/10/react-virtual-analysis-of-the-dom/
 
-11. Redux中间件是什么东西，接受几个参数（两端的柯里化函数）
-    > 函数的柯里化与Redux中间件及applyMiddleware源码分析  https://juejin.im/post/5b6845daf265da0fa8676459
+    > 谈谈React虚拟DOM和diff算法 https://juejin.im/post/5ceca77c6fb9a07eec59aa35
 
-    > redux中间件原理及实现 https://www.jianshu.com/p/8c2a37247020
+11. react diff 原理
+    > 深度剖析：如何实现一个 Virtual DOM 算法 https://github.com/livoras/blog/issues/13
 
-12. WebView和原生是如何通信
+    > React diff原理探究以及应用实践 https://juejin.im/post/5cb5b4926fb9a068b52fb823#comment
+
+    > React Diff理解 https://juejin.im/post/5b3658f0518825522609e4c0#comment
+
+    > React 源码剖析系列 － 不可思议的 react diff https://zhuanlan.zhihu.com/p/20346379
+
+12. React 中 keys 的作用是什么？
+    > React技术内幕 key带来了什么  https://juejin.im/post/59abb01c518825243f1b6dad
+
+
+13. WebView和原生是如何通信
     > IOS、Android与H5通信-JsBridge原理(总结) https://juejin.im/post/5abfbb7251882555731c434a
 
-13. RN有没有做热加载
-    > React Native 热加载（Hot Reload）原理简介 https://www.jianshu.com/p/1fa6e9c0799f
+    > 好好和h5沟通！几种常见的hybrid通信方式 http://zjutkz.net/2016/04/17/%E5%A5%BD%E5%A5%BD%E5%92%8Ch5%E6%B2%9F%E9%80%9A%EF%BC%81%E5%87%A0%E7%A7%8D%E5%B8%B8%E8%A7%81%E7%9A%84hybrid%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F/
 
 14. RN遇到的兼容性问题
     > React+RN开发过程中的一些问题总结 https://github.com/amandakelake/blog/issues/52
@@ -384,7 +391,7 @@
     > ReactNative之原生模块开发并发布——iOS篇 http://www.liuchungui.com/blog/2016/05/02/reactnativezhi-yuan-sheng-mo-kuai-kai-fa-bing-fa-bu-iospian/
 
 16. RN的原理，为什么可以同时在安卓和IOS端运行
-    > React Native运行原理解析 https://blog.csdn.net/xiangzhihong8/article/details/52623852
+    > React Native for Android 原理分析与实践：实现原理 https://juejin.im/post/5a6460f8f265da3e4f0a446d
 
 17. RN如何调用原生的一些功能
     > RN调用原生流程总结 https://www.jianshu.com/p/b078ab50baf3 
@@ -396,9 +403,6 @@
 
     > React Native通信机制详解 http://blog.cnbang.net/tech/2698/ 
 
-19. React 中 keys 的作用是什么？
-    > React技术内幕 key带来了什么  https://juejin.im/post/59abb01c518825243f1b6dad
-
 20. React 中 refs 的作用是什么？
     >  React之ref详细用法 https://segmentfault.com/a/1190000008665915
 
@@ -408,13 +412,6 @@
 22. 调用 setState 之后发生了什么？
     > setState 之后发生了什么 https://undefinedblog.com/what-happened-after-set-state/
     
-23. react diff 原理
-    > React diff原理探究以及应用实践 https://juejin.im/post/5cb5b4926fb9a068b52fb823#comment
-
-    > React Diff理解 https://juejin.im/post/5b3658f0518825522609e4c0#comment
-
-    > React 源码剖析系列 － 不可思议的 react diff https://zhuanlan.zhihu.com/p/20346379
-
 24. 为什么建议传递给 setState 的参数是一个 callback 而不是一个对象
     > https://juejin.im/post/58cfcf6e44d9040068478fc6
 
