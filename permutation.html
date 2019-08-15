@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>全排列</title>
+</head>
+
+<body>
+    <script>
+        var permutation = function (string) {
+            var arr = string.split('')
+
+            function permute(arr) {
+                if (arr.length === 1) {
+                    return arr;
+                }
+                if (arr.length === 2) {
+                    return [arr[0] + arr[1], arr[1] + arr[0]];
+                }
+
+                let result = []
+                for (let index = 0; index < arr.length; index++) {
+                    let pivot = arr.splice(index, 1)[0];
+                    result = result.concat(permute(arr).map(item => pivot + item))
+                    arr.splice(index, 0, pivot)
+                }
+                return [...new Set(result)];
+            }
+
+            return permute(arr)
+        };
+
+        let res = permutation('ABCDEFGHA'); // 超过10位内存可能溢出
+        console.log(res);
+
+    </script>
+</body>
+
+</html>
