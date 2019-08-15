@@ -346,19 +346,11 @@
 
     > React 高效渲染策略 https://github.com/fi3ework/blog/issues/15
 
-5. 虚拟 DOM
+5. placeholder
 
-    > React 虚拟 DOM 浅析 http://www.alloyteam.com/2015/10/react-virtual-analysis-of-the-dom/
-
-    > 谈谈 React 虚拟 DOM 和 diff 算法 https://juejin.im/post/5ceca77c6fb9a07eec59aa35
-
-6. react diff 原理
+6. 虚拟 DOM & diff 原理
 
     > 深度剖析：如何实现一个 Virtual DOM 算法 https://github.com/livoras/blog/issues/13
-
-    > React diff 原理探究以及应用实践 https://juejin.im/post/5cb5b4926fb9a068b52fb823#comment
-
-    > React Diff 理解 https://juejin.im/post/5b3658f0518825522609e4c0#comment
 
     > React 源码剖析系列 － 不可思议的 react diff https://zhuanlan.zhihu.com/p/20346379
 
@@ -410,7 +402,11 @@
 
 16. 调用 setState 之后发生了什么？
 
-    > setState 之后发生了什么 https://undefinedblog.com/what-happened-after-set-state/
+    > 你真的理解 setState 吗？ https://juejin.im/post/5b45c57c51882519790c7441
+
+    > React setState 详解 https://github.com/PeterChen1997/FightForOffer/wiki/02-React-setState%E8%AF%A6%E8%A7%A3
+    
+    > setState 源码分析，流程详解 https://cisy.me/setState/
 
 17. 为什么建议传递给 setState 的参数是一个 callback 而不是一个对象
 
