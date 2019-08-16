@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>TEST</title>
+    <style>
+        body {
+            padding: 16px 32px;
+        }
+
+        pre {
+            padding: 16px;
+            line-height: 1.5;
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        // 2. 实现一个JSON.stringify
+        function jsonStringify(obj) {
+            const type = typeof obj;
+            if (/undefined|function|symbol/.test(type)) {
+                return undefined;
+            }
+            if (/number|boolean/.test(type) || obj === null) {
+                return String(obj);
+            }
+            if (type === "string") {
+                return `"${obj}"`;
+            }
+            let result = [];
+            switch (Object.prototype.toString.call(obj)) {
+                case "[object Array]":
+                    for (let v of obj) {
+                        let value = jsonStringify(v);
+                        value = value === undefined ? 'null' : value;
+                        result.push(value)
+                    }
+                    return "[" + result.join() + "]";
+
+                case "[object Object]":
+                    for (let [key, value] of Object.entries(obj)) {
+                        value = jsonStringify(value)
+                        if (value !== undefined) {
+                            result.push(`"${key}":${value}`)
+                        }
+                    }
+                    return '{' + result.join() + '}'
+                case "[object Date]":
+                    return `"${obj.toJSON ? obj.toJSON() : obj.toString()}"`;
+                default:
+                    return "{}";
+            }
+        }
+
+        console.log('=========== jsonStringify =================')
+        console.log(jsonStringify(Object));
+        console.log(jsonStringify(null));
+        console.log(jsonStringify(2));
+        console.log(jsonStringify(false));
+        console.log(jsonStringify("false"));
+        console.log(jsonStringify({ a: 1, b: 2 }));
+        let arr = [
+            false,
+            Symbol(),
+            Symbol,
+            new Date(),
+            new Error("测试"),
+            undefined,
+            "测试",
+            null,
+            /./,
+            { a: 1, b: 2, c: null },
+            [1, undefined],
+            Number(1),
+        ]
+        console.log(jsonStringify(arr), '\n', 'jsonStringify(arr)===JSON.stringify(arr)',
+            jsonStringify(arr) === JSON.stringify(arr),
+        );
+
+        // 3. 实现 JSON.parse
+        function jsonParse(json) {
+            // 加括号把{}变成表达式而不是代码块 
+            return eval("(" + json + ")");
+        }
+        function jsonParse2(json) {
+            return new Function("return " + json)();
+        }
+        console.log('=========== jsonParse =================')
+        console.log(
+            jsonParse(JSON.stringify([
+                false,
+                Symbol(),
+                Symbol,
+                new Date(),
+                new Error("测试"),
+                undefined,
+                "测试",
+                null,
+                /./,
+                { a: 1, b: 2, c: null },
+                [1, undefined],
+                Number(1),
+            ])),
+        );
+
+    </script>
+</body>
+
+</html>

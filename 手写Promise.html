@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>TEST</title>
+    <title>Promise TEST</title>
     <style>
         body {
             padding: 16px 32px;
@@ -46,54 +46,42 @@
         */
 
         // promise 三个状态
-        const PENDING = "pending";
-        const FULFILLED = "fulfilled";
-        const REJECTED = "rejected";
+        const PENDING = "Pending";
+        const FULFILLED = "Fulfilled";
+        const REJECTED = "Rejected";
 
         function Promise(excutor) {
-            let that = this; // 缓存当前promise实例对象
-            that.status = PENDING; // 初始状态
-            that.value = undefined; // fulfilled状态时 返回的信息
-            that.reason = undefined; // rejected状态时 拒绝的原因
-            that.onFulfilledCallbacks = []; // 存储fulfilled状态对应的onFulfilled函数
-            that.onRejectedCallbacks = []; // 存储rejected状态对应的onRejected函数
+            let self = this; // 缓存当前promise实例对象
+            self.status = PENDING; // 初始状态
+            self.value = undefined; // fulfilled状态时 返回的信息
+            self.reason = undefined; // rejected状态时 拒绝的原因
+            self.onFulfilledCallbacks = []; // 存储fulfilled状态对应的onFulfilled函数
+            self.onRejectedCallbacks = []; // 存储rejected状态对应的onRejected函数
 
-            function resolve(value) { // value成功态时接收的终值
+            function resolve(value) {
+                // 如果传入的值是promise则继续展开
                 if (value instanceof Promise) {
                     return value.then(resolve, reject);
                 }
+                // 只能由pending状态 => fulfilled状态 (避免调用多次resolve reject)
+                if (self.status === PENDING) {
+                    self.status = FULFILLED;
+                    self.value = value;
+                    self.onFulfilledCallbacks.forEach(cb => cb(self.value));
+                }
 
-                // 为什么resolve 加setTimeout?
-                // 2.2.4规范 onFulfilled 和 onRejected 只允许在 execution context 栈仅包含平台代码时运行.
-                // 注1 这里的平台代码指的是引擎、环境以及 promise 的实施代码。实践中要确保 onFulfilled 和 onRejected 方法异步执行，且应该在 then 方法被调用的那一轮事件循环之后的新执行栈中执行。
-
-                setTimeout(() => {
-                    // 调用resolve 回调对应onFulfilled函数
-                    if (that.status === PENDING) {
-                        // 只能由pending状态 => fulfilled状态 (避免调用多次resolve reject)
-                        that.status = FULFILLED;
-                        that.value = value;
-                        that.onFulfilledCallbacks.forEach(cb => cb(that.value));
-                    }
-                });
             }
 
-            function reject(reason) { // reason失败态时接收的拒因
-                setTimeout(() => {
-                    // 调用reject 回调对应onRejected函数
-                    if (that.status === PENDING) {
-                        // 只能由pending状态 => rejected状态 (避免调用多次resolve reject)
-                        that.status = REJECTED;
-                        that.reason = reason;
-                        that.onRejectedCallbacks.forEach(cb => cb(that.reason));
-                    }
-                });
+            function reject(reason) {
+                // 只能由pending状态 => rejected状态 (避免调用多次resolve reject)
+                if (self.status === PENDING) {
+                    self.status = REJECTED;
+                    self.reason = reason;
+                    self.onRejectedCallbacks.forEach(cb => cb(self.reason));
+                }
+
             }
 
-            // 捕获在excutor执行器中抛出的异常
-            // new Promise((resolve, reject) => {
-            //     throw new Error('error in excutor')
-            // })
             try {
                 excutor(resolve, reject);
             } catch (e) {
@@ -166,15 +154,11 @@
          * @return {function} newPromsie  返回一个新的promise对象
          */
         Promise.prototype.then = function (onFulfilled, onRejected) {
-            const that = this;
+            const self = this;
             let newPromise;
             // 处理参数默认值 保证参数后续能够继续执行
-            onFulfilled =
-                typeof onFulfilled === "function" ? onFulfilled : value => value;
-            onRejected =
-                typeof onRejected === "function" ? onRejected : reason => {
-                    throw reason;
-                };
+            onFulfilled = typeof onFulfilled === "function" ? onFulfilled : value => { return value };
+            onRejected = typeof onRejected === "function" ? onRejected : reason => { throw reason };
 
             // then里面的FULFILLED/REJECTED状态时 为什么要加setTimeout ?
             // 原因:
@@ -196,11 +180,11 @@
             // console.log('全局执行栈中同步代码');
             //
 
-            if (that.status === FULFILLED) { // 成功态
+            if (self.status === FULFILLED) { // 成功态
                 return newPromise = new Promise((resolve, reject) => {
                     setTimeout(() => {
                         try {
-                            let x = onFulfilled(that.value);
+                            let x = onFulfilled(self.value);
                             resolvePromise(newPromise, x, resolve, reject); // 新的promise resolve 上一个onFulfilled的返回值
                         } catch (e) {
                             reject(e); // 捕获前面onFulfilled中抛出的异常 then(onFulfilled, onRejected);
@@ -209,11 +193,11 @@
                 })
             }
 
-            if (that.status === REJECTED) { // 失败态
+            if (self.status === REJECTED) { // 失败态
                 return newPromise = new Promise((resolve, reject) => {
                     setTimeout(() => {
                         try {
-                            let x = onRejected(that.reason);
+                            let x = onRejected(self.reason);
                             resolvePromise(newPromise, x, resolve, reject);
                         } catch (e) {
                             reject(e);
@@ -222,25 +206,33 @@
                 });
             }
 
-            if (that.status === PENDING) { // 等待态
+            if (self.status === PENDING) { // 等待态
                 // 当异步调用resolve/rejected时 将onFulfilled/onRejected收集暂存到集合中
+                // 为什么加setTimeout?
+                // 2.2.4规范 onFulfilled 和 onRejected 只允许在 execution context 栈仅包含平台代码时运行.
+                // 注1 这里的平台代码指的是引擎、环境以及 promise 的实施代码。实践中要确保 onFulfilled 和 onRejected 方法异步执行，且应该在 then 方法被调用的那一轮事件循环之后的新执行栈中执行。
+
                 return newPromise = new Promise((resolve, reject) => {
-                    that.onFulfilledCallbacks.push((value) => {
-                        try {
-                            let x = onFulfilled(value);
-                            resolvePromise(newPromise, x, resolve, reject);
-                        } catch (e) {
-                            reject(e);
-                        }
+                    self.onFulfilledCallbacks.push((value) => {
+                        setTimeout(() => {
+                            try {
+                                let x = onFulfilled(value);
+                                resolvePromise(newPromise, x, resolve, reject);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        })
                     });
-                    that.onRejectedCallbacks.push((reason) => {
-                        try {
-                            let x = onRejected(reason);
-                            resolvePromise(newPromise, x, resolve, reject);
-                        } catch (e) {
-                            reject(e);
-                        }
-                    });
+                    self.onRejectedCallbacks.push((reason) => {
+                        setTimeout(() => {
+                            try {
+                                let x = onRejected(reason);
+                                resolvePromise(newPromise, x, resolve, reject);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        })
+                    })
                 });
             }
         };
@@ -318,24 +310,23 @@
         }
 
 
-        // TEST
-        // console.log('======== test 1 ========')
-        // var promise = new Promise((resolve, reject) => {
-        //     setTimeout(() => {
-        //         resolve('====promise====')
-        //     }, 500);
-        // })
-        // var p2 = new Promise((resolve, reject) => {
-        //     setTimeout(() => {
-        //         resolve('====promise2 ====')
-        //     }, 1000);
-        // })
-        // promise.then((res) => {
-        //     console.log(res)
-        // })
-        // Promise.all([promise, p2]).then((res) => {
-        //     console.log(res)
-        // })
+        console.log('======== test 1 ========')
+        var promise = new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve('====promise====')
+            }, 500);
+        })
+        var p2 = new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve('====promise2 ====')
+            }, 1000);
+        })
+        promise.then((res) => {
+            console.log(res)
+        })
+        Promise.all([promise, p2]).then((res) => {
+            console.log(res)
+        })
 
         console.log('======== test 2 ========')
 

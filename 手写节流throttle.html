@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>TEST</title>
+    <title>throttle TEST</title>
     <style>
         html {
             height: 400%;
@@ -110,7 +110,7 @@
 
         // 时间戳 + 定时器
         function throttle(func, wait) {
-            var timeout = null;
+            var timer = null;
             var previous = 0;
             return function () {
                 var now = Date.now();
@@ -118,20 +118,20 @@
                 var context = this;
                 var args = arguments;
                 if (remaining <= 0 || remaining > wait) {
-                    if (timeout) {
-                        clearTimeout(timeout);
-                        timeout = null;
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
                     }
                     previous = now;
                     func.apply(context, args);
-                } else if (!timeout) {
-                    timeout = setTimeout(function () {
+                } else if (!timer) {
+                    timer = setTimeout(function () {
                         previous = Date.now();
                         func.apply(context, args);
-                        timeout = null;
+                        timer = null;
                     }, remaining);
                 }
-            }
+            };
         }
 
         function handle() {
