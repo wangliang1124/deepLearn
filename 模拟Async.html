@@ -29,18 +29,18 @@
     function async(generator) {
         return new Promise(function (resolve, reject) {
             const it = generator();
-            function step(nextF) {
-                let next;
+            function step(next) {
+                let result;
                 try {
-                    next = nextF();
-                    console.log(next)
+                    result = next();
+                    console.log(result)
                 } catch (e) {
                     return reject(e);
                 }
-                if (next.done) {
-                    return resolve(next.value);
+                if (result.done) {
+                    return resolve(result.value);
                 }
-                Promise.resolve(next.value).then(
+                Promise.resolve(result.value).then(
                     function (v) {
                         step(function () {
                             return it.next(v);
@@ -48,7 +48,6 @@
                     },
                     function (e) {
                         step(function () {
-                            console.log('捕获错误========',e)
                             return it.throw(e);
                         });
                     },
@@ -59,7 +58,6 @@
             });
         });
     }
-
     const promise = new Promise((resolve) => {
         setTimeout(() => {
             resolve('1111111')
