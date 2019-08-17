@@ -16,16 +16,18 @@
         return new Promise((resolve, reject) => {
             // 1.将传入的data数据转化为url字符串形式
             var queryString = url.indexOf("?") == -1 ? "?" : "&";
+            var arr = []
             for (var key in data) {
-                queryString += key + "=" + data[key] + "&";
+                arr.push(key + "=" + encodeURIComponent(data[key]))
             }
+            queryString += arr.join("&");
             // 2.处理url中的回调函数
             var callbackName =
                 "jsonp_callback_" +
                 Math.random()
                     .toString(16)
                     .replace(".", "");
-            queryString += "callback=" + callbackName;
+            queryString += "&callback=" + callbackName;
 
             // 3.创建一个script标签并插入到页面中
             var script = document.createElement("script");
@@ -42,9 +44,9 @@
         });
     }
 
-    jsonp('http://127.0.0.1:3000/show', { name: 'super', age: 20 }).then((res) => {
+    jsonp('http://127.0.0.1:3000/show', { name: '测试', age: 20 }).then((res) => {
         console.log(res)
-    }).catch((err)=>{
+    }).catch((err) => {
         console.log('xx===')
         console.log(err)
     })
