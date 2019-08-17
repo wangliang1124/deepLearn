@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>TEST</title>
+</head>
+
+<body>
+    <script>
+        function milliFormat(num) {
+            return (
+                num &&
+                num.toString().replace(/\d+/, function (s) {
+                    return s.replace(/(\d)(?=(\d{3})+$)/g, "$1,");
+                })
+            );
+        }
+        console.log(milliFormat(-1200000123123.223));
+
+        function render(template, data) {
+            return template.replace(/{{\s*(\w+)\s*}}/g, function (a, b) {
+                return data[b] || ""
+            })
+        }
+
+        var t = '<p><a href="{{url}}">{{name}}</a><span>{{greetting}}</span></p>'
+        console.log(render(t, {
+            url: 'http://www.alibaba.com',
+            name: 'Alibaba',
+            greetting: 'Welcome'
+        }))
+    </script>
+</body>
+
+</html>

@@ -33,6 +33,7 @@
                 let next;
                 try {
                     next = nextF();
+                    console.log(next)
                 } catch (e) {
                     return reject(e);
                 }
@@ -47,6 +48,7 @@
                     },
                     function (e) {
                         step(function () {
+                            console.log('捕获错误========',e)
                             return it.throw(e);
                         });
                     },
@@ -60,7 +62,7 @@
 
     const promise = new Promise((resolve) => {
         setTimeout(() => {
-            resolve('11111')
+            resolve('1111111')
         }, 1000);
     })
     const sleep = function (time, value) {
@@ -83,15 +85,13 @@
             append(a)
             const b = yield sleep(1500, 2222222);
             append(b)
-            const c = yield sleep(500, 333333);
+            const c = yield sleep(500, 3333333);
             append(c)
             throw new Error('xxxxx')
         } catch (e) {
-            console.log("出错了：", e);
+            console.log("内部捕获", e);
         }
     });
-
-
 
 </script>
 

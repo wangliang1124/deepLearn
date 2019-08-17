@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        var q = function (url) {
+            let result = {};
+            const query = url.split("?")[1];
+            if (!query) return result;
+            const pairs = query.split("&");
+            pairs.forEach(pair => {
+                let [key, value] = pair.split("=");
+                value = value ? decodeURIComponent(value).replace(/\+/g, " ") : ''
+                if (/^\d+$/.test(value)) {
+                    value = Number(value)
+                }
+                if (Array.isArray(result[key])) {
+                    result[key].push(value)
+                }
+                else if (result[key]) {
+                    result[key] = [result[key], value]
+                } else {
+                    result[key] = value
+                }
+            });
+            return result;
+        };
+        console.log(
+            q(
+                "https://www.google.com/search?q=%E6%AD%A3%E5%88%99&oq=%E6%AD%A3%E5%88%99&aqs=chrome..69i57j0j69i59l2j0l2.480j0j9&sourceid=chrome&ie=UTF-8",
+            ),
+        );
+        console.log(q('http://www.domain.com/?user=anonymous&id=123&id=456&id=789&city=%E5%8C%97%E4%BA%AC&d&enabled'))</script>
+</body>
+
+</html>

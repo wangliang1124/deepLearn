@@ -5,13 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>isContain</title>
+    <title>indexOf</title>
 </head>
 
 <body>
     <script>
 
-        function isContain(a, b) {
+        function indexOf(a, b) {
             for (let i = 0; i < b.length; i++) {
                 if (b[i] === a[0]) {
                     for (let j = 1; j < a.length; j++) {
@@ -24,9 +24,9 @@
             return -1
         }
 
-        console.log(isContain('34', '1234567'))
-        console.log(isContain('35', '1234567'))
-        console.log(isContain('355', '12354355'))
+        console.log(indexOf('34', '1234567'))
+        console.log(indexOf('35', '1234567'))
+        console.log(indexOf('355', '12354355'))
 
     </script>
 </body>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>getXPath</title>
+</head>
+
+<body>
+    <ul>
+        <li> <span>1</span>
+        </li>
+        <li>
+            <span>2</span> <span>3</span>
+            <span id="span_3">4</span>
+        </li>
+    </ul>
+</body>
+<script>
+    function getXPath(node) {
+        let slibings = node.parentNode.children
+        let count = 0;
+        let result = ''
+        for (let i = 0; i < slibings.length; i++) {
+            if (slibings[i] === node) {
+                result = node.tagName.toLowerCase() + (count > 0 ? `[${count}]` : '')
+            }
+            if (slibings[i].tagName === node.tagName) {
+                count++
+            }
+
+        }
+        return (node.parentNode === document.body ? 'body' : getXPath(node.parentNode)) + '>' + result;
+    }
+
+    console.log(getXPath(document.getElementById('span_3'))) //  body>ul>li[1]>span[2] 
+
+</script>
+
+</html>
