@@ -54,10 +54,11 @@
     function throttle(func, time) {
         let timer = null;
         return function (...args) {
+            let context = this
             if (!timer) {
                 timer = setTimeout(() => {
                     timer = null;
-                    func.apply(this, args);
+                    func.apply(context, args);
                 }, time);
             }
         }

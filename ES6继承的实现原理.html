@@ -90,6 +90,7 @@
         }(Parent);
 
         let child = new Child;
+        // console.log(Object.getOwnPropertyNames(Child))
         console.log(child.getName(), Child.getFuncName(), '\n', Object.keys(Child), '\n', Reflect.ownKeys(Child));
     </script>
 </body>

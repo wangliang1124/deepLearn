@@ -108,21 +108,10 @@
                 return reject(new TypeError('循环引用'));
             }
 
-            let called = false; // 避免多次调用
-            // 如果x是一个promise对象 （该判断和下面 判断是不是thenable对象重复 所以可有可无）
-            if (x instanceof Promise) { // 获得它的终值 继续resolve
-                if (x.status === PENDING) { // 如果为等待态需等待直至 x 被执行或拒绝 并解析y值
-                    x.then(y => {
-                        resolvePromise(promise2, y, resolve, reject);
-                    }, reason => {
-                        reject(reason);
-                    });
-                } else { // 如果 x 已经处于执行态/拒绝态(值已经被解析为普通值)，用相同的值执行传递下去 promise
-                    x.then(resolve, reject);
-                }
-                // 如果 x 为对象或者函数
-            } else if (x != null && ((typeof x === 'object') || (typeof x === 'function'))) {
-                try { // 是否是thenable对象（具有then方法的对象/函数）
+            // 判断 x 是否是 promise 对象
+            if (x != null && (typeof x === "object" || typeof x === "function")) {
+                let called = false; // 避免多次调用
+                try {
                     let then = x.then;
                     if (typeof then === 'function') {
                         then.call(x, y => {
@@ -181,7 +170,7 @@
             //
 
             if (self.status === FULFILLED) { // 成功态
-                return newPromise = new Promise((resolve, reject) => {
+                newPromise = new Promise((resolve, reject) => {
                     setTimeout(() => {
                         try {
                             let x = onFulfilled(self.value);
@@ -191,10 +180,11 @@
                         }
                     });
                 })
+                return newPromise
             }
 
             if (self.status === REJECTED) { // 失败态
-                return newPromise = new Promise((resolve, reject) => {
+                newPromise = new Promise((resolve, reject) => {
                     setTimeout(() => {
                         try {
                             let x = onRejected(self.reason);
@@ -204,15 +194,16 @@
                         }
                     });
                 });
+                return newPromise
             }
 
-            if (self.status === PENDING) { // 等待态
+            if (self.status === PENDING) {
                 // 当异步调用resolve/rejected时 将onFulfilled/onRejected收集暂存到集合中
                 // 为什么加setTimeout?
                 // 2.2.4规范 onFulfilled 和 onRejected 只允许在 execution context 栈仅包含平台代码时运行.
                 // 注1 这里的平台代码指的是引擎、环境以及 promise 的实施代码。实践中要确保 onFulfilled 和 onRejected 方法异步执行，且应该在 then 方法被调用的那一轮事件循环之后的新执行栈中执行。
 
-                return newPromise = new Promise((resolve, reject) => {
+                newPromise = new Promise((resolve, reject) => {
                     self.onFulfilledCallbacks.push((value) => {
                         setTimeout(() => {
                             try {
@@ -234,6 +225,7 @@
                         })
                     })
                 });
+                return newPromise
             }
         };
 

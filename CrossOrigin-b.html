@@ -15,13 +15,13 @@
 
         // 监听a.html传来的hash值，再传给c.html
         window.onhashchange = function () {
-            console.log('data from a', location.hash)
+            console.log('hash: data from a', location.hash)
             iframe.src = iframe.src + '#hha=test';
         };
     </script>
 
     <script>
-        window.name = 'cross origin data from b.html!';
+        window.name = 'window.name: cross origin data from b.html!';
     </script>
 </body>
 

@@ -12,7 +12,7 @@
 
 </body>
 <script>
-    function setCookie(key, value = '', days) {
+    function setCookie(key, value = '', days = 0) {
         if (!key) return
         let date = new Date()
         date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000); // 设置过期时间为 days 天之后
@@ -37,13 +37,15 @@
         let result = {}
         if (!document.cookie) return result
         document.cookie.split(';').forEach((item) => {
-            const [key, value] = item.split('=')
-            result[key.trim()] = decodeURIComponent(value.trim());
+            if (item.indexOf('=') > -1) {
+                let [key, value] = item.split('=')
+                result[key.trim()] = decodeURIComponent(value.trim());
+            }
         })
         return result
     }
 
-    window.localStorage = window.localStorage || new LocalStorage()
+    window.localStorage = new LocalStorage()
 
     function LocalStorage() {
         const cookies = getCookies()
@@ -87,6 +89,7 @@
         }
     }()
 
+    console.log(document.cookie, window.localStorage)
 </script>
 
 </html>

@@ -45,16 +45,16 @@
             }
         },
         //禁用默认行为
-        prevent: function () {
-            if (window.preventDefault) {
-                window.preventDefault();
+        prevent: function (event) {
+            if (event.preventDefault) {
+                event.preventDefault();
             } else {
                 event.returnValue = false;
             }
         },
         //阻止事件冒泡
         stop: function (event) {
-            if (window.stopPropagation) {
+            if (event.stopPropagation) {
                 event.stopPropagation();
             } else {
                 event.cancelBubble = true;
@@ -86,7 +86,7 @@
     }
     var nav = document.getElementById('nav')
     EventUtil.on(nav, 'click', function (event) {
-        EventUtil.prevent()
+        EventUtil.prevent(event)
         var event = EventUtil.getEvent(event)
         var target = EventUtil.getTarget(event)
         // console.log(target, this.children)
