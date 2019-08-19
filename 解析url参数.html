@@ -22,13 +22,13 @@
                 } catch (e) {
                     return
                 }
-                if (/^\d+$/.test(value)) {
-                    value = parseFloat(value)
+                if (/^\d+(\.\d+)?$/.test(value)) {
+                    value = Number(value)
                 }
-                if (result[key]) {
-                    result[key] = [].concat(result[key], value)
-                } else {
+                if (typeof result[key] === 'undefined') {
                     result[key] = value
+                } else {
+                    result[key] = [].concat(result[key], value)
                 }
             });
             return result;

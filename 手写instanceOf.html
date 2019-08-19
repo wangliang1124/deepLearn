@@ -35,7 +35,7 @@
 
     <script>
         function instanceOf(source, target) {
-            var proto = source.__proto__;
+            let proto = source.__proto__;
             let prototype = target.prototype;
             while (proto) {
                 if (proto === prototype) return true;
