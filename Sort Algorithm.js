@@ -261,10 +261,11 @@ console.log(quickSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 
     7、堆排序（Heap Sort）
     堆排序（Heapsort）是指利用堆这种数据结构所设计的一种排序算法。堆积是一个近似完全二叉树的结构，并同时满足堆积的性质：即子结点的键值或索引总是小于（或者大于）它的父节点。
 
-    7.1 算法描述
-    将初始待排序关键字序列(R1,R2….Rn)构建成大顶堆，此堆为初始的无序区；
-    将堆顶元素R[1]与最后一个元素R[n]交换，此时得到新的无序区(R1,R2,……Rn-1)和新的有序区(Rn),且满足R[1,2…n-1]<=R[n]；
-    由于交换后新的堆顶R[1]可能违反堆的性质，因此需要对当前无序区(R1,R2,……Rn-1)调整为新堆，然后再次将R[1]与无序区最后一个元素交换，得到新的无序区(R1,R2….Rn-2)和新的有序区(Rn-1,Rn)。不断重复此过程直到有序区的元素个数为n-1，则整个排序过程完成。
+    具体算法描述如下：
+
+    <1>.将初始待排序关键字序列(R1,R2....Rn)构建成大顶堆，此堆为初始的无序区；
+    <2>.将堆顶元素R[1]与最后一个元素R[n]交换，此时得到新的无序区(R1,R2,......Rn-1)和新的有序区(Rn),且满足R[1,2...n-1]<=R[n]；
+    <3>.由于交换后新的堆顶R[1]可能违反堆的性质，因此需要对当前无序区(R1,R2,......Rn-1)调整为新堆，然后再次将R[1]与无序区最后一个元素交换，得到新的无序区(R1,R2....Rn-2)和新的有序区(Rn-1,Rn)。不断重复此过程直到有序区的元素个数为n-1，则整个排序过程完成。
 */
 function heapSort(arr) {
     let len = arr.length;
@@ -310,11 +311,12 @@ console.log(heapSort(arr)); //[10, 13, 20, 22, 30, 31, 35, 46, 60, 65, 65, 77, 8
     8、计数排序（Counting Sort）
     计数排序不是基于比较的排序算法，其核心在于将输入的数据值转化为键存储在额外开辟的数组空间中。 作为一种线性时间复杂度的排序，计数排序要求输入的数据必须是有确定范围的整数。
 
-    8.1 算法描述
-    找出待排序的数组中最大和最小的元素；
-    统计数组中每个值为i的元素出现的次数，存入数组C的第i项；
-    对所有的计数累加（从C中的第一个元素开始，每一项和前一项相加）；
-    反向填充目标数组：将每个元素i放在新数组的第C(i)项，每放一个元素就将C(i)减去1。
+    具体算法描述如下：
+
+    <1>. 找出待排序的数组中最大和最小的元素；
+    <2>. 统计数组中每个值为i的元素出现的次数，存入数组C的第i项；
+    <3>. 对所有的计数累加（从C中的第一个元素开始，每一项和前一项相加）；
+    <4>. 反向填充目标数组：将每个元素i放在新数组的第C(i)项，每放一个元素就将C(i)减去1。
 */
 function countingSort(arr) {
     let min = Infinity,
@@ -345,11 +347,11 @@ console.log(countingSort(arr)); //[1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 6, 
     9、桶排序（Bucket Sort）
     桶排序是计数排序的升级版。它利用了函数的映射关系，高效与否的关键就在于这个映射函数的确定。桶排序 (Bucket sort)的工作的原理：假设输入数据服从均匀分布，将数据分到有限数量的桶里，每个桶再分别排序（有可能再使用别的排序算法或是以递归方式继续使用桶排序进行排）。
 
-    9.1 算法描述
-    设置一个定量的数组当作空桶；
-    遍历输入数据，并且把数据一个一个放到对应的桶里去；
-    对每个不是空的桶进行排序；
-    从不是空的桶里把排好序的数据拼接起来。 
+    具体算法描述如下：
+    <1>.设置一个定量的数组当作空桶；
+    <2>.遍历输入数据，并且把数据一个一个放到对应的桶里去；
+    <3>.对每个不是空的桶进行排序；
+    <4>.从不是空的桶里把排好序的数据拼接起来。
 */
 function bucketSort(arr, size = 5) {
     let len = arr.length;
@@ -397,7 +399,10 @@ console.log(bucketSort(arr, 4)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 
     10.1 算法描述
     取得数组中的最大数，并取得位数；
     arr为原始数组，从最低位开始取每个位组成radix数组；
-    对radix进行计数排序（利用计数排序适用于小范围数的特点）；
+    
+     基数排序适用于：
+    (1)数据范围较小，建议在小于1000
+    (2)每个数值都要大于等于0
 */
 function radixSort(arr) {
     let mod = 10;
@@ -407,40 +412,36 @@ function radixSort(arr) {
 
     for (let i = 0; i < maxDigit; i++, dev *= 10, mod *= 10) {
         for (let j = 0; j < arr.length; j++) {
-            let bucket = Math.floor((arr[j] % mod) / dev);
-            if (counter[bucket] == null) {
-                counter[bucket] = [];
+            let radix = Math.floor((arr[j] % mod) / dev);
+            if (counter[radix] === undefined) {
+                counter[radix] = [];
             }
-            counter[bucket].push(arr[j]);
+            counter[radix].push(arr[j]);
         }
 
         let pos = 0;
         for (let j = 0; j < counter.length; j++) {
-            if (counter[j]) {
+            while (counter[j] && counter[j].length) {
                 let value = counter[j].shift();
-                while (value) {
-                    arr[pos++] = value;
-                    value = counter[j].shift();
-                }
+                arr[pos++] = value;
             }
         }
     }
     return arr;
 }
 
-var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
-console.log(radixSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
+var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48, 0];
+console.log(radixSort(arr)); //[0, 2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
 
 // 二分搜索
-function binarySearch(item) {
-    this.quickSort();
+function binarySearch(item, sortedArray) {
     var low = 0,
-        high = array.length - 1,
+        high = sortedArray.length - 1,
         mid,
         element;
     while (low <= high) {
         mid = Math.floor((low + high) / 2);
-        element = array[mid];
+        element = sortedArray[mid];
         if (element < item) {
             low = mid + 1;
         } else if (element > item) {
@@ -451,6 +452,9 @@ function binarySearch(item) {
     }
     return -1;
 }
+
+var arr = [0, 2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50];
+console.log(binarySearch(19, arr));
 
 // 硬币找零-动态规划， d1=1，d2=5，d3=10，d4=25。
 // 硬币找零-动态规划， d1=1，d2=5，d3=10，d4=25。
@@ -463,7 +467,7 @@ function MinCoinChange(coins) {
         if (cache[amount]) {
             return cache[amount];
         }
-        let min = [],
+        let minChange = [],
             subMin = [],
             subAmount;
         for (let i = 0; i < coins.length; i++) {
@@ -472,20 +476,18 @@ function MinCoinChange(coins) {
             if (subAmount >= 0) {
                 subMin = makeChange(subAmount);
             }
-            if (subMin.length < min.length - 1 || !min.length) {
-                min = [coin].concat(subMin);
+            if (subMin.length < minChange.length - 1 || !minChange.length) {
+                minChange = [coin].concat(subMin);
                 console.log("sub Min " + subMin + " + " + coin + " for " + amount);
             }
         }
-        return (cache[amount] = min);
+        return (cache[amount] = minChange);
     };
     return makeChange;
 }
 
 var makeChange = new MinCoinChange([1, 5, 10, 25]);
 console.log(makeChange(39));
-
-var makeChange = new MinCoinChange([1, 5, 10, 25]);
 console.log(makeChange(36));
 
 // 硬币找零-贪心算法
