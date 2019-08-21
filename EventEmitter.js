@@ -33,12 +33,9 @@ EventEmitter.prototype = {
     },
 
     emit: function(type, ...args) {
-        let handlers = this.eventQueue[type];
-        if (!handlers || handlers.length === 0) return;
-        for (let i = 0; i < handlers.length; i++) {
-            let handler = handlers[i];
-            handler && handler.call(null, ...args);
-        }
+        this.eventQueue[type].forEach((handler)=>{
+            handler(...args)
+        })
         return this;
     },
 };

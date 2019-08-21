@@ -112,24 +112,29 @@ console.log(insertionSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 
  */
 function shellSort(arr) {
     let len = arr.length;
-    let gap = Math.floor(len / 3) + 1;
+    let gap = 1;
+
+    // 动态定义间隔序列
+    while (gap < len / 5) {
+        gap = gap * 5 + 1;
+    }
 
     while (gap > 0) {
         for (let i = gap; i < len; i++) {
             let preIndex = i - gap;
             let currentValue = arr[i];
-            for (; preIndex >= 0 && arr[preIndex] > currentValue; preIndex -= gap) {
+            while (preIndex >= 0 && arr[preIndex] > currentValue) {
                 arr[preIndex + gap] = arr[preIndex];
+                preIndex -= gap;
             }
             arr[preIndex + gap] = currentValue;
         }
-        gap = Math.floor(gap / 3);
+        gap = Math.floor(gap / 5);
     }
     return arr;
 }
 var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
 console.log(shellSort(arr)); //[2, 3, 4, 5, 15, 19, 26, 27, 36, 38, 44, 46, 47, 48, 50]
-
 
 /* 
     5、归并排序（Merge Sort）
@@ -229,23 +234,23 @@ function quick(array, left, right) {
 }
 
 function partition(array, left, right) {
-    var pivot = array[Math.floor((right + left) / 2)],
-        i = left,
-        j = right;
-    while (i <= j) {
-        while (array[i] < pivot) {
-            i++;
+    let pivot = array[Math.floor((left + right) / 2)];
+
+    while (left <= right) {
+        while (array[left] < pivot) {
+            left++;
         }
-        while (array[j] > pivot) {
-            j--;
+        while (array[right] > pivot) {
+            right--;
         }
-        if (i <= j) {
-            [array[i], array[j]] = [array[j], array[i]];
-            i++;
-            j--;
+
+        if (left <= right) {
+            [array[left], array[right]] = [array[right], array[left]];
+            left++;
+            right--;
         }
     }
-    return i;
+    return left;
 }
 
 var arr = [3, 44, 38, 5, 47, 15, 36, 26, 27, 2, 46, 4, 19, 50, 48];
@@ -317,7 +322,7 @@ function countingSort(arr) {
     let counter = [];
 
     for (let i = 0; i < arr.length; i++) {
-        const curr = arr[i];
+        let curr = arr[i];
         if (min > curr) min = curr;
         if (max < curr) max = curr;
         counter[curr] = counter[curr] ? counter[curr] + 1 : 1;
