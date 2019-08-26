@@ -9,22 +9,6 @@ class App extends React.Component {
         cart: [],
     };
 
-    // componentDidMount() {
-    //     this.setState({
-    //         cart: store.getState().shoppingCart.cart,
-    //     });
-    //     this.unsubscribe = store.subscribe(() => {
-    //         console.log(store.getState());
-    //         this.setState({
-    //             cart: store.getState().shoppingCart.cart,
-    //         });
-    //     });
-    // }
-
-    // componentWillUnmount() {
-    //     this.unsubscribe();
-    // }
-
     handleAdd = () => {
         store.dispatch(addToCart("Coffee 500gm", 1, 250));
         // store.dispatch(addToCart("Flour 1kg", 2, 110));
@@ -46,17 +30,6 @@ class App extends React.Component {
             <div className="App">
                 <header className="App-header">
                     <img src={logo} className="App-logo" alt="logo" />
-                    {/* {this.state.cart.map((item, index) => {
-                        return (
-                            <ul key={index}>
-                                <li>
-                                    <span>{item.product}</span>
-                                    <span>{item.quantity}</span>
-                                    <span>{item.unitCost}</span>
-                                </li>
-                            </ul>
-                        );
-                    })} */}
                     <Display></Display>
                     <button onClick={this.handleAdd}>加入购入车</button>
                     <button onClick={this.handleDelete}>删除</button>

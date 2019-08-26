@@ -25,17 +25,24 @@ class Display extends React.Component {
     render() {
         return (
             <div>
-                {this.state.cart.map((item, index) => {
-                    return (
-                        <ul key={index}>
-                            <li>
-                                <span>{item.product}</span>
-                                <span>{item.quantity}</span>
-                                <span>{item.unitCost}</span>
-                            </li>
-                        </ul>
-                    );
-                })}
+                <table style={{width: 600}}>
+                    <tbody>
+                        <tr>
+                            <td>产品</td>
+                            <td>数量</td>
+                            <td>价格</td>
+                        </tr>
+                        {this.state.cart.map((item, index) => {
+                            return (
+                                <tr key={index}>
+                                    <td>{item.product}</td>
+                                    <td>{item.quantity}</td>
+                                    <td>{item.unitCost}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
         );
     }
