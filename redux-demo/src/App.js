@@ -3,27 +3,27 @@ import logo from "./logo.svg";
 import "./App.css";
 import store from "./store.js";
 import { addToCart, updateCart, deleteFromCart } from "./actions/cart";
-
+import Display from './Display'
 class App extends React.Component {
     state = {
         cart: [],
     };
 
-    componentDidMount() {
-        this.setState({
-            cart: store.getState().shoppingCart.cart,
-        });
-        this.unsubscribe = store.subscribe(() => {
-            console.log(store.getState());
-            this.setState({
-                cart: store.getState().shoppingCart.cart,
-            });
-        });
-    }
+    // componentDidMount() {
+    //     this.setState({
+    //         cart: store.getState().shoppingCart.cart,
+    //     });
+    //     this.unsubscribe = store.subscribe(() => {
+    //         console.log(store.getState());
+    //         this.setState({
+    //             cart: store.getState().shoppingCart.cart,
+    //         });
+    //     });
+    // }
 
-    componentWillUnmount() {
-        this.unsubscribe();
-    }
+    // componentWillUnmount() {
+    //     this.unsubscribe();
+    // }
 
     handleAdd = () => {
         store.dispatch(addToCart("Coffee 500gm", 1, 250));
@@ -46,7 +46,7 @@ class App extends React.Component {
             <div className="App">
                 <header className="App-header">
                     <img src={logo} className="App-logo" alt="logo" />
-                    {this.state.cart.map((item, index) => {
+                    {/* {this.state.cart.map((item, index) => {
                         return (
                             <ul key={index}>
                                 <li>
@@ -56,7 +56,8 @@ class App extends React.Component {
                                 </li>
                             </ul>
                         );
-                    })}
+                    })} */}
+                    <Display></Display>
                     <button onClick={this.handleAdd}>加入购入车</button>
                     <button onClick={this.handleDelete}>删除</button>
                     <button onClick={this.handleUpdate}>更新</button>
@@ -65,5 +66,6 @@ class App extends React.Component {
         );
     }
 }
+
 
 export default App;
