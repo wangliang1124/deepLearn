@@ -20,17 +20,17 @@
     }
 
     function getCookie(key) {
-        let result = ''
+        let value = ''
         let cookie = document.cookie + ";"
         let queryString = key + "="
         let start = cookie.indexOf(queryString)
         if (start > -1) {
             start += queryString.length
             let end = cookie.indexOf(";", start)
-            result = decodeURIComponent(cookie.substring(start, end));
+            value = decodeURIComponent(cookie.substring(start, end));
         }
         // return getCookies()[key]
-        return result
+        return value
     }
 
     function getCookies() {
