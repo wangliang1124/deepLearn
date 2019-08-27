@@ -1,9 +1,10 @@
 import React from "react";
+import axios from "axios";
 import logo from "./logo.svg";
 import "./App.css";
 import store from "./store.js";
 import { addToCart, updateCart, deleteFromCart } from "./actions/cart";
-import Display from './Display'
+import Display from "./Display";
 class App extends React.Component {
     state = {
         cart: [],
@@ -23,6 +24,16 @@ class App extends React.Component {
         store.dispatch(updateCart("Coffee 500gm", 99, 9999));
     };
 
+    handleAsync = async () => {
+        // store.dispatch(actionCreator.fetchStart());
+        // try {
+        //     const response = await axios.get("/api/v1/topics");
+        //     store.dispatch(actionCreator.fetchSuccess(response.data));
+        // } catch (e) {
+        //     store.dispatch(actionCreator.fetchFailure());
+        // }
+    };
+
     render() {
         console.log("initial state: ", store.getState());
 
@@ -34,11 +45,11 @@ class App extends React.Component {
                     <button onClick={this.handleAdd}>加入购入车</button>
                     <button onClick={this.handleDelete}>删除</button>
                     <button onClick={this.handleUpdate}>更新</button>
+                    <button onClick={this.handleAsync}>处理异步</button>
                 </header>
             </div>
         );
     }
 }
-
 
 export default App;
