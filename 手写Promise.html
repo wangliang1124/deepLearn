@@ -51,25 +51,20 @@
         const REJECTED = "Rejected";
 
         function Promise(excutor) {
-            let self = this; // 缓存当前promise实例对象
-            self.status = PENDING; // 初始状态
-            self.value = undefined; // fulfilled状态时 返回的信息
-            self.reason = undefined; // rejected状态时 拒绝的原因
-            self.onFulfilledCallbacks = []; // 存储fulfilled状态对应的onFulfilled函数
-            self.onRejectedCallbacks = []; // 存储rejected状态对应的onRejected函数
+            this.status = PENDING; // 初始状态
+            this.value = undefined; // fulfilled状态时 返回的信息
+            this.reason = undefined; // rejected状态时 拒绝的原因
+            this.onFulfilledCallbacks = []; // 存储fulfilled状态对应的onFulfilled函数
+            this.onRejectedCallbacks = []; // 存储rejected状态对应的onRejected函数
 
+            let self = this; // 缓存当前promise实例对象
             function resolve(value) {
-                // 如果传入的值是promise则继续展开
-                if (value instanceof Promise) {
-                    return value.then(resolve, reject);
-                }
                 // 只能由pending状态 => fulfilled状态 (避免调用多次resolve reject)
                 if (self.status === PENDING) {
                     self.status = FULFILLED;
                     self.value = value;
                     self.onFulfilledCallbacks.forEach(cb => cb(self.value));
                 }
-
             }
 
             function reject(reason) {
@@ -79,7 +74,6 @@
                     self.reason = reason;
                     self.onRejectedCallbacks.forEach(cb => cb(self.reason));
                 }
-
             }
 
             try {
@@ -143,8 +137,8 @@
          * @return {function} newPromsie  返回一个新的promise对象
          */
         Promise.prototype.then = function (onFulfilled, onRejected) {
-            const self = this;
-            let newPromise;
+            let self = this;
+            let promise2;
             // 处理参数默认值 保证参数后续能够继续执行
             onFulfilled = typeof onFulfilled === "function" ? onFulfilled : value => { return value };
             onRejected = typeof onRejected === "function" ? onRejected : reason => { throw reason };
@@ -170,31 +164,31 @@
             //
 
             if (self.status === FULFILLED) { // 成功态
-                newPromise = new Promise((resolve, reject) => {
+                promise2 = new Promise((resolve, reject) => {
                     setTimeout(() => {
                         try {
                             let x = onFulfilled(self.value);
-                            resolvePromise(newPromise, x, resolve, reject); // 新的promise resolve 上一个onFulfilled的返回值
+                            resolvePromise(promise2, x, resolve, reject); // 新的promise resolve 上一个onFulfilled的返回值
                         } catch (e) {
                             reject(e); // 捕获前面onFulfilled中抛出的异常 then(onFulfilled, onRejected);
                         }
                     });
                 })
-                return newPromise
+                return promise2
             }
 
             if (self.status === REJECTED) { // 失败态
-                newPromise = new Promise((resolve, reject) => {
+                promise2 = new Promise((resolve, reject) => {
                     setTimeout(() => {
                         try {
                             let x = onRejected(self.reason);
-                            resolvePromise(newPromise, x, resolve, reject);
+                            resolvePromise(promise2, x, resolve, reject);
                         } catch (e) {
                             reject(e);
                         }
                     });
                 });
-                return newPromise
+                return promise2
             }
 
             if (self.status === PENDING) {
@@ -203,12 +197,12 @@
                 // 2.2.4规范 onFulfilled 和 onRejected 只允许在 execution context 栈仅包含平台代码时运行.
                 // 注1 这里的平台代码指的是引擎、环境以及 promise 的实施代码。实践中要确保 onFulfilled 和 onRejected 方法异步执行，且应该在 then 方法被调用的那一轮事件循环之后的新执行栈中执行。
 
-                newPromise = new Promise((resolve, reject) => {
+                promise2 = new Promise((resolve, reject) => {
                     self.onFulfilledCallbacks.push((value) => {
                         setTimeout(() => {
                             try {
                                 let x = onFulfilled(value);
-                                resolvePromise(newPromise, x, resolve, reject);
+                                resolvePromise(promise2, x, resolve, reject);
                             } catch (e) {
                                 reject(e);
                             }
@@ -218,19 +212,31 @@
                         setTimeout(() => {
                             try {
                                 let x = onRejected(reason);
-                                resolvePromise(newPromise, x, resolve, reject);
+                                resolvePromise(promise2, x, resolve, reject);
                             } catch (e) {
                                 reject(e);
                             }
                         })
                     })
                 });
-                return newPromise
+                return promise2
             }
         };
 
         Promise.resolve = function (value) {
-            return new Promise((resolve, reject) => resolve(value));
+            if (value instanceof Promise) {
+                return value;
+            }
+            return new Promise((resolve, reject) => {
+                if (value && value.then && typeof value.then === 'function') {
+                    setTimeout(() => {
+                        value.then(resolve, reject);
+                    });
+                } else {
+                    resolve(value);
+                }
+            });
+
         };
 
 
@@ -266,25 +272,23 @@
          * 当这个数组里的所有promise对象全部变为resolve状态的时候，才会resolve。
          */
         Promise.all = function (promises) {
-            function gen(length, resolve) {
+            return new Promise((resolve, reject) => {
                 let count = 0;
-                let values = [];
-                return function (i, value) {
-                    values[i] = value;
-                    if (++count === length) {
-                        console.log(values);
-                        resolve(values);
+                let result = [];
+                if (promises.length === 0) {
+                    resolve(result);
+                } else {
+                    for (let i = 0; i < promises.length; i++) {
+                        // promises[i] 可能是普通值
+                        Promise.resolve(promises[i]).then((data) => {
+                            result[i] = data;
+                            if (++count === promises.length) {
+                                resolve(result);
+                            }
+                        }, reject);
                     }
                 }
-            }
-            return new Promise((resolve, reject) => {
-                let done = gen(promises.length, resolve);
-                promises.forEach((promise, index) => {
-                    Promise.resolve(promise).then((value) => {
-                        done(index, value)
-                    }, reject)
-                })
-            })
+            });
         }
 
         /**
@@ -294,33 +298,54 @@
        * 只要有一个promise对象进入 FulFilled 或者 Rejected 状态的话，就会继续进行后面的处理(取决于哪一个更快)
        */
         Promise.race = function (promises) {
+            if (promises.length === 0) {
+                return;
+            }
             return new Promise((resolve, reject) => {
                 promises.forEach((promise, index) => {
-                    promise.then(resolve, reject);
+                    Promise.resolve(promise).then(resolve, reject);
                 });
             });
         }
 
 
-        console.log('======== test 1 ========')
+        console.log('======== test promise.then ========')
         var promise = new Promise((resolve, reject) => {
             setTimeout(() => {
                 resolve('====promise====')
             }, 500);
-        })
-        var p2 = new Promise((resolve, reject) => {
-            setTimeout(() => {
-                resolve('====promise2 ====')
-            }, 1000);
-        })
-        promise.then((res) => {
-            console.log(res)
-        })
-        Promise.all([promise, p2]).then((res) => {
+        }).then((res) => {
             console.log(res)
         })
 
-        console.log('======== test 2 ========')
+
+        console.log('======== test Promise.resolve ========')
+
+        var p = Promise.resolve(20);
+        p.then((data) => {
+            console.log(data);
+        });
+
+
+        var p2 = Promise.resolve({
+            then: function (resolve, reject) {
+                resolve(30);
+            }
+        });
+
+        p2.then((data) => {
+            console.log(data)
+        });
+
+        var p3 = Promise.resolve(new Promise((resolve, reject) => {
+            resolve(400)
+        }));
+        p3.then((data) => {
+            console.log(data)
+        });
+
+
+        console.log('======== test Promise.all ========')
 
         var promise1 = new Promise((resolve, reject) => {
             resolve(3);
@@ -338,13 +363,33 @@
 
         var p = Promise.all([]); // will be immediately resolved
         var p2 = Promise.all([1337, "hi"]); // non-promise values will be ignored, but the evaluation will be done asynchronously
-        console.log('p=====', p);
-        console.log('p2=====', p2)
+        console.log(p);
+        console.log(p2)
         setTimeout(function () {
             console.log('the stack is now empty');
-            console.log('p2=====', p2);
+            console.log(p2);
         });
 
+        console.log('======== test Promise.race ========')
+        Promise.race([
+            new Promise((resolve, reject) => { setTimeout(() => { resolve(100) }, 1000) }),
+            undefined,
+            new Promise((resolve, reject) => { setTimeout(() => { reject(100) }, 100) })
+        ]).then((data) => {
+            console.log('success ', data);
+        }, (err) => {
+            console.log('err ', err);
+        });
+
+        Promise.race([
+            new Promise((resolve, reject) => { setTimeout(() => { resolve(100) }, 1000) }),
+            new Promise((resolve, reject) => { setTimeout(() => { resolve(200) }, 200) }),
+            new Promise((resolve, reject) => { setTimeout(() => { reject(100) }, 1000) })
+        ]).then((data) => {
+            console.log(data);
+        }, (err) => {
+            console.log(err);
+        });
     </script>
 </body>
 
