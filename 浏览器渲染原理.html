@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>浏览器渲染原理</title>
+</head>
+
+<body>
+    <button id="normal">正常</button>
+    <button id="display">隐藏后展示</button>
+    <button id="fragment">fragment</button>
+    <button id="backup">备份</button>
+    <button id="clear">清空</button>
+    <ul id="list"></ul>
+    <script>
+        const data = [];
+        for (let i = 0; i < 2000; i++) {
+            data.push(i);
+        }
+
+        function appendDataToElement(appendToElement, data) {
+            let li;
+            for (let i = 0; i < data.length; i++) {
+                li = document.createElement('li');
+                li.textContent = 'text';
+                appendToElement.appendChild(li);
+            }
+        }
+        const ul = document.getElementById('list');
+        const normalBtn = document.getElementById('normal');
+        const displayBtn = document.getElementById('display');
+        const fragment = document.getElementById('fragment');
+        const backup = document.getElementById('backup');
+        const clear = document.getElementById('clear');
+        normalBtn.addEventListener('click', () => {
+            appendDataToElement(ul, data);
+        });
+        displayBtn.addEventListener('click', () => {
+            ul.style.display = 'none';
+            appendDataToElement(ul, data);
+            ul.style.display = 'block';
+        });
+        fragment.addEventListener('click', () => {
+            const frag = document.createDocumentFragment();
+            appendDataToElement(frag, data);
+            ul.appendChild(frag);
+        })
+        backup.addEventListener('click', () => {
+            const clone = ul.cloneNode(true);
+            appendDataToElement(clone, data);
+            ul.parentNode.replaceChild(clone, ul);
+            ul = clone;
+        })
+        clear.addEventListener('click', () => {
+            while (ul.lastChild) {
+                ul.removeChild(ul.lastChild);
+            }
+        })
+    </script>
+</body>
+
+</html>

@@ -9,6 +9,13 @@
 </head>
 
 <body>
+    <div></div>
+    <p></p>
+    <button>增加</button>
+    <button>减少</button>
+    <button>无效</button>
+    <button>修改</button>
+
     <script>
         const createStore = function (reducer, initState, enhancer) {
             // 检查你的 state 和 enhancer 参数有没有传反
@@ -53,7 +60,6 @@
                 dispatch({ type: Symbol() })
             }
 
-            /* 注意！！！只修改了这里，用一个不匹配任何计划的 type，来获取初始值 */
             dispatch({ type: Symbol() })
 
             return {
@@ -65,25 +71,25 @@
         }
 
         function combineReducers(reducers) {
-            /* reducerKeys = ['counter', 'info']*/
             const reducerKeys = Object.keys(reducers)
-
+            // console.log(reducerKeys) /* reducerKeys = ['counter', 'info']*/
             /*返回合并后的新的reducer函数*/
             return function combination(state = {}, action) {
                 /*生成的新的state*/
-                const nextState = {}
+                let nextState = {}
 
                 /*遍历执行所有的reducers，整合成为一个新的state*/
                 for (let i = 0; i < reducerKeys.length; i++) {
                     const key = reducerKeys[i]
                     const reducer = reducers[key]
                     /*之前的 key 的 state*/
-                    const previousStateForKey = state[key]
+                    const previousState = state[key]
                     /*执行 分 reducer，获得新的state*/
-                    const nextStateForKey = reducer(previousStateForKey, action)
+                    const nextStateForKey = reducer(previousState, action)
 
                     nextState[key] = nextStateForKey
                 }
+                console.log(nextState)
                 return nextState;
             }
         }
@@ -139,22 +145,34 @@
             }
             return boundActionCreators
         }
+
+
+    </script>
+    <script>
         /* ====================================================== test ======================================================================== */
+        // let initState = {
+        //     counter: {
+        //         count: 0
+        //     },
+        //     info: {
+        //         name: '无线研发',
+        //         description: '我们都是前端爱好者！'
+        //     }
+        // }
+
+        /*  ===================================== reducer ======================================== */
         let initState = {
-            counter: {
-                count: 0
-            },
-            info: {
-                name: '无线研发',
-                description: '我们都是前端爱好者！'
-            }
+            count: 0
         }
-        /*注意：action = {type:'',other:''}, action 必须有一个 type 属性*/
         function counterReducer(state, action) {
+            /*注意：如果 state 没有初始值，那就给他初始值！！*/
+            if (!state) {
+                state = initState;
+            }
             switch (action.type) {
                 case 'INCREMENT':
                     return {
-                        count: state.count + action.count || 1
+                        count: state.count + (action.count || 1)
                     }
                 case 'DECREMENT':
                     return {
@@ -166,7 +184,16 @@
             }
         }
 
-        function InfoReducer(state, action) {
+        /*  ===================================== reducer ======================================== */
+        let info = {
+            name: '无线研发',
+            description: '我们都是前端爱好者！'
+        }
+
+        function infoReducer(state, action) {
+            if (!state) {
+                state = info;
+            }
             switch (action.type) {
                 case 'SET_NAME':
                     return {
@@ -185,28 +212,25 @@
 
         const reducer = combineReducers({
             counter: counterReducer,
-            info: InfoReducer
+            info: infoReducer
         });
-        // 装饰模式
+
+        /*  ================================== 创建一个唯一的 store ===================================== */
+        // 中间件
         const loggerMiddleware = (store) => (next) => (action) => {
             console.log('====== logger =======')
-            console.log('this state', store.getState());
-            console.log('action', action);
+            // console.log('this state', store.getState());
+            // console.log('action', action);
             next(action);
-            console.log('next state', store.getState());
-            console.log('====== logger =======')
+            // console.log('next state', store.getState());
+            // console.log('====== logger =======')
         }
 
-        /*把plan函数*/
-        let store = createStore(reducer, initState, applyMiddleware(loggerMiddleware));
-
-        store.subscribe(() => {
-            let state = store.getState();
-            console.log('====== linstener =====', state);
-        });
+        let store = createStore(reducer, applyMiddleware(loggerMiddleware));
+        // console.log(store.getState())
 
 
-        /*返回 action 的函数就叫 actionCreator*/
+        /*  ================================== actionCreator ===================================== */
         function increment(count) {
             return {
                 type: 'INCREMENT',
@@ -221,6 +245,13 @@
             }
         }
 
+        function setDescription(description) {
+            return {
+                type: 'SET_DESCRIPTION',
+                description: description
+            }
+        }
+
         // const actions = {
         //     increment: function () {
         //         return store.dispatch(increment.apply(this, arguments))
@@ -230,25 +261,48 @@
         //     }
         // }
 
-        const actions = bindActionCreators({ increment, setName }, store.dispatch)
+        const actions = bindActionCreators({ increment, setName, setDescription }, store.dispatch)
 
-        actions.increment(100)
-        actions.setName('北京无线开发')
+        /*  ================================== view ===================================== */
+        var btn = document.querySelectorAll('button')
+        var div = document.querySelector('div')
+        var p = document.querySelector('p')
 
-        // /*自增*/
-        // store.dispatch({
-        //     type: 'INCREMENT',
-        //     count: 100
-        // });
+        div.innerText = store.getState().counter.count
+        p.innerText = JSON.stringify(store.getState().info)
 
-        /*自减*/
-        store.dispatch({
-            type: 'DECREMENT'
+        /* ======================== 订阅变化，重新渲染DOM ======================== */
+        store.subscribe(() => {
+            let state = store.getState();
+            console.log('====== state change =====', state);
+            div.innerText = store.getState().counter.count
+            p.innerText = JSON.stringify(store.getState().info)
         });
-        /*我想随便改 计划外的修改是无效的！*/
-        store.dispatch({
-            count: 'abc'
-        });
+
+        /*  ================================== dispatch ===================================== */
+        /*增加*/
+        btn[0].addEventListener('click', function () {
+            store.dispatch(increment());
+        })
+        /*减少*/
+        btn[1].addEventListener('click', function () {
+            store.dispatch({
+                type: 'DECREMENT'
+            });
+        })
+        /*无效的动作！*/
+        btn[2].addEventListener('click', function () {
+            store.dispatch({
+                type: 'NONE',
+                count: 'abc'
+            });
+        })
+        /*修改名称*/
+        btn[3].addEventListener('click', function () {
+            actions.increment(100)
+            actions.setName('北京无线开发')
+            actions.setDescription('我们都是大佬')
+        })
     </script>
 </body>
 
