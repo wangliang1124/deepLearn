@@ -26,7 +26,7 @@
     </pre>
 
     <script>
-        function deepClone(obj) {
+        function deepClone(obj, map = new Map()) {
             if (!obj || typeof obj !== "object") {
                 return obj;
             }
@@ -46,8 +46,13 @@
 
                 case "[object Object]":
                     result = obj.constructor ? new obj.constructor() : {};
-                    for (let [k, v] of Object.entries(obj)) {
-                        result[k] = deepClone(v);
+                    // 处理循环引用
+                    if (map.get(obj)) {
+                        return obj;
+                    }
+                    map.set(obj, result);
+                    for (const k in obj) {
+                        result[k] = deepClone(obj[k], map);
                     }
                     return result;
 
@@ -83,6 +88,17 @@
         console.log(source.props.birth === clone.props.birth);
         console.log(source);
         console.log(clone);
+
+        const target = {
+            field1: 1,
+            field2: undefined,
+            field3: {
+                child: 'child'
+            },
+            field4: [2, 4, 8]
+        };
+        target.target = target;
+        console.log(deepClone(target))
     </script>
 </body>
 
