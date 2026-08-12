@@ -22,6 +22,30 @@
 <body>
     <H3>7. 实现一个JS函数柯里化</H3>
     <script>
+        function curry(func) {
+            return function curried(...args) {
+                // 如果传入参数足够，直接执行
+                if (args.length >= func.length) {
+                    return func.apply(this, args);
+                } else {
+                    // 否则，返回一个新函数来收集剩余参数
+                    return function (...args2) {
+                        return curried.apply(this, args.concat(args2));
+                    }
+                }
+            };
+        }
+
+        // 实际应用
+        function sum(a, b, c) {
+            return a + b + c;
+        }
+        const curriedSum = curry(sum);
+        console.log(curriedSum(1, 2, 3)); // 6
+        console.log(curriedSum(1)(2, 3)); // 6
+        console.log(curriedSum(1)(2)(3)); // 6
+
+
         // 方法一
         // function currying(func) {
         //     var args = Array.prototype.slice.call(arguments, 1);
@@ -51,14 +75,13 @@
             var args = Array.prototype.slice.call(arguments, 1);
             return function () {
                 var newArgs = args.concat([].slice.call(arguments));
-                if (newArgs.length === func.length) {
+                if (newArgs.length >= func.length) {
                     return func.apply(this, newArgs);
                 }
                 newArgs.unshift(func);
                 return currying.apply(this, newArgs);
             };
         }
-
 
         console.log("============== currying ==================");
         function multiFn(a, b, c) {
@@ -67,11 +90,11 @@
 
         var multi = currying(multiFn);
         console.log(
-            multi(2, 22,4,44,4),
-            multi(2)(3)(4),
-            multi(2, 3, 4),
-            multi(2)(3, 4),
-            multi(2, 3)(4)
+            multi(2, 22, 4, 44, 4),
+            // multi(2)(3)(4),
+            // multi(2, 3, 4),
+            // multi(2)(3, 4),
+            // multi(2, 3)(4)
         );
 
 

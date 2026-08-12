@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>deepTraverseAndModify</title>
+    <script>
+        function deepTraverseAndModify(object, modifierFunction) {
+            // 验证 object 是对象或数组，否则直接返回
+            if (typeof object !== "object" || object === null) {
+                return object;
+            }
+
+            // 如果传入的是数组，遍历数组每个元素
+            if (Array.isArray(object)) {
+                return object.map((item) => deepTraverseAndModify(item, modifierFunction));
+            }
+
+            // 初始化一个新对象来存储修改后的对象
+            const modifiedObject = {};
+
+            // 遍历对象的每个属性
+            Object.keys(object).forEach((key) => {
+                const originalValue = object[key];
+
+                // 判断属性值是否是对象或数组，如果是，递归调用自身，否则直接应用修改函数
+                const modifiedValue =
+                    typeof originalValue === "object" && originalValue !== null
+                        ? deepTraverseAndModify(originalValue, modifierFunction)
+                        : modifierFunction(originalValue, key);
+
+                modifiedObject[key] = modifiedValue;
+            });
+
+            return modifiedObject;
+        }
+
+        // 使用示例
+        const originalObject = {
+            a: 1,
+            b: [1, 2, { c: true, d: [3, 4] }],
+            e: { f: 5, g: 6 },
+        };
+
+        const modifiedObject = deepTraverseAndModify(originalObject, (value, key) => {
+            // 示例：将所有数字加 10
+            if (typeof value === "number") {
+                return value + 10;
+            }
+            return value;
+        });
+
+        console.log("Original:", originalObject);
+        console.log("Modified:", modifiedObject);
+    </script>
+</head>
+
+<body>
+
+</body>
+
+</html>

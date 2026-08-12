@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popover</title>
+    <style>
+        #textElement {
+            width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            background-color: beige;
+        }
+
+        .popover {
+            position: absolute;
+            background-color: white;
+            border: 1px solid gray;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const textElement = document.getElementById("textElement");
+            if (textElement.scrollWidth > textElement.offsetWidth) {
+                textElement.addEventListener("click", function (e) {
+                    e.stopPropagation()
+                    console.log(this.dataset);
+                    const fullText = this.getAttribute("data-full-text"); // this.dataset.fullText
+                    const popover = document.createElement("div");
+                    popover.className = "popover";
+                    popover.textContent = fullText;
+                    document.body.appendChild(popover);
+                    // 简单的定位，将popover放在被点击元素的下方
+                    const rect = this.getBoundingClientRect();
+                    popover.style.left = rect.left + "px";
+                    popover.style.top = rect.bottom + 5 + "px";
+                });
+            }
+
+            document.addEventListener('click', function () {
+                const popover = document.querySelector('.popover')
+                popover && document.body.removeChild(popover);
+            })
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="textElement"
+        data-full_text="这是一段很长很长很长很长很长很长很长很长很长很长很长很长很长很长很长很长的文本">
+        这是一段很长很长很长很长很长很长很长很长很长很长很长很长很长很长很长很长的文本
+    </div>
+
+</body>
+
+</html>

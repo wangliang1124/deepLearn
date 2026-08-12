@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ObservableArray</title>
+    <script>
+
+        function ObservableArray() {
+            // 1. 新增：创建私有存储容器，存储所有真实值，避免get/set循环
+            this._data = [];
+            // 2. 初始化参数：把初始值push进去（复用自己的push，自动监听）
+            Array.prototype.push.apply(this._data, arguments);
+            // 3. 同步原生数组的length（保持和普通数组一致的使用体验）
+            this.length = this._data.length;
+        }
+        ObservableArray.prototype = Object.create(Array.prototype);
+        ObservableArray.prototype.constructor = ObservableArray;
+
+        ObservableArray.prototype.push = function () {
+            var previousLength = this.length;
+            // 核心：操作私有容器_data，而非this本身
+            var result = Array.prototype.push.apply(this._data, arguments);
+            // 同步length
+            this.length = this._data.length;
+
+            // 为新添加的索引定义get/set（监听）
+            for (var i = previousLength; i < this.length; i++) {
+                (function (index) {
+                    Object.defineProperty(this, index, {
+                        enumerable: true,
+                        configurable: true,
+                        get: function () {
+                            console.log("正在读取索引为" + index + "的元素");
+                            return this._data[index]; // 读私有容器，不触发get
+                        },
+                        set: function (value) {
+                            console.log("正在设置索引为" + index + "的元素为" + value);
+                            this._data[index] = value; // 写私有容器，不触发set
+                        },
+                    });
+                }).call(this, i);
+            }
+
+            console.log("执行了push操作，添加了" + (this.length - previousLength) + "个元素");
+            return result;
+        };
+
+        ObservableArray.prototype.pop = function () {
+            if (this.length === 0) return; // 空数组直接返回，避免报错
+            var popIndex = this.length - 1; // 最后一个元素的真实索引
+            // 核心：操作私有容器_data
+            var result = Array.prototype.pop.apply(this._data, arguments);
+            // 同步length
+            this.length = this._data.length;
+            // 可选：删除被pop的索引的get/set（释放资源，也可以不删）
+            delete this[popIndex];
+
+            console.log("执行了pop操作，删除的元素为：" + result);
+            return result;
+        };
+
+        // 测试代码（无报错，正常打印监听日志）
+        var myArray = new ObservableArray(1, 2, 3);
+        console.log('初始化后：', myArray[0], myArray[1], myArray[2]); // 触发3次get
+        myArray.push(4, 5); // 打印push日志，为4、5索引添加监听
+        var poppedElement = myArray.pop(); // 打印pop日志，删除索引4的监听
+        console.log('弹出的元素：', poppedElement); // 5
+        myArray[0] = 10; // 触发索引0的set
+        console.log('修改后索引0的值：', myArray[0]); // 触发get，打印10
+        console.log('数组当前length：', myArray.length); // 4
+
+        console.log('----------------------------------------');
+
+        let array = [1, 2, 3];
+        let proxyArray = new Proxy(array, {
+            get(target, property, receiver) {
+                console.log(`正在读取数组元素${property}`);
+                return target[property];
+            },
+        });
+        let element = proxyArray[1];
+
+        // let array = [1, 2, 3];
+        let proxyArray1 = new Proxy(array, {
+            set(target, property, value, receiver) {
+                if (value < 0) {
+                    throw new Error("数组元素不能小于0");
+                }
+                target[property] = value;
+                return true;
+            },
+        });
+        // proxyArray1[0] = -1; // throw error
+
+
+
+        // 目标原生数组
+        const targetArr = [1, 2, 3];
+
+        // 创建Proxy代理，拦截push操作
+        const proxyArr = new Proxy(targetArr, {
+            // get捕获器：拦截「属性/方法的读取」（数组的push是原型上的方法，读取时会触发此捕获器）
+            get(target, prop, receiver) {
+                // 判断读取的属性是否是push
+                if (prop === 'push') {
+                    // 返回自定义的push函数，实现拦截
+                    return function (...args) {
+                        // 【拦截前置逻辑】：push执行前的操作（比如打印日志、校验参数）
+                        console.log(`开始拦截push操作，准备添加的元素：`, args);
+                        console.log(`push前数组长度：`, target.length);
+
+                        // 执行数组原生的push方法，获取执行结果（原生push返回新长度）
+                        // const result = target.push(...args);
+                        const result = Reflect.apply(Array.prototype.push, target, args);
+
+                        // 【拦截后置逻辑】：push执行后的操作（核心业务逻辑，比如通知更新、数据校验）
+                        console.log(`push操作完成，新添加的元素：`, args);
+                        console.log(`push后数组长度：`, target.length);
+
+                        // 保留原生push的返回值（必须返回，否则proxyArr.push()会得到undefined）
+                        return result;
+                    };
+                }
+                // 非push属性/方法：直接返回原生值，不做拦截（保证数组其他功能正常）
+                return Reflect.get(target, prop, receiver);
+            }
+        });
+
+        // 测试：调用代理数组的push，会触发拦截
+        proxyArr.push(4, 5);
+        // 控制台打印拦截日志，同时原生push逻辑正常执行
+        console.log(proxyArr); // [1,2,3,4,5]（目标数组也会同步修改）
+    </script>
+   
+</head>
+
+<body>
+  
+</body>
+
+</html>

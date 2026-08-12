@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <p>检测内存变化</p>
+  <button id="btn">开始</button>
+  <script>
+    const arr = [];
+    // 数组中添加100万个数据
+    for (let i = 0; i < 100 * 10000; i++) {
+      arr.push(i)
+    }
+    function bind() {
+      const obj = {
+        str: JSON.stringify(arr) // 浅拷贝的方式创建一个比较大的字符串
+      }
+      // 每次调用bind函数，都在全局绑定一个onclick监听事件，不一定非要执行
+      // 使用绑定事件，主要是为了保持obj被全局标记
+      window.addEventListener('click', () => {
+        // 引用对象obj
+        console.log(obj);
+      })
+    }
+    let n = 0;
+    function start() {
+      setTimeout(() => {
+        bind(); // 调用bind函数
+        n++; // 循环次数增加
+        if (n < 50) {
+          start(); // 循环执行50次，注意这里并没有使用setInterval定时器
+        } else {
+          alert('done');
+        }
+      }, 200);
+    }
+    document.getElementById('btn').addEventListener('click', () => {
+      start();
+    })
+  </script>
+</body>
+
+</html>
