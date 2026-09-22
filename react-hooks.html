@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Hooks 行为演示</title>
+  <!-- React 19 起不再提供 UMD 构建，免构建的 CDN 方案只能用 18.x -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    :root {
+      --bg: #fff;
+      --fg: #1a1a1a;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --card: #f6f8fa;
+      --link: #0969da;
+      --ok: #1a7f37;
+      --bad: #cf222e;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --line: #30363d;
+        --card: #161b22;
+        --link: #58a6ff;
+        --ok: #3fb950;
+        --bad: #f85149;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      max-width: 860px;
+      background: var(--bg);
+      color: var(--fg);
+      font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    .tagline { margin: 0 0 8px; color: var(--muted); }
+
+    h2 {
+      margin: 36px 0 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: 18px;
+    }
+
+    a { color: var(--link); }
+
+    .demo {
+      margin-top: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card);
+    }
+
+    button {
+      margin: 2px 6px 2px 0;
+      padding: 5px 12px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--bg);
+      color: var(--fg);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: var(--link); color: var(--link); }
+
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+    }
+
+    code { padding: 1px 5px; border-radius: 4px; background: var(--line); }
+
+    .out {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 5px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12.5px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    .note { margin-top: 8px; color: var(--muted); font-size: 13.5px; }
+    table { border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+    th, td { padding: 4px 10px; border: 1px solid var(--line); text-align: left; }
+    th { background: var(--card); }
+
+    footer {
+      margin-top: 56px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>React Hooks 行为演示</h1>
+  <p class="tagline">配套笔记：<a href="react-hooks.md">react-hooks.md</a>。页面里的每个结论都由左侧交互实际跑出来，而不是写死的文案。</p>
+  <p class="note">当前 React 版本：<span id="ver" class="mono">加载中…</span></p>
+
+  <div id="root"></div>
+
+  <footer>
+    源码：<a href="https://github.com/anotherleon/deepLearn">github.com/anotherleon/deepLearn</a>
+  </footer>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useReducer, memo } = React;
+
+    document.getElementById("ver").textContent = React.version;
+
+    function Section({ title, children, note }) {
+      return (
+        <section>
+          <h2>{title}</h2>
+          {note && <p className="note">{note}</p>}
+          <div className="demo">{children}</div>
+        </section>
+      );
+    }
+
+    // ============ 1. Hooks 在 fiber 上是一条链表 ============
+    function HookList() {
+      const [a] = useState("useState-a");
+      const [b] = useState("useState-b");
+      const r = useRef("useRef");
+      const m = useMemo(() => "useMemo", []);
+      const c = useCallback(() => "useCallback", []);
+      const [red] = useReducer(x => x, "useReducer");
+      useEffect(() => {}, []);
+      const [rows, setRows] = useState(null);
+      const host = useRef(null);
+
+      const inspect = () => {
+        const el = host.current;
+        const key = Object.keys(el).find(k => k.startsWith("__reactFiber$"));
+        let fiber = el[key];
+        while (fiber && typeof fiber.type !== "function") fiber = fiber.return;
+        const list = [];
+        let hook = fiber && fiber.memoizedState;
+        let i = 1;
+        while (hook) {
+          const ms = hook.memoizedState;
+          list.push({
+            i: i++,
+            shape: ms === null ? "null"
+              : Array.isArray(ms) ? "[value, deps]"
+              : typeof ms === "object" ? "{" + Object.keys(ms).join(", ") + "}"
+              : JSON.stringify(ms),
+            queue: hook.queue ? "有" : "—",
+            next: hook.next ? "→" : "(末尾)",
+          });
+          hook = hook.next;
+        }
+        setRows(list);
+      };
+
+      return (
+        <div ref={host}>
+          <p className="note">
+            这个组件按顺序调用了 9 个 hook：先是演示用的 useState ×2、useRef、useMemo、useCallback、useReducer、useEffect，
+            再加上驱动这个 demo 自己所需的 useState（存表格数据）和 useRef（拿 DOM 节点）——
+            为界面管道加的 hook 一样会占链表位置，这也是一个观察点。
+            点击后从 DOM 节点的 <code>__reactFiber$</code> 属性取到 fiber，沿 <code>memoizedState.next</code> 把链表走一遍。
+          </p>
+          <button onClick={inspect}>读取 fiber 上的 hook 链表</button>
+          {rows && (
+            <>
+              <table>
+                <thead>
+                  <tr><th>#</th><th>memoizedState 形状</th><th>update queue</th><th>next</th></tr>
+                </thead>
+                <tbody>
+                  {rows.map(r => (
+                    <tr key={r.i}>
+                      <td>{r.i}</td><td className="mono">{r.shape}</td><td>{r.queue}</td><td>{r.next}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="out">
+                节点数 = {rows.length}，与 hook 调用次数一致。
+                {"\n"}顺序与源码里的调用顺序逐一对应 —— React 靠<span className="bad">位置</span>而不是名字来认 hook，
+                {"\n"}这就是不能把 hook 放进 if / 循环的根本原因：位置一错，第 N 次渲染取到的就是别人的状态。
+                {"\n"}
+                {"\n"}注意 useState / useReducer 的节点带 update queue，useRef / useMemo / useCallback 没有；
+                {"\n"}useRef 的 memoizedState 就是一个 {"{ current }"} 对象 —— 所谓 ref 只是一个不随渲染重建的普通对象。
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // ============ 2. 依赖比较用的是 Object.is ============
+    function DepsAlgo() {
+      const [step, setStep] = useState(0);
+      const [log, setLog] = useState([]);
+      const runsNaN = useRef(0);
+      const runsZero = useRef(0);
+
+      // 1 → NaN → NaN
+      const nanDep = step === 0 ? 1 : NaN;
+      // 0 → -0
+      const zeroDep = step < 2 ? 0 : -0;
+
+      useEffect(() => { runsNaN.current++; }, [nanDep]);
+      useEffect(() => { runsZero.current++; }, [zeroDep]);
+
+      const advance = () => {
+        if (step >= 2) return;
+        setStep(step + 1);
+      };
+
+      useEffect(() => {
+        setLog(l => [...l, `第 ${step} 步：NaN 依赖 effect 跑了 ${runsNaN.current} 次，±0 依赖 effect 跑了 ${runsZero.current} 次`]);
+      }, [step]);
+
+      return (
+        <div>
+          <p className="note">
+            <code>Object.is</code> 和 <code>===</code> 只在两处结论相反：<code>NaN</code> 与 <code>NaN</code>（=== 说不等，Object.is 说等），
+            <code>+0</code> 与 <code>-0</code>（=== 说等，Object.is 说不等）。所以只要看 effect 跑不跑，就能反推 React 用的是哪个。
+          </p>
+          <button onClick={advance} disabled={step >= 2}>
+            {step === 0 ? "把依赖从 1 改成 NaN" : step === 1 ? "把依赖从 NaN 再改成 NaN" : "已完成"}
+          </button>
+          <div className="out">
+            {log.join("\n")}
+            {step >= 2 && (
+              <>
+                {"\n\n"}
+                <span className="ok">结论</span>：NaN → NaN 没有触发重跑（若用 === 会触发），
+                {"\n"}0 → -0 触发了重跑（若用 === 不会触发）。
+                {"\n"}两个用例都指向 <span className="ok">Object.is</span>。
+                {"\n\n"}实践含义：依赖里放对象/数组/函数字面量，每次渲染都是新引用，
+                {"\n"}Object.is 判定为变化，effect 每次都会重跑。
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ============ 3. 闭包陷阱 ============
+    function StaleClosure() {
+      const [count, setCount] = useState(0);
+      const [stale, setStale] = useState([]);
+      const [fresh, setFresh] = useState([]);
+      const countRef = useRef(count);
+      countRef.current = count;
+
+      // 空依赖：回调永远闭包住首次渲染的 count
+      useEffect(() => {
+        const id = setInterval(() => {
+          setStale(a => [...a, count]);        // 永远是 0
+          setFresh(a => [...a, countRef.current]); // 用 ref 读到最新值
+        }, 600);
+        return () => clearInterval(id);
+      }, []);
+
+      return (
+        <div>
+          <p className="note">
+            下面的 <code>setInterval</code> 写在依赖为 <code>[]</code> 的 effect 里，回调捕获的是首次渲染时的 <code>count</code>。
+            点几次「+1」，对比两行采样。
+          </p>
+          <button onClick={() => setCount(c => c + 1)}>count + 1（当前 {count}）</button>
+          <button onClick={() => { setStale([]); setFresh([]); }}>清空采样</button>
+          <div className="out">
+            真实 state：{count}
+            {"\n"}闭包里读到的（直接用 count）：[{stale.slice(-8).join(", ")}] <span className="bad">← 卡在初始值</span>
+            {"\n"}用 ref 读到的（countRef.current）：[{fresh.slice(-8).join(", ")}] <span className="ok">← 跟得上</span>
+            {"\n\n"}两种正规解法：把 count 加进依赖数组（effect 会重建定时器），
+            {"\n"}或者用 setCount(c =&gt; c + 1) 这种函数式更新，完全不读外部的 count。
+            {"\n"}ref 是逃生通道，能用但不该是首选。
+          </div>
+        </div>
+      );
+    }
+
+    // ============ 4. useState 存数组：直接改 vs 换新引用 ============
+    function MutateArray() {
+      const [arr, setArr] = useState([1, 2, 3]);
+      const renders = useRef(0);
+      const mutations = useRef(0);
+      const [, force] = useState(0);
+      renders.current++;
+
+      const mutate = () => {
+        arr.push(arr.length + 1);
+        mutations.current++;
+        setArr(arr);              // 同一个引用
+      };
+      const replace = () => setArr(prev => [...prev, prev.length + 1]);
+
+      return (
+        <div>
+          <p className="note">
+            <code>setState</code> 拿到的新值若与旧值 <code>Object.is</code> 相等，React 会跳过这次更新。
+            数组 <code>push</code> 之后引用没变，所以画面不动 —— 但数据其实已经改了。
+            注意：界面不刷新时，连「真实长度」这一行也是旧的，所以要靠第三个按钮才能看到真相。
+          </p>
+          <button onClick={mutate}>push 后 setArr(arr)（同引用）</button>
+          <button onClick={replace}>setArr([...prev, n])（新引用）</button>
+          <button onClick={() => force(n => n + 1)}>强制重渲染，看真实数据</button>
+          <div className="out">
+            渲染次数：{renders.current}
+            {"\n"}push 调用次数：{mutations.current}
+            {"\n"}此刻渲染出的数组：[{arr.join(", ")}]（长度 {arr.length}）
+            {"\n\n"}连点第一个按钮：push 次数在涨，渲染次数<span className="bad">不涨</span>，
+            {"\n"}数组内容也不动 —— 因为这段文字本身就没有重新渲染。
+            {"\n"}再点「强制重渲染」：数组会一次性跳到真实内容，说明数据早就改了，
+            {"\n"}只是 React 因为引用相同而跳过了更新，界面与数据脱节。
+            {"\n"}点「新引用」那个按钮：换了引用，渲染立即触发，这才是正确写法。
+          </div>
+        </div>
+      );
+    }
+
+    // ============ 5. useEffect vs useLayoutEffect ============
+    function EffectTiming() {
+      const [order, setOrder] = useState([]);
+      const [mode, setMode] = useState(null);
+      const [offset, setOffset] = useState(0);
+      const boxRef = useRef(null);
+
+      const seq = useRef([]);
+      seq.current = mode ? [] : seq.current;
+
+      useLayoutEffect(() => {
+        if (!mode) return;
+        if (mode === "layout") setOffset(120);
+        seq.current.push("useLayoutEffect");
+      }, [mode]);
+
+      useEffect(() => {
+        if (!mode) return;
+        if (mode === "effect") setOffset(120);
+        seq.current.push("useEffect");
+        setOrder(seq.current.slice());
+      }, [mode]);
+
+      return (
+        <div>
+          <p className="note">
+            两者都在 DOM 变更后执行，区别是时机：<code>useLayoutEffect</code> 在浏览器绘制<b>之前</b>同步执行，
+            <code>useEffect</code> 在绘制<b>之后</b>异步执行。所以用 useEffect 改布局，用户可能先看到一帧旧位置。
+          </p>
+          <button onClick={() => { seq.current = []; setOffset(0); setMode(null); setTimeout(() => setMode("layout"), 20); }}>
+            用 useLayoutEffect 移动方块
+          </button>
+          <button onClick={() => { seq.current = []; setOffset(0); setMode(null); setTimeout(() => setMode("effect"), 20); }}>
+            用 useEffect 移动方块
+          </button>
+          <div style={{ position: "relative", height: 34, marginTop: 10 }}>
+            <div ref={boxRef} style={{
+              position: "absolute", left: offset, top: 0, width: 30, height: 30,
+              background: "#0969da", borderRadius: 4, transition: "none",
+            }} />
+          </div>
+          <div className="out">
+            渲染后的 effect 执行顺序：{order.length ? order.join(" → ") : "（点上面的按钮）"}
+            {"\n"}render 永远在这两者之前。
+            {"\n\n"}useLayoutEffect 里读 DOM 尺寸已经是最终值，且此时改样式不会闪；
+            {"\n"}代价是它同步阻塞绘制，逻辑重会拖慢首屏。默认用 useEffect，
+            {"\n"}只在「必须在绘制前读取或修正布局」时才换 useLayoutEffect。
+          </div>
+        </div>
+      );
+    }
+
+    // ============ 6. memo 与 useMemo ============
+    let childRenderCount = 0;
+    const PureChild = memo(function PureChild({ n }) {
+      childRenderCount++;
+      return <span className="mono">子组件收到 n={n}</span>;
+    });
+
+    let plainChildCount = 0;
+    function PlainChild({ n }) {
+      plainChildCount++;
+      return <span className="mono">子组件收到 n={n}</span>;
+    }
+
+    function MemoDemo() {
+      const [tick, setTick] = useState(0);
+      const [, setNudge] = useState(0);
+      const heavyRuns = useRef(0);
+
+      // useMemo 缓存的是「值」
+      const heavy = useMemo(() => {
+        heavyRuns.current++;
+        return tick * 2;
+      }, [tick]);
+
+      return (
+        <div>
+          <p className="note">
+            <code>memo</code> 是高阶组件，缓存的是<b>组件的渲染结果</b>，靠浅比较 props 决定要不要重渲染；
+            <code>useMemo</code> 是 hook，缓存的是<b>一个值</b>，靠依赖数组决定要不要重算。作用对象不同，不是替代关系。
+          </p>
+          <button onClick={() => setNudge(n => n + 1)}>父组件重渲染（不改 props）</button>
+          <button onClick={() => setTick(t => t + 1)}>改变 tick（会改 props）</button>
+          <div className="out">
+            memo 包裹的子组件渲染次数：<span className="ok">{childRenderCount}</span>
+            {"\n"}未包裹的子组件渲染次数：<span className="bad">{plainChildCount}</span>
+            {"\n"}useMemo 里的计算执行次数：{heavyRuns.current}（依赖 tick={tick}，值={heavy}）
+            {"\n\n"}点「父组件重渲染」：未包裹的子组件次数在涨，memo 包裹的不涨。
+            {"\n"}点「改变 tick」：props 变了，两者都涨，useMemo 也重算。
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <PureChild n={tick} /> ｜ <PlainChild n={tick} />
+          </div>
+        </div>
+      );
+    }
+
+    // ============ 7. useMemo / useCallback 与 async ============
+    function AsyncMemo() {
+      const [res, setRes] = useState(null);
+
+      // 常见误用：工厂函数是 async，useMemo 拿到的是 Promise 而不是值
+      const wrong = useMemo(async () => 42, []);
+      // 正确：在 effect 里发起异步，用 state 承接结果
+      const [right, setRight] = useState(null);
+      useEffect(() => {
+        let alive = true;
+        (async () => { const v = await Promise.resolve(42); if (alive) setRight(v); })();
+        return () => { alive = false; };
+      }, []);
+
+      const cb = useCallback(async () => 42, []);
+
+      const check = async () => {
+        setRes({
+          memoIsPromise: wrong instanceof Promise,
+          memoTypeof: typeof wrong,
+          cbReturnIsPromise: cb() instanceof Promise,
+          awaited: await cb(),
+        });
+      };
+
+      return (
+        <div>
+          <p className="note">
+            <code>useMemo(async () =&gt; …)</code> 语法上不报错，但缓存下来的是 Promise 对象，不是你要的值 ——
+            拿去参与计算或渲染就会得到 <code>[object Promise]</code>。
+            <code>useCallback</code> 则完全可以接 async：它缓存的是函数本身，调用时机由你决定。
+          </p>
+          <button onClick={check}>检查返回值类型</button>
+          <div className="out">
+            {res ? (
+              <>
+                useMemo(async …) 的结果 instanceof Promise：<span className="bad">{String(res.memoIsPromise)}</span>
+                {"\n"}它的 typeof：{res.memoTypeof}（不是 number，直接渲染会变成 [object Promise]）
+                {"\n\n"}useCallback(async …) 返回的函数，调用后 instanceof Promise：<span className="ok">{String(res.cbReturnIsPromise)}</span>
+                {"\n"}await 之后拿到的值：<span className="ok">{String(res.awaited)}</span>
+                {"\n\n"}正确写法（effect + state 承接）拿到的值：<span className="ok">{String(right)}</span>
+                {"\n"}effect 里还要带一个 alive 标志，组件卸载后别再 setState。
+              </>
+            ) : "（点上面的按钮）"}
+          </div>
+        </div>
+      );
+    }
+
+    // ============ 8. useRef 不触发渲染 ============
+    function RefVsState() {
+      const [s, setS] = useState(0);
+      const r = useRef(0);
+      const renders = useRef(0);
+      renders.current++;
+      const [, force] = useState(0);
+
+      return (
+        <div>
+          <p className="note">
+            <code>useRef</code> 返回的对象在组件整个生命周期里保持同一个引用，改 <code>.current</code> 不会通知 React，
+            所以不触发渲染。适合存「不需要反映到界面上」的东西：定时器 id、DOM 节点、上一次的值。
+          </p>
+          <button onClick={() => { r.current++; }}>ref.current + 1（不重渲染）</button>
+          <button onClick={() => setS(v => v + 1)}>state + 1（重渲染）</button>
+          <button onClick={() => force(n => n + 1)}>强制重渲染，看 ref 的值</button>
+          <div className="out">
+            渲染次数：{renders.current}
+            {"\n"}state：{s}
+            {"\n"}ref.current：{r.current}
+            {"\n\n"}连点第一个按钮：界面上的 ref.current 不动，因为没有重渲染 ——
+            {"\n"}但值已经存进去了，点「强制重渲染」就会看到它一次性跳到真实值。
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <>
+          <Section title="1. Hooks 在 fiber 上是一条链表">
+            <HookList />
+          </Section>
+          <Section title="2. 依赖数组的比较用的是 Object.is">
+            <DepsAlgo />
+          </Section>
+          <Section title="3. 闭包陷阱">
+            <StaleClosure />
+          </Section>
+          <Section title="4. useState 存数组：直接改 vs 换新引用">
+            <MutateArray />
+          </Section>
+          <Section title="5. useEffect 与 useLayoutEffect 的时机">
+            <EffectTiming />
+          </Section>
+          <Section title="6. memo 与 useMemo 的区别">
+            <MemoDemo />
+          </Section>
+          <Section title="7. useMemo / useCallback 遇上 async">
+            <AsyncMemo />
+          </Section>
+          <Section title="8. useRef 改动不触发渲染">
+            <RefVsState />
+          </Section>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+
+</html>

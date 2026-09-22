@@ -166,7 +166,7 @@
 
 <body>
   <h1>deepLearn</h1>
-  <p class="tagline">前端原理笔记与手写代码 demo —— 48 个可直接在浏览器打开的单文件示例。</p>
+  <p class="tagline">前端原理笔记与手写代码 demo —— 49 个可直接在浏览器打开的单文件示例。</p>
 
   <h2>笔记</h2>
   <ul class="notes">
@@ -175,6 +175,9 @@
     </li>
     <li><a class="name" href="02-deep-dive.md">02 深入学习</a>
       <span class="desc">JS / 浏览器 / HTTP / CSS / React 问答</span>
+    </li>
+    <li><a class="name" href="react-hooks.md">React Hooks 面试题</a>
+      <span class="desc">19 题，链表原理 / 闭包陷阱 / 依赖比较</span>
     </li>
     <li><a class="name" href="state-management-comparison.md">状态管理对比</a>
       <span class="desc">Flux → Redux → Vuex → MobX</span>
@@ -196,6 +199,7 @@
     <p><span class="badge">需双端口</span> 跨域三件套，需同时起两个端口模拟不同源：<br>
       <code>python3 -m http.server 8080</code> 与 <code>python3 -m http.server 8081</code>，然后打开
       <code>http://127.0.0.1:8081/cross-origin-a.html</code>。</p>
+    <p><span class="badge">需联网</span> 从 CDN 加载 React、Babel 等依赖，本地文件可直接打开但要能联网。</p>
     <p><span class="badge">需后端</span> 依赖本地或远端接口，仓库内不含服务端代码。</p>
     <p><span class="badge">部分失效</span> 引用的资源已不可用，仅供读源码。</p>
     <p><span class="badge">源码</span> 纯 JS 文件，点开是源码而非可交互页面。</p>
@@ -287,8 +291,11 @@
     </li>
   </ul>
 
-  <h2>框架与语言原理 <span class="count">6</span></h2>
+  <h2>框架与语言原理 <span class="count">7</span></h2>
   <ul>
+    <li><a class="name" href="react-hooks.html">react-hooks</a>
+      <span class="desc">8 个交互演示：hook 链表 / 闭包陷阱 / 依赖比较</span><span class="badge">需联网</span>
+    </li>
     <li><a class="name" href="es6-inheritance.html">es6-inheritance</a>
       <span class="desc">class extends 编译后的原型结构</span>
     </li>
@@ -302,7 +309,7 @@
       <span class="desc">defineProperty 实现 MVVM 双向绑定</span>
     </li>
     <li><a class="name" href="react-router-internals.html">react-router-internals</a>
-      <span class="desc">用 pushState 实现最简 React Router</span>
+      <span class="desc">用 pushState 实现最简 React Router</span><span class="badge">需联网</span>
     </li>
     <li><a class="name" href="redux-implementation.html">redux-implementation</a>
       <span class="desc">从零实现 createStore 与中间件</span>
@@ -333,7 +340,7 @@
       <span class="desc">解析 URL query 参数</span>
     </li>
     <li><a class="name" href="thousands-separator-template-engine.html">thousands-separator-template-engine</a>
-      <span class="desc">千位分隔符与极简模版引擎</span>
+      <span class="desc">千位分隔符与极简模板引擎</span>
     </li>
     <li><a class="name" href="exercises-1.html">exercises-1</a>
       <span class="desc">综合编程题（一）</span>

@@ -492,6 +492,8 @@
 
     > 用状态响应输入 https://react.dev/learn/state-a-components-memory
 
+    仓库内另有一篇笔记：[React Hooks 面试题](react-hooks.md)（19 题，配可运行 demo）
+
 3. Redux
 
     > **推荐** 完全理解 redux（从零实现一个 redux） https://github.com/brickspert/blog/issues/22

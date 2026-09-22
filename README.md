@@ -1,6 +1,6 @@
 # deepLearn
 
-前端原理笔记与手写代码 demo。48 个单文件示例，无构建、无依赖，绝大多数双击就能在浏览器里跑。
+前端原理笔记与手写代码 demo。49 个单文件示例，无构建、无依赖，绝大多数双击就能在浏览器里跑。
 
 ## 怎么跑
 
@@ -16,6 +16,7 @@ open index.html          # 从导航页进入所有 demo
 | --- | --- |
 | 需 server | 用到 ES module，需 `python3 -m http.server 8080` 后访问 |
 | 需双端口 | 跨域三件套，需同时起 8080 与 8081 两个端口模拟不同源 |
+| 需联网 | 从 CDN 加载 React、Babel 等依赖，本地文件可直接打开但要能联网 |
 | 需后端 | 依赖本地或远端接口，仓库内不含服务端代码 |
 | 部分失效 | 引用的资源已不可用，仅供读源码 |
 
@@ -33,6 +34,7 @@ open http://127.0.0.1:8081/cross-origin-a.html
 | --- | --- |
 | [01 手写代码](01-handwritten-code.md) | 20+ 道手写实现题的完整题解 |
 | [02 深入学习](02-deep-dive.md) | JS / 浏览器 / HTTP / HTML / CSS / React / 工程化 问答 |
+| [React Hooks 面试题](react-hooks.md) | 19 题，含链表原理、闭包陷阱、依赖比较，配可运行 demo |
 | [状态管理对比](state-management-comparison.md) | Flux → Redux → Vuex → MobX 横向对比 |
 | [React-Redux 原理](react-redux-internals.md) | Provider 与 connect 源码剖析 |
 | [原生 / RN / H5 通信](native-rn-h5-bridge.md) | iOS 与 Android 双向桥接方案 |
@@ -80,11 +82,12 @@ open http://127.0.0.1:8081/cross-origin-a.html
 
 | Demo | 说明 |
 | --- | --- |
+| [react-hooks](react-hooks.html) | 8 个 Hooks 行为交互演示 · 需联网 |
 | [es6-inheritance](es6-inheritance.html) | class extends 编译后的原型结构 |
 | [proxy](proxy.html) | Proxy 的 get / set / apply / construct 拦截 |
 | [observable-array](observable-array.html) | 可监听数组，拦截 push / pop 变更 |
 | [vue-two-way-binding](vue-two-way-binding.html) | defineProperty 实现 MVVM 双向绑定 |
-| [react-router-internals](react-router-internals.html) | 用 pushState 实现最简 React Router |
+| [react-router-internals](react-router-internals.html) | 用 pushState 实现最简 React Router · 需联网 |
 | [redux-implementation](redux-implementation.html) | 从零实现 createStore、combineReducers 与中间件 |
 
 ### 算法与编程题
@@ -98,7 +101,7 @@ open http://127.0.0.1:8081/cross-origin-a.html
 | [permutation](permutation.html) | 全排列 |
 | [deep-traverse-and-modify](deep-traverse-and-modify.html) | 深度遍历并就地修改嵌套结构 |
 | [parse-url-params](parse-url-params.html) | 解析 URL query 参数 |
-| [thousands-separator-template-engine](thousands-separator-template-engine.html) | 千位分隔符与极简模版引擎 |
+| [thousands-separator-template-engine](thousands-separator-template-engine.html) | 千位分隔符与极简模板引擎 |
 | [exercises-1](exercises-1.html) | 综合编程题（一） |
 | [exercises-2](exercises-2.html) | 综合编程题（二） |
 
