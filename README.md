@@ -41,7 +41,7 @@ cd ios-snippets && ./run-all.sh      # 15 个程序，全部通过
 | 文档 | 内容 |
 | --- | --- |
 | [01 手写代码](01-handwritten-code.md) | 20+ 道手写实现题的完整题解 |
-| [02 深入学习](02-deep-dive.md) | JS / 浏览器 / HTTP / HTML / CSS / React / 工程化 问答 |
+| [02 深入学习](02-deep-dive.md) | JS / 浏览器 / HTTP / HTML / CSS / React / 工程化 问答，答案已[抓到本地](answers/) |
 | [React Hooks 面试题](react-hooks.md) | 19 题，含链表原理、闭包陷阱、依赖比较，配可运行 demo |
 | [状态管理对比](state-management-comparison.md) | Flux → Redux → Vuex → MobX 横向对比 |
 | [React-Redux 原理](react-redux-internals.md) | Provider 与 connect 源码剖析 |
