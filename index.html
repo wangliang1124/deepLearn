@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>deepLearn · 前端原理与手写代码</title>
+  <style>
+    :root {
+      --bg: #fff;
+      --fg: #1a1a1a;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --link: #0969da;
+      --card: #f6f8fa;
+      --badge-bg: #fff4e5;
+      --badge-fg: #9a5b00;
+      --badge-line: #f0c48a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --line: #30363d;
+        --link: #58a6ff;
+        --card: #161b22;
+        --badge-bg: #2d1e00;
+        --badge-fg: #e3a008;
+        --badge-line: #5c4405;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      max-width: 900px;
+      background: var(--bg);
+      color: var(--fg);
+      font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 28px;
+    }
+
+    .tagline {
+      margin: 0 0 32px;
+      color: var(--muted);
+    }
+
+    h2 {
+      margin: 40px 0 4px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: 19px;
+    }
+
+    h2 .count {
+      margin-left: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: normal;
+    }
+
+    a {
+      color: var(--link);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    ul {
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 8px;
+    }
+
+    li {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card);
+    }
+
+    li .name {
+      font-weight: 600;
+    }
+
+    li .desc {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 0 6px;
+      border: 1px solid var(--badge-line);
+      border-radius: 10px;
+      background: var(--badge-bg);
+      color: var(--badge-fg);
+      font-size: 11px;
+      line-height: 17px;
+      vertical-align: 1px;
+      white-space: nowrap;
+    }
+
+    .notes {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 8px;
+    }
+
+    .run {
+      margin-top: 24px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card);
+      font-size: 14px;
+    }
+
+    .run p {
+      margin: 0 0 8px;
+    }
+
+    .run p:last-child {
+      margin-bottom: 0;
+    }
+
+    code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--line);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+    }
+
+    footer {
+      margin-top: 56px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>deepLearn</h1>
+  <p class="tagline">前端原理笔记与手写代码 demo —— 48 个可直接在浏览器打开的单文件示例。</p>
+
+  <h2>笔记</h2>
+  <ul class="notes">
+    <li><a class="name" href="01-handwritten-code.md">01 手写代码</a>
+      <span class="desc">20+ 道手写实现题的完整题解</span>
+    </li>
+    <li><a class="name" href="02-deep-dive.md">02 深入学习</a>
+      <span class="desc">JS / 浏览器 / HTTP / CSS / React 问答</span>
+    </li>
+    <li><a class="name" href="state-management-comparison.md">状态管理对比</a>
+      <span class="desc">Flux → Redux → Vuex → MobX</span>
+    </li>
+    <li><a class="name" href="react-redux-internals.md">React-Redux 原理</a>
+      <span class="desc">Provider 与 connect 源码剖析</span>
+    </li>
+    <li><a class="name" href="native-rn-h5-bridge.md">原生 / RN / H5 通信</a>
+      <span class="desc">iOS 与 Android 双向桥接方案</span>
+    </li>
+    <li><a class="name" href="safe-area.md">搞懂 Safe Area</a>
+      <span class="desc">刘海屏安全区与横竖屏适配</span>
+    </li>
+  </ul>
+
+  <div class="run">
+    <p><strong>怎么跑：</strong>绝大多数 demo 双击即可用 <code>file://</code> 打开。带标记的需要额外条件：</p>
+    <p><span class="badge">需 server</span> 用到 ES module，需 <code>python3 -m http.server 8080</code> 后访问。</p>
+    <p><span class="badge">需双端口</span> 跨域三件套，需同时起两个端口模拟不同源：<br>
+      <code>python3 -m http.server 8080</code> 与 <code>python3 -m http.server 8081</code>，然后打开
+      <code>http://127.0.0.1:8081/cross-origin-a.html</code>。</p>
+    <p><span class="badge">需后端</span> 依赖本地或远端接口，仓库内不含服务端代码。</p>
+    <p><span class="badge">部分失效</span> 引用的资源已不可用，仅供读源码。</p>
+    <p><span class="badge">源码</span> 纯 JS 文件，点开是源码而非可交互页面。</p>
+  </div>
+
+  <h2>手写实现 <span class="count">16</span></h2>
+  <ul>
+    <li><a class="name" href="handwritten-new.html">handwritten-new</a>
+      <span class="desc">实现 new 操作符</span>
+    </li>
+    <li><a class="name" href="handwritten-bind.html">handwritten-bind</a>
+      <span class="desc">实现 Function.prototype.bind</span>
+    </li>
+    <li><a class="name" href="handwritten-call-apply.html">handwritten-call-apply</a>
+      <span class="desc">实现 call 与 apply</span>
+    </li>
+    <li><a class="name" href="handwritten-object-create.html">handwritten-object-create</a>
+      <span class="desc">实现 Object.create</span>
+    </li>
+    <li><a class="name" href="handwritten-currying.html">handwritten-currying</a>
+      <span class="desc">函数柯里化</span>
+    </li>
+    <li><a class="name" href="handwritten-promise.html">handwritten-promise</a>
+      <span class="desc">符合 Promise/A+ 的完整实现</span>
+    </li>
+    <li><a class="name" href="handwritten-async.html">handwritten-async</a>
+      <span class="desc">用 Generator 模拟 async/await</span>
+    </li>
+    <li><a class="name" href="handwritten-deep-clone.html">handwritten-deep-clone</a>
+      <span class="desc">深拷贝，处理循环引用</span>
+    </li>
+    <li><a class="name" href="handwritten-index-of.html">handwritten-index-of</a>
+      <span class="desc">实现 Array.prototype.indexOf</span>
+    </li>
+    <li><a class="name" href="handwritten-instanceof.html">handwritten-instanceof</a>
+      <span class="desc">沿原型链实现 instanceof</span>
+    </li>
+    <li><a class="name" href="handwritten-json-stringify-parse.html">handwritten-json-stringify-parse</a>
+      <span class="desc">实现 JSON.stringify 与 JSON.parse</span>
+    </li>
+    <li><a class="name" href="handwritten-throttle.html">handwritten-throttle</a>
+      <span class="desc">节流，含时间戳与定时器两版</span>
+    </li>
+    <li><a class="name" href="handwritten-debounce.html">handwritten-debounce</a>
+      <span class="desc">防抖，含立即执行选项</span>
+    </li>
+    <li><a class="name" href="ajax-wrapper.html">ajax-wrapper</a>
+      <span class="desc">基于 Promise 封装 XHR</span><span class="badge">需后端</span>
+    </li>
+    <li><a class="name" href="event-utils.html">event-utils</a>
+      <span class="desc">跨浏览器事件绑定与解绑</span>
+    </li>
+    <li><a class="name" href="event-emitter-test.html">event-emitter-test</a>
+      <span class="desc">发布订阅，配套 event-emitter.js</span><span class="badge">需 server</span>
+    </li>
+  </ul>
+
+  <h2>浏览器与网络 <span class="count">10</span></h2>
+  <ul>
+    <li><a class="name" href="browser-rendering.html">browser-rendering</a>
+      <span class="desc">对比 4 种批量插入 2000 个节点的方式</span>
+    </li>
+    <li><a class="name" href="jsonp.html">jsonp</a>
+      <span class="desc">JSONP 跨域原理与实现</span><span class="badge">需后端</span>
+    </li>
+    <li><a class="name" href="cross-origin-a.html">cross-origin-a</a>
+      <span class="desc">跨域入口：location.hash 与 window.name</span><span class="badge">需双端口</span>
+    </li>
+    <li><a class="name" href="cross-origin-b.html">cross-origin-b</a>
+      <span class="desc">跨域中间层，被 a 以 iframe 引入</span><span class="badge">需双端口</span>
+    </li>
+    <li><a class="name" href="cross-origin-c.html">cross-origin-c</a>
+      <span class="desc">跨域同域代理页，回传数据给 a</span><span class="badge">需双端口</span>
+    </li>
+    <li><a class="name" href="cookie-as-localstorage.html">cookie-as-localstorage</a>
+      <span class="desc">用 cookie 模拟 localStorage API</span>
+    </li>
+    <li><a class="name" href="hash-router.html">hash-router</a>
+      <span class="desc">hash 模式前端路由原理</span>
+    </li>
+    <li><a class="name" href="async-iframe.html">async-iframe</a>
+      <span class="desc">动态创建 iframe，不阻塞 load 事件</span>
+    </li>
+    <li><a class="name" href="memory-leak-closure.html">memory-leak-closure</a>
+      <span class="desc">闭包引用导致的经典泄漏案例</span>
+    </li>
+    <li><a class="name" href="memory-leak-detection.html">memory-leak-detection</a>
+      <span class="desc">点按钮观察内存增长，配合 DevTools</span>
+    </li>
+  </ul>
+
+  <h2>框架与语言原理 <span class="count">6</span></h2>
+  <ul>
+    <li><a class="name" href="es6-inheritance.html">es6-inheritance</a>
+      <span class="desc">class extends 编译后的原型结构</span>
+    </li>
+    <li><a class="name" href="proxy.html">proxy</a>
+      <span class="desc">Proxy 的 get / set / apply / construct 拦截</span>
+    </li>
+    <li><a class="name" href="observable-array.html">observable-array</a>
+      <span class="desc">可监听数组，拦截 push / pop 变更</span>
+    </li>
+    <li><a class="name" href="vue-two-way-binding.html">vue-two-way-binding</a>
+      <span class="desc">defineProperty 实现 MVVM 双向绑定</span>
+    </li>
+    <li><a class="name" href="react-router-internals.html">react-router-internals</a>
+      <span class="desc">用 pushState 实现最简 React Router</span>
+    </li>
+    <li><a class="name" href="redux-implementation.html">redux-implementation</a>
+      <span class="desc">从零实现 createStore 与中间件</span>
+    </li>
+  </ul>
+
+  <h2>算法与编程题 <span class="count">10</span></h2>
+  <ul>
+    <li><a class="name" href="sort-algorithms.js">sort-algorithms.js</a>
+      <span class="desc">十大经典排序算法</span><span class="badge">源码</span>
+    </li>
+    <li><a class="name" href="data-structures.js">data-structures.js</a>
+      <span class="desc">链表、栈、队列等基础结构</span><span class="badge">源码</span>
+    </li>
+    <li><a class="name" href="async-execution-order.js">async-execution-order.js</a>
+      <span class="desc">宏任务与微任务的执行顺序</span><span class="badge">源码</span>
+    </li>
+    <li><a class="name" href="shuffle.html">shuffle</a>
+      <span class="desc">Fisher-Yates 洗牌算法</span>
+    </li>
+    <li><a class="name" href="permutation.html">permutation</a>
+      <span class="desc">全排列</span>
+    </li>
+    <li><a class="name" href="deep-traverse-and-modify.html">deep-traverse-and-modify</a>
+      <span class="desc">深度遍历并就地修改嵌套结构</span>
+    </li>
+    <li><a class="name" href="parse-url-params.html">parse-url-params</a>
+      <span class="desc">解析 URL query 参数</span>
+    </li>
+    <li><a class="name" href="thousands-separator-template-engine.html">thousands-separator-template-engine</a>
+      <span class="desc">千位分隔符与极简模版引擎</span>
+    </li>
+    <li><a class="name" href="exercises-1.html">exercises-1</a>
+      <span class="desc">综合编程题（一）</span>
+    </li>
+    <li><a class="name" href="exercises-2.html">exercises-2</a>
+      <span class="desc">综合编程题（二）</span>
+    </li>
+  </ul>
+
+  <h2>DOM 与交互 <span class="count">6</span></h2>
+  <ul>
+    <li><a class="name" href="drag.html">drag</a>
+      <span class="desc">原生拖拽，含边界处理</span>
+    </li>
+    <li><a class="name" href="popover.html">popover</a>
+      <span class="desc">文本溢出时的气泡提示</span>
+    </li>
+    <li><a class="name" href="lazy-load.html">lazy-load</a>
+      <span class="desc">图片懒加载</span><span class="badge">部分失效</span>
+    </li>
+    <li><a class="name" href="lazy-man.html">lazy-man</a>
+      <span class="desc">LazyMan 链式调用与任务队列</span>
+    </li>
+    <li><a class="name" href="get-xpath.html">get-xpath</a>
+      <span class="desc">计算元素的 XPath</span>
+    </li>
+    <li><a class="name" href="serialize-form.html">serialize-form</a>
+      <span class="desc">表单序列化为查询串</span>
+    </li>
+  </ul>
+
+  <footer>
+    源码：<a href="https://github.com/anotherleon/deepLearn">github.com/anotherleon/deepLearn</a>
+  </footer>
+</body>
+
+</html>
