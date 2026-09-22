@@ -2793,3 +2793,337 @@ GCD 时代 `dispatch_async` 派发出去的任务**与创建它的上下文完�
 > 父 Task 一 `cancel()`，TaskGroup 里正在 `Task.sleep` 的子任务立刻抛出并退出——**这正是 GCD 做不到的那件事**。
 
 → [原文：多线程](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/多线程.md)
+
+---
+
+## 八、运行时机制
+
+### 97. `objc_msgSend` 的执行流程？🔥
+
+1. 检查 receiver 是否为 **nil** → 是就直接返回（这就是「给 nil 发消息不崩」的原因）
+2. 通过 **isa** 找到 receiver 的类对象
+3. 在类对象的**方法缓存 `cache_t`** 里查
+4. 缓存命中 → 直接调用 IMP
+5. 缓存未命中 → 在类对象的**方法列表**里查
+6. 找到 → **缓存起来**再调用
+7. 没找到 → 沿 **`superclass` 链**向上查，每一级重复 3–6
+8. 一路到根类仍没找到 → 进入**消息转发**
+
+关键设计是第 3、6 步的 `cache_t`：方法查找是每次调用都发生的高频操作，缓存把大部分调用压到一次哈希查找。
+
+> ✅ 第 1 步「nil 直接返回」实测（[objc-value-semantics.m](ios-snippets/objc-value-semantics.m)）：
+>
+> ```
+>   [nil length]        = 0（返回 0）
+>   [nil description]   = nil
+> ```
+
+→ [原文：runtime](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/runtime.md)
+
+### 98. 消息转发的三个阶段？🔥
+
+| 阶段 | 方法 | 能力 | 开销 |
+| --- | --- | --- | --- |
+| **① 动态方法解析** | `+resolveInstanceMethod:` / `+resolveClassMethod:` | 用 `class_addMethod` 动态加实现。返回 YES 且加成功，runtime **重新发送消息** | 小 |
+| **② 快速转发** | `-forwardingTargetForSelector:` | 返回一个备用对象接收该消息，runtime 直接对它 `objc_msgSend`。**不创建 `NSInvocation`，效率高**。但改不了参数/返回值，也没法转给多个对象 | 中 |
+| **③ 完整转发** | `-methodSignatureForSelector:` + `-forwardInvocation:` | 拿到封装了完整调用信息的 `NSInvocation`，可以改参数、换 target、转发给多个对象、存下来以后再用 | 大 |
+
+三个阶段都不处理 → `doesNotRecognizeSelector:` → 抛 `unrecognized selector` 异常。
+
+⚠️ 第三阶段里 `methodSignatureForSelector:` **返回 nil 会直接崩溃**，不会走到 `forwardInvocation:`。
+
+> ✅ **实测**（[objc-msgsend-forwarding.m](ios-snippets/objc-msgsend-forwarding.m)）三个阶段逐个跑通：
+>
+> ```
+> == 阶段一：动态方法解析 ==
+>   [阶段一 resolveInstanceMethod: 动态加方法]
+>     -> 运行时加进来的 IMP 执行了，sel=notImplemented
+>
+> == 阶段二：快速转发 ==
+>   [阶段二 forwardingTargetForSelector: 转给 Helper]
+>     -> Helper 代收了 sayHi
+>
+> == 阶段三：完整转发 ==
+>   [阶段三 methodSignatureForSelector: 给出签名]
+>   [阶段三 forwardInvocation: 拿到 NSInvocation，可读改参数与返回值]
+>     -> 截获参数 a=3 b=4，手动写回返回值 7
+>     调用方拿到的返回值 = 7
+>
+> == 三个阶段都不接 ==
+>     -> 捕获到 NSInvalidArgumentException
+>     -> -[Unhandled nobodyHandlesThis]: unrecognized selector sent to instance 0x101321860
+> ```
+>
+> **还有一条容易被忽略的结论**：
+>
+> ```
+>   s2 respondsToSelector:@selector(sayHi) = NO  <- 转发能跑通，但这里仍是 NO
+> ```
+>
+> `respondsToSelector:` 只查方法列表，**不考虑转发**。所以「能响应」和「`respondsToSelector:` 返回 YES」是两回事——写防御性代码时容易踩。
+>
+> 💡 另一个踩坑记录：我最初想演示兜底时重写了 `doesNotRecognizeSelector:` 并正常返回，结果进程直接 **SIGTRAP**。runtime 断言这个方法**绝不能返回**，只能让它照常抛异常、在调用处 `@try/@catch`。
+
+→ [原文：runtime](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/runtime.md)
+
+### 99. Method Swizzling 的注意事项？🔥
+
+- **在 `+load` 中执行**（理由见[第 7 题](#7-method-swizzling-应该在-load-还是-initialize-中执行为什么-)）
+- 放在 `+load` 里本来就只执行一次，`dispatch_once` 属于**防御性编程**而非必需
+- **先尝试 `class_addMethod`**，避免误交换到父类的方法
+- swizzled 方法里**用 swizzled 的方法名**调用原实现（不是看起来该用的那个名字）
+
+第 3、4 点需要展开——这是最容易写错的地方：
+
+```objc
++ (void)load {
+    Method original  = class_getInstanceMethod(self, @selector(viewWillAppear:));
+    Method swizzled  = class_getInstanceMethod(self, @selector(xxx_viewWillAppear:));
+
+    // 如果该方法其实定义在父类上，直接 exchange 会把父类的实现也换掉，
+    // 影响所有兄弟类。先尝试添加到本类：
+    BOOL added = class_addMethod(self,
+                                 @selector(viewWillAppear:),
+                                 method_getImplementation(swizzled),
+                                 method_getTypeEncoding(swizzled));
+    if (added) {
+        // 添加成功说明本类原来没有该方法，把 swizzled 的实现替换成父类的
+        class_replaceMethod(self,
+                            @selector(xxx_viewWillAppear:),
+                            method_getImplementation(original),
+                            method_getTypeEncoding(original));
+    } else {
+        method_exchangeImplementations(original, swizzled);
+    }
+}
+
+- (void)xxx_viewWillAppear:(BOOL)animated {
+    [self xxx_viewWillAppear:animated];   // ← 看着像递归，其实调的是原实现
+    // 埋点逻辑
+}
+```
+
+最后那行不是递归：交换之后 `xxx_viewWillAppear:` 这个 selector 对应的 IMP 已经是**原来的实现**了。
+
+→ [原文：runtime](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/runtime.md)
+
+### 100. Runtime 有哪些实际应用？
+
+**① 字典转模型** —— `class_copyIvarList` / `class_copyPropertyList` 拿到所有属性，配合 KVC 自动映射。MJExtension、YYModel 的核心思路，详见[第 106 题](#106-oc-的字典转模型是怎么通过反射实现的)。
+
+**② 防数组越界崩溃** —— Method Swizzling hook `NSArray` 类簇私有子类 `__NSArrayI` 的 `objectAtIndex:`，调用前加边界检查，越界返回 nil。
+
+⚠️ **建议只在 Release 启用**，Debug 仍然抛异常，否则问题会被一直藏着。
+
+**③ 无侵入埋点（AOP）** —— hook `UIViewController` 的 `viewDidAppear:` 等生命周期方法，不改业务代码就给所有页面加上 PV 统计。埋点逻辑集中在一个 Category 里，与业务完全解耦。
+
+**④ 多播代理** —— 用完整转发阶段实现一对多分发，多个对象同时监听同一事件源。可基于 `NSProxy`（透明）或 `NSObject` 子类（更灵活）。
+
+→ [原文：runtime](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/runtime.md)
+
+### 101. NSProxy 和 NSObject 的区别？🔥
+
+两个都是 ObjC 的**根类**，但设计目的完全不同。
+
+| | `NSObject` | `NSProxy` |
+| --- | --- | --- |
+| 转发流程 | 三阶段（动态解析 → 快速转发 → 完整转发） | **跳过前两阶段，直接进完整转发** |
+| 基础方法 | 实现了一大堆（`retain`、`release`、`isKindOfClass:`、`respondsToSelector:`…） | **几乎什么都不实现** |
+| 伪装能力 | 弱——内省方法被自己消费掉，不会转发 | 强——几乎所有消息都转给真实对象 |
+
+**内省方法的表现差异是关键：**
+
+```objc
+// NSObject 子类做代理
+DogProxyA *proxyA = ...;                        // 继承 NSObject，内部持有 Dog
+[proxyA bark];                                  // ✅ 未实现 → 转发 → Dog 处理
+[proxyA isKindOfClass:[Dog class]];             // ❌ NO —— NSObject 自己实现了，直接答了
+[proxyA respondsToSelector:@selector(bark)];    // ❌ NO —— 同上
+
+// NSProxy 子类做代理
+DogProxyB *proxyB = ...;                        // 继承 NSProxy，内部持有 Dog
+[proxyB bark];                                  // ✅ 转发 → Dog 处理
+[proxyB isKindOfClass:[Dog class]];             // ✅ 转发 → Dog 答 YES
+[proxyB respondsToSelector:@selector(bark)];    // ✅ 转发 → Dog 答 YES
+```
+
+**所以 `NSProxy` 才是真正「透明」的代理**——外界分不出它和真实对象。这也是 `NSProxy` 被用来解决 `NSTimer` 循环引用的原因（见[第 17 题](#17-timer-的使用注意事项有哪些-)）：做一个弱引用真实 target 的 NSProxy 中间层，timer 强引用 proxy，proxy 弱引用 target，环就断了。
+
+`NSProxy` 子类只需重写 `methodSignatureForSelector:` 和 `forwardInvocation:` 两个方法。
+
+→ [原文：runtime](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/runtime.md)
+
+### 102. Category 可以添加实例变量、实例方法、类方法吗？🔥
+
+**实例方法和类方法：可以。** 运行时会合并到类对象的 `class_rw_t` 方法列表（类方法合并到元类的）。注意 Category 的方法被**插到列表前面**，所以同名时会先找到 Category 的——**表现上像"覆盖"，但原方法仍然在列表里，没有被替换或删除。**
+
+**实例变量：不能。** 原因要从三层元数据结构说起：`objc_class` → `class_rw_t` → `class_ro_t`。
+
+| | `class_rw_t` | `class_ro_t` |
+| --- | --- | --- |
+| 读写 | 运行时**可读可写** | 编译期确定，**只读** |
+| 创建时机 | 运行时 realize 时创建 | **编译期生成** |
+| 方法列表 | 合并后的完整列表（类本身 + 分类） | 只有类本身编译期定义的 `baseMethodList` |
+| **实例变量** | **不包含** | **包含 `ivars`，决定实例内存布局** |
+
+关键：**ivar 信息在只读的 `class_ro_t` 里，编译后改不了。** Category 是运行时加载的，若允许它改 ivar 布局，就会改变 `instanceSize` 和 `ivars`，**导致所有已创建对象的内存结构失效**——更要命的是所有已编译子类的 ivar 偏移量全部作废。
+
+所以 Category 只能加**行为**（方法），不能改**结构**（ivar）。想存东西用关联对象，见下题。
+
+> ✅ **实测**（[objc-category-and-ivar.m](ios-snippets/objc-category-and-ivar.m)）两条都验证了：
+>
+> ```
+> == 分类不能加实例变量 ==
+>   Person 的 ivar 列表：
+>       （空）—— @property 在分类里没有生成任何 ivar
+> ```
+>
+> 注意：分类里写 `@property` **能编译通过**，但它只生成 setter/getter 的**声明**，不生成 ivar，也不生成实现——不自己实现就会运行时崩溃。
+>
+> ```
+> == 分类方法「覆盖」主类方法的真相 ==
+>   调用 [p whoAmI]：
+>     分类的实现
+>   方法列表里两个实现都还在，分类的被插到了前面：
+>       第 2 个方法是 whoAmI，IMP=0x104a0cab4  <- 先找到这个
+>       第 3 个方法是 whoAmI，IMP=0x104a0c9c8
+> ```
+>
+> **两个 IMP 都在方法列表里**，地址不同，只是分类那个排在前面。这就证明了「不是替换，是插队」。
+
+→ [原文：Objective-C 底层原理-NSObject](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C底层原理-NSObject.md)
+
+### 103. 如何给分类添加成员变量？🔥
+
+编译期的 `category_t` 结构体里**没有 `ivar_list`**，所以加不了。用**关联对象**间接实现：
+
+```objc
+#import <objc/runtime.h>
+
+static const void *kNameKey = &kNameKey;   // 用变量自身地址当 key，保证唯一
+
+@implementation UIView (Extension)
+- (void)setName:(NSString *)name {
+    objc_setAssociatedObject(self, kNameKey, name, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+- (NSString *)name {
+    return objc_getAssociatedObject(self, kNameKey);
+}
+@end
+```
+
+**存储结构**——关联对象**不在对象本身的内存里**，而是 runtime 维护的全局哈希表：
+
+```
+AssociationsManager
+  └─ AssociationsHashMap:   { 对象指针 → ObjectAssociationMap }
+                                          └─ { key → ObjcAssociation(policy, value) }
+```
+
+| API | 做什么 |
+| --- | --- |
+| `objc_setAssociatedObject` | 以对象指针为 key 找到（或创建）`ObjectAssociationMap`，再以传入的 key 存 value 和内存管理策略 |
+| `objc_getAssociatedObject` | 同路径取出 |
+| `objc_removeAssociatedObjects` | 移除该对象**所有**关联对象 |
+
+✅ **不会内存泄漏**：对象 `dealloc` 时 runtime 会自动检查并清理它的所有关联对象（这也是[第 82 题](#82-weak-变量在对象释放后为什么能自动变成-nil)里 `objc_destructInstance` 干的活之一）。
+
+> ✅ **实测**（[objc-category-and-ivar.m](ios-snippets/objc-category-and-ivar.m)）
+>
+> ```
+>   p.nickname = 小明  <- 存在全局 AssociationsManager 哈希表里，不在对象内存布局中
+> ```
+>
+> 对照上一题的输出：`class_copyIvarList` 仍然返回空——关联对象**确实没有进入对象的内存布局**。
+
+→ [原文：runtime](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/runtime.md)
+
+### 104. iOS 中有哪些反射机制？OC 和 Swift 的反射有什么区别？🔥
+
+两套，能力差得很远。
+
+**ObjC Runtime 反射——完整的动态反射（可读可写可改）**
+
+运行时能拿到属性列表、方法列表、ivar 列表、协议列表，还能**动态创建类、加方法、改方法实现（Swizzling）、用字符串创建对象**（`NSClassFromString`）。元数据在 `class_rw_t` / `class_ro_t` 里。**只支持 ObjC 类。**
+
+**Swift Mirror 反射——有限的只读内省**
+
+`Mirror(reflecting:)` 能拿类型名、存储属性名和值、`displayStyle`，还能用 `superclassMirror` 遍历继承链。底层依赖编译器写进 Mach-O 的 `__swift5_fieldmd`、`__swift5_reflstr`。支持所有 Swift 类型（struct/class/enum/tuple），但**不能改属性、不能拿方法列表、不能动态调用方法**。
+
+**核心区别：OC 反射追求最大灵活性，Swift 反射追求编译期安全。**
+
+继承自 `NSObject` 的 Swift 类两套可以共存，但 **ObjC Runtime 只看得见标了 `@objc` 的成员**。
+
+> ✅ **实测**（[swift-reflection-codable.swift](ios-snippets/swift-reflection-codable.swift)）Mirror 的能力边界：
+>
+> ```
+>   displayStyle = struct
+>   subjectType  = User
+>   children:
+>       id  :  Int  =  7
+>       name  :  String  =  Ann
+>       tags  :  Array<String>  =  ["a", "b"]
+>       secret  :  String  =  hidden        ← private 属性也被列出来了
+> ```
+>
+> 两条值得注意：
+>
+> 1. **`private` 属性照样能被 Mirror 读到** —— 它看的是内存布局，不受访问控制影响。别拿 `private` 当安全措施
+> 2. **计算属性不在里面** —— 实测 `WithComputed` 的 children 只有 `["stored"]`。因为计算属性没有存储，不在布局里
+
+→ [原文：iOS 反射](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS反射.md)
+
+### 105. Swift 的 Mirror 底层是怎么实现的？
+
+依赖编译器写进 Mach-O 的反射元数据，涉及四个 section：
+
+| Section | 存什么 |
+| --- | --- |
+| `__swift5_fieldmd` | Field Descriptor：字段数量、每个字段的名称引用和类型引用 |
+| `__swift5_reflstr` | 字段名称的字符串常量 |
+| `__swift5_types` | Type Descriptor：类型名、泛型参数、字段数量、Field Descriptor 的相对偏移 |
+| `__swift5_typeref` | 字段类型的 Mangled Name 引用 |
+
+**创建 `Mirror(reflecting:)` 时**：通过值的类型元数据指针找到 Type Descriptor → 通过其中的 Field Descriptor 引用定位字段描述 → 逐个读字段名（从 `__swift5_reflstr`）和字段偏移量（从元数据的 Field Offset Vector）→ 从值的内存地址加偏移量处读出字段值 → 构建 `Mirror.Child` 数组。
+
+**逃生口**：类型若遵循 `CustomReflectable`，Mirror 会优先调 `customMirror` 属性，跳过默认流程。
+
+> 💡 这几个 section 正是[第 1 题](#1-app-启动的详细流程是什么-)里 Pre-main 第 ⑤ 步注册的那些。那一步只登记指针不解析，**首次 `Mirror(reflecting:)` 才触发真正的字段描述符解析**——两题可以串起来答。
+
+→ [原文：iOS 反射](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS反射.md)
+
+### 106. OC 的字典转模型是怎么通过反射实现的？
+
+五步：
+
+1. `class_copyPropertyList`（或 `class_copyIvarList`）拿属性列表
+2. 遍历，用 `property_getName` 取属性名
+3. 以属性名为 key 从字典取值
+4. `setValue:forKey:`（KVC）设进模型对象
+5. `free` 释放属性列表的内存 ← **别忘了，`copy` 开头的 runtime API 都要手动 free**
+
+实际框架（MJExtension、YYModel）还要处理：类型转换（字符串转数字）、嵌套模型递归、数组元素类型识别（靠约定的类方法返回）、属性名与 JSON key 的映射、`NSNull` 处理。
+
+YYModel 为了性能还做了两件事：**用 `objc_msgSend` 直接调 setter 而不走 KVC**，以及**缓存属性类型信息**避免重复解析。
+
+> 对比 Swift 的 Codable（[第 56 题](#56-codable-的底层原理是什么-)）：那边是编译期合成、类型安全、失败会精确报错；这边是运行时反射、灵活但通常静默失败。
+
+→ [原文：iOS 反射](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS反射.md)
+
+### 107. `NSClassFromString` 在什么场景下使用？有什么注意事项？
+
+**场景**
+
+1. **路由系统** —— 组件化架构里 URL → 类名字符串 → `NSClassFromString` → 创建对象，实现模块解耦
+2. **动态加载** —— 按配置或服务端下发的类名创建不同的 VC / 策略对象
+3. **避免硬依赖** —— 要用某个类但不想 import 它的头文件（如可选依赖的 SDK）
+
+**注意事项**
+
+- 类不存在返回 `nil` **不崩溃**，所以**必须判空**
+- ⚠️ **Swift 类的命名空间**：Swift 类在 runtime 里的名字**带模块名前缀**（`MyApp.MyViewController`），必须传完整的 `"模块名.类名"`，否则返回 nil。标了 `@objc(CustomName)` 的则用括号里的名字
+- 别在性能敏感路径里频繁调用——它要做全局类表的哈希查找
+
+这个模块名前缀的问题，根子在[第 25 题](#25-objc-和-swift-的符号名有什么区别)：Swift 符号包含模块信息，ObjC 不包含。
+
+→ [原文：iOS 反射](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS反射.md)
