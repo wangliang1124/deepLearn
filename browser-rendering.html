@@ -29,7 +29,8 @@
                 appendToElement.appendChild(li);
             }
         }
-        const ul = document.getElementById('list');
+        // 用 let：「备份」按钮会用克隆节点整体替换掉原节点，需要重新赋值
+        let ul = document.getElementById('list');
         const normalBtn = document.getElementById('normal');
         const displayBtn = document.getElementById('display');
         const fragment = document.getElementById('fragment');
