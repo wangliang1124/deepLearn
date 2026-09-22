@@ -1,19 +1,24 @@
 ## 1.实现 new 操作符
 
+> ▶ 运行 demo：[handwritten-new.html](handwritten-new.html)
+
 ```js
 function New(constructor, ...args) {
-   // 创建一个新对象，该对象继承自构造函数的原型
+    // 创建一个新对象，该对象继承自构造函数的原型
     const obj = Object.create(constructor.prototype);
-    
-    // 调用构造函数，并将新对象作为this值传递进去
+
+    // 调用构造函数，并将新对象作为 this 值传递进去
     const result = constructor.apply(obj, args);
-    
-    // 如果构造函数返回一个对象，则返回该对象，否则返回新创建的对象
-    return typeof result === 'object' && result !== null ? result : obj;
+
+    // 构造函数显式返回对象或函数时以其为结果，其余情况返回新创建的对象
+    const isObject = typeof result === "object" && result !== null;
+    return isObject || typeof result === "function" ? result : obj;
 }
 ```
 
 ## 2.实现 JSON.stringify
+
+> ▶ 运行 demo：[handwritten-json-stringify-parse.html](handwritten-json-stringify-parse.html)
 
 ```js
 function jsonStringify(obj) {
@@ -55,6 +60,8 @@ function jsonStringify(obj) {
 
 ## 3.实现 JSON.parse
 
+> ▶ 运行 demo：[handwritten-json-stringify-parse.html](handwritten-json-stringify-parse.html)
+
 ```js
 function jsonParse(json) {
     return eval("(" + json + ")");
@@ -67,6 +74,8 @@ function jsonParse2(json) {
 > JSON.parse 三种实现方式 https://github.com/youngwind/blog/issues/115
 
 ## 4.实现 call & apply
+
+> ▶ 运行 demo：[handwritten-call-apply.html](handwritten-call-apply.html)（用到 ES module，需起 http server）
 
 ### 实现 call
 
@@ -143,6 +152,8 @@ Function.prototype.bind2 = function() {
 
 ## 5.实现 bind
 
+> ▶ 运行 demo：[handwritten-bind.html](handwritten-bind.html)
+
 ```js
 Function.prototype._bind = function(context) {
     if (typeof this !== "function") {
@@ -192,6 +203,8 @@ var bound = function() {
 
 ## 6.实现一个 Object.create
 
+> ▶ 运行 demo：[handwritten-object-create.html](handwritten-object-create.html)
+
 ```js
 function create(proto) {
     if (Object.create) {
@@ -205,12 +218,36 @@ function create(proto) {
 
 ## 7.实现函数柯里化
 
+> ▶ 运行 demo：[handwritten-currying.html](handwritten-currying.html)
+
+```js
+function curry(func) {
+    return function curried(...args) {
+        // 参数够了就直接执行
+        if (args.length >= func.length) {
+            return func.apply(this, args);
+        }
+        // 否则返回新函数继续收集剩余参数
+        return function (...args2) {
+            return curried.apply(this, args.concat(args2));
+        };
+    };
+}
+
+const curriedSum = curry((a, b, c) => a + b + c);
+curriedSum(1, 2, 3); // 6
+curriedSum(1)(2, 3); // 6
+curriedSum(1)(2)(3); // 6
+```
+
+ES5 写法。注意判断条件是 `>=` 而不是 `===`，否则传入多于形参个数的实参时会一直返回函数而不执行：
+
 ```js
 function currying(func) {
     var args = Array.prototype.slice.call(arguments, 1);
     return function() {
         var newArgs = args.concat([].slice.call(arguments));
-        if (newArgs.length === func.length) {
+        if (newArgs.length >= func.length) {
             return func.apply(this, newArgs);
         }
         newArgs.unshift(func);
@@ -220,6 +257,8 @@ function currying(func) {
 ```
 
 ## 8.实现 Promise
+
+> ▶ 运行 demo：[handwritten-promise.html](handwritten-promise.html)
 
 ```js
 /**
@@ -532,6 +571,8 @@ Promise.all = function(promises) {
 
 ## 9.防抖和节流
 
+> ▶ 运行 demo：[handwritten-debounce.html](handwritten-debounce.html) · [handwritten-throttle.html](handwritten-throttle.html)
+
 ### 防抖 debounce
 
 ```js
@@ -581,8 +622,12 @@ function throttle(func, wait) {
 
 ## 10.实现一个 JS 深拷贝
 
+> ▶ 运行 demo：[handwritten-deep-clone.html](handwritten-deep-clone.html)
+
+用一个 `Map` 缓存「原对象 → 克隆对象」的映射来处理循环引用：再次遇到同一个对象时返回**已创建的克隆**，而不是原对象，否则克隆结果里会混进源对象的引用。
+
 ```js
-function deepClone(obj) {
+function deepClone(obj, map = new Map()) {
     if (!obj || typeof obj !== "object") {
         return obj;
     }
@@ -591,19 +636,26 @@ function deepClone(obj) {
         return obj.cloneNode(true);
     }
 
+    // 命中缓存说明是循环引用，返回此前创建的克隆
+    if (map.has(obj)) {
+        return map.get(obj);
+    }
+
     var result;
     switch (Object.prototype.toString.call(obj)) {
         case "[object Array]":
             result = [];
+            map.set(obj, result);
             for (let v of obj) {
-                result.push(deepClone(v));
+                result.push(deepClone(v, map));
             }
             return result;
 
         case "[object Object]":
             result = obj.constructor ? new obj.constructor() : {};
+            map.set(obj, result);
             for (let [k, v] of Object.entries(obj)) {
-                result[k] = deepClone(v);
+                result[k] = deepClone(v, map);
             }
             return result;
 
@@ -625,6 +677,8 @@ function deepClone(obj) {
 
 ## 11.实现一个 instanceOf
 
+> ▶ 运行 demo：[handwritten-instanceof.html](handwritten-instanceof.html)
+
 ```js
 function instanceOf(source, target) {
     let proto = source.__proto__;
@@ -640,6 +694,8 @@ function instanceOf(source, target) {
 > 浅谈 instanceof 和 typeof 的实现原理 https://juejin.im/post/5b0b9b9051882515773ae714
 
 ## 12. 简单实现 async/await 中的 async 函数
+
+> ▶ 运行 demo：[handwritten-async.html](handwritten-async.html)
 
 ```js
 function async(generator) {
@@ -676,6 +732,8 @@ function async(generator) {
 ```
 
 ## 13. 基于 Promise 的 ajax 封装
+
+> ▶ 运行 demo：[ajax-wrapper.html](ajax-wrapper.html)（需后端接口）
 
 ```js
 function ajax(
@@ -746,6 +804,8 @@ function formatParams(data) {
 
 ## 14.JSONP 的原理是什么？
 
+> ▶ 运行 demo：[jsonp.html](jsonp.html)（需后端接口）
+
 ```js
 function jsonp(url, data) {
     return new Promise((resolve, reject) => {
@@ -781,6 +841,8 @@ function jsonp(url, data) {
 ```
 
 ## 15. 如何实现数组的随机排序？
+
+> ▶ 运行 demo：[shuffle.html](shuffle.html)
 
 Fisher–Yates Shuffle
 
@@ -914,6 +976,8 @@ function BFS(node) {
 
 ## 19. 解析 url 参数
 
+> ▶ 运行 demo：[parse-url-params.html](parse-url-params.html)
+
 ```js
 var q = function(url) {
     let result = {};
@@ -966,6 +1030,8 @@ console.log(flatten(["abc", ["a", [[3, "a"], { a: "a" }], null, false]]));
 ```
 
 ## 解析 url
+
+> ▶ 运行 demo：[parse-url-params.html](parse-url-params.html)
 
 ```js
 var parseURL = function(url) {
@@ -1041,6 +1107,8 @@ var escapeHtml = function(htmlStr) {
 
 ## 千位分隔
 
+> ▶ 运行 demo：[thousands-separator-template-engine.html](thousands-separator-template-engine.html)
+
 ```js
 // 如何将浮点数点左边的数每三位添加一个逗号，如 12000000.11 转化为『12,000,000.11』?
 function milliFormat(num) {
@@ -1054,6 +1122,8 @@ function milliFormat(num) {
 ```
 
 ## 模版引擎
+
+> ▶ 运行 demo：[thousands-separator-template-engine.html](thousands-separator-template-engine.html)
 
 ```js
 function render(template, data) {
@@ -1075,6 +1145,8 @@ console.log(
 > Underscore \_.template 方法使用详解 https://github.com/lessfish/underscore-analysis/issues/26
 
 ## 数据结构与算法
+
+> ▶ 运行 demo：[data-structures.js](data-structures.js) · [sort-algorithms.js](sort-algorithms.js)
 
 > 窥探数据结构的世界- ES6 版 https://juejin.im/post/5cd1ab3df265da03587c142a
 

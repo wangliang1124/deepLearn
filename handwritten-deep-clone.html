@@ -35,21 +35,23 @@
                 return obj.cloneNode(true)
             }
 
+            // 命中缓存说明是循环引用，返回此前创建的克隆（返回 obj 会把源对象的引用带进结果里）
+            if (map.has(obj)) {
+                return map.get(obj);
+            }
+
             var result;
             switch (Object.prototype.toString.call(obj)) {
                 case "[object Array]":
                     result = [];
+                    map.set(obj, result);
                     for (let v of obj) {
-                        result.push(deepClone(v));
+                        result.push(deepClone(v, map));
                     }
                     return result;
 
                 case "[object Object]":
                     result = obj.constructor ? new obj.constructor() : {};
-                    // 处理循环引用
-                    if (map.get(obj)) {
-                        return obj;
-                    }
                     map.set(obj, result);
                     for (const k in obj) {
                         result[k] = deepClone(obj[k], map);
