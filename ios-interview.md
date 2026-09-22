@@ -258,7 +258,7 @@ cd ios-snippets && ./run-all.sh      # 15 个程序，全部通过
 
 **会。** 子类没实现 `+initialize` 时，子类首次收到消息会沿继承链找到**父类的实现**并执行，`self` 是子类。有几个这样的子类，父类的实现就被执行几次。
 
-[第 4 题的实测](#4-load-和-initialize-的主要区别是什么-)里 `Base` 的实现跑了 3 次，就是这个。
+[第 4 题的实测](#4-load-和-initialize-的主要区别是什么)里 `Base` 的实现跑了 3 次，就是这个。
 
 防护写法：
 
@@ -486,7 +486,7 @@ parentView.addSubview(childView)
 
 ### 16. RunLoop 在实际开发中有哪些应用？🔥
 
-**① NSTimer 滑动时失效.** 见[第 14 题实测](#14-runloop-的-mode-有什么作用-)。两种解法：Timer 加到 `NSRunLoopCommonModes`；或改用 GCD Timer（`dispatch_source_t`，不依赖 RunLoop Mode）。
+**① NSTimer 滑动时失效.** 见[第 14 题实测](#14-runloop-的-mode-有什么作用)。两种解法：Timer 加到 `NSRunLoopCommonModes`；或改用 GCD Timer（`dispatch_source_t`，不依赖 RunLoop Mode）。
 
 **② 子线程保活.** 子线程干完活就退出，想让它常驻：
 
@@ -506,7 +506,7 @@ _thread = [[NSThread alloc] initWithBlock:^{
 三个关键点：
 
 - **必须加 Source**（比如 `NSPort`），否则 Mode 为空，`CFRunLoopRunSpecific` 入口直接返回，RunLoop 压根起不来
-- **别用 `[NSRunLoop run]`** —— 外层 `while(1)` 停不掉（见[第 15 题的表](#15-runloop-的运作流程是怎样的-)）
+- **别用 `[NSRunLoop run]`** —— 外层 `while(1)` 停不掉（见[第 15 题的表](#15-runloop-的运作流程是怎样的)）
 - 用 `while + runMode:beforeDate:` 配合标志位，这是 Apple 官方文档推荐的可控写法。`CFRunLoopRun()` 也能保活且能被 stop，但只跑 DefaultMode，外层退出条件不如自定义循环灵活
 
 **③ 卡顿监控.** 子线程拿信号量等主线程 RunLoop 的状态变化通知，超时（比如 50ms）未等到且主线程停在 `kCFRunLoopBeforeSources` 或 `kCFRunLoopAfterWaiting`，说明卡在处理事件上，抓栈：
@@ -1400,7 +1400,7 @@ swiftc -emit-sil -O x.swift   # 优化后 SIL
 - **指导性能调优** —— 按实际生成的指令有针对性地上 `final`/`private`（促进去虚拟化）、值类型（减 ARC）、`@inlinable`（跨模块内联）、WMO
 - **理解语言行为** —— Optional 的枚举本质（`switch_enum`）、闭包捕获的 box 提升（`alloc_box` + `partial_apply`）、struct 与 class 的内存模型差异
 
-> ✅ 本文[第 38 题](#38-swift-有哪些方法派发方式-)和[第 42 题](#42-下面代码-saygoodbye-的输出是什么为什么-)的结论就是这么验出来的。
+> ✅ 本文[第 38 题](#38-swift-有哪些方法派发方式)和[第 42 题](#42-下面代码-saygoodbye-的输出是什么为什么)的结论就是这么验出来的。
 
 → [原文：SIL](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/SIL.md)
 
@@ -1573,7 +1573,7 @@ public struct AnySequence<Element>: Sequence {
 
 ### 54. 存在类型的底层是怎么实现的？为什么有性能开销？
 
-见[第 40 题](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么-)，那里有完整的实测数据。补充结构定义：
+见[第 40 题](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么)，那里有完整的实测数据。补充结构定义：
 
 ```c
 struct ExistentialContainer {
@@ -1611,7 +1611,7 @@ struct ExistentialContainer {
 
 ⚠️ **关键的一句**：泛型特化**依赖编译器优化**。`-Onone` 下泛型同样走见证表，性能和 `any` 接近。区别在于泛型**有能力**被特化，而 `any` 在语义上就排除了这个可能——因为数组里每个元素的具体类型都可能不同，编译器没法为"某一个"类型特化。
 
-这也正是[第 40 题实测](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么-)里 `-O` 差 10.31x、`-Onone` 只差 1.27x 的原因。
+这也正是[第 40 题实测](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么)里 `-O` 差 10.31x、`-Onone` 只差 1.27x 的原因。
 
 → [原文：类型擦除](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/类型擦除.md)
 
@@ -1687,7 +1687,7 @@ view1.attr = m × view2.attr + c
 
 约束有**优先级 1–1000**：Required（1000）必须满足，Optional 尽量满足，冲突时低优先级的被打破。
 
-⚠️ 性能上的要点：**约束求解的复杂度随约束数量非线性增长**。视图层级一深、约束一多，Layout 阶段耗时会急剧上升——这是列表卡顿的常见原因之一（见[第 74 题](#74-卡顿的常见原因和解决方案有哪些-)）。
+⚠️ 性能上的要点：**约束求解的复杂度随约束数量非线性增长**。视图层级一深、约束一多，Layout 阶段耗时会急剧上升——这是列表卡顿的常见原因之一（见[第 74 题](#74-卡顿的常见原因和解决方案有哪些)）。
 
 → [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
 
@@ -1712,7 +1712,7 @@ view1.attr = m × view2.attr + c
 - 调 `setNeedsLayout` 后的下一个布局周期
 - 调 `layoutIfNeeded`（有待处理标记时）
 
-⚠️ 添加子视图时，**更直接触发的是父视图的布局**；子视图自己会不会触发取决于它自身是否也需要重新布局。详细展开见[第 11 题](#11-uiview-的-layoutsubviews-在什么时机被调用-)。
+⚠️ 添加子视图时，**更直接触发的是父视图的布局**；子视图自己会不会触发取决于它自身是否也需要重新布局。详细展开见[第 11 题](#11-uiview-的-layoutsubviews-在什么时机被调用)。
 
 → [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
 
@@ -1778,7 +1778,10 @@ UIView.animate(withDuration: 0.3) {
 let label = UILabel()
 label.translatesAutoresizingMaskIntoConstraints = false
 view.addSubview(label)
-NSLayoutConstraint.activate([...])
+NSLayoutConstraint.activate([
+    label.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
+    label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+])
 
 print(label.frame)      // (0, 0, 0, 0) —— 布局还没执行
 
@@ -2127,9 +2130,9 @@ Memory Footprint = Dirty Memory + Compressed Memory
 
 **值类型的逃逸**：值类型需要活过创建它的函数作用域时，编译器会把它分配到堆上——被逃逸闭包捕获、被存进堆上的属性、通过返回值逃逸。
 
-**协议类型变量的隐式堆分配**：`let shape: Shape = Circle()` 会包进存在容器。容器内联缓冲区 24 字节，超过就堆分配。**这意味着即使是值类型，通过协议类型持有也可能产生堆分配开销**——这在 ObjC 里不存在（ObjC 的协议类型本质就是个 `id` 指针）。详见[第 40 题](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么-)。
+**协议类型变量的隐式堆分配**：`let shape: Shape = Circle()` 会包进存在容器。容器内联缓冲区 24 字节，超过就堆分配。**这意味着即使是值类型，通过协议类型持有也可能产生堆分配开销**——这在 ObjC 里不存在（ObjC 的协议类型本质就是个 `id` 指针）。详见[第 40 题](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么)。
 
-**COW**：Array / Dictionary / Set 实现了写时拷贝，赋值时共享底层存储，改的时候才真拷贝。[第 125 题](#125-swift-中-copy-on-write-的底层原理是什么-)有实测。
+**COW**：Array / Dictionary / Set 实现了写时拷贝，赋值时共享底层存储，改的时候才真拷贝。[第 125 题](#125-swift-中-copy-on-write-的底层原理是什么)有实测。
 
 **ARC 实现差异**
 
@@ -2409,12 +2412,12 @@ Fatal error: Attempted to read an unowned reference but object 0x… was already
 值为 `nil` 的特殊标记。进 `@autoreleasepool {` 时 push 一个，出 `}` 时从栈顶逐个 `release` 直到遇见**对应的**那个哨兵。**这个设计就是为了支持嵌套**：
 
 ```objc
-@autoreleasepool {          // push POOL_BOUNDARY_1
-    NSString *a = ...;      // push a
-    @autoreleasepool {      // push POOL_BOUNDARY_2
-        NSString *b = ...;  // push b
-    }                       // pop 到 BOUNDARY_2，释放 b
-}                           // pop 到 BOUNDARY_1，释放 a
+@autoreleasepool {                                  // push POOL_BOUNDARY_1
+    NSString *a = [NSString stringWithFormat:@"a"]; // 便利构造 → autorelease → push a
+    @autoreleasepool {                              // push POOL_BOUNDARY_2
+        NSString *b = [NSString stringWithFormat:@"b"];  // push b
+    }                                               // pop 到 BOUNDARY_2，释放 b
+}                                                   // pop 到 BOUNDARY_1，释放 a
 ```
 
 #### autorelease 的流程
@@ -2432,7 +2435,7 @@ Fatal error: Attempted to read an unowned reference but object 0x… was already
 | `kCFRunLoopBeforeWaiting` | **释放旧池、创建新池** ← autorelease 对象在此释放 |
 | `kCFRunLoopExit` | 释放 pool |
 
-这和[第 15 题](#15-runloop-的运作流程是怎样的-)说的「BeforeWaiting 时系统做三件事」的第三件是同一回事。
+这和[第 15 题](#15-runloop-的运作流程是怎样的)说的「BeforeWaiting 时系统做三件事」的第三件是同一回事。
 
 > ✅ **实测**（[objc-weak-and-arc.m](ios-snippets/objc-weak-and-arc.m)）嵌套 pool 的释放时机：
 >
@@ -2584,7 +2587,7 @@ context.performAndWait {
 
 **⑧ 主线程等后台线程持有的锁，最终被 watchdog 杀掉** —— 未必是经典 Coffman 死锁，但用户感知一样：主线程卡在 `os_unfair_lock_lock` / `pthread_mutex_lock` / `semaphore_wait`，后台持锁跑长任务，界面长时间无响应。
 
-**⑨ signal handler 里再次申请锁** —— 崩溃采集路径如果调用 `malloc`、`NSLog`、ObjC runtime、dyld 这些**非 async-signal-safe** 的 API，可能在原线程已持锁时再次申请同一把锁，导致**采集链路自己死锁**。详见[第 169 题](#169-signal-handler-为什么要求异步信号安全哪些操作不能在里面做-)。
+**⑨ signal handler 里再次申请锁** —— 崩溃采集路径如果调用 `malloc`、`NSLog`、ObjC runtime、dyld 这些**非 async-signal-safe** 的 API，可能在原线程已持锁时再次申请同一把锁，导致**采集链路自己死锁**。详见[第 169 题](#169-signal-handler-为什么要求异步信号安全哪些操作不能在里面做)。
 
 **⑩ Swift Concurrency 误用** —— actor 的可重入设计能减少传统死锁，但不等于不会卡死：
 
@@ -2868,7 +2871,7 @@ GCD 时代 `dispatch_async` 派发出去的任务**与创建它的上下文完�
 
 ### 99. Method Swizzling 的注意事项？🔥
 
-- **在 `+load` 中执行**（理由见[第 7 题](#7-method-swizzling-应该在-load-还是-initialize-中执行为什么-)）
+- **在 `+load` 中执行**（理由见[第 7 题](#7-method-swizzling-应该在-load-还是-initialize-中执行为什么)）
 - 放在 `+load` 里本来就只执行一次，`dispatch_once` 属于**防御性编程**而非必需
 - **先尝试 `class_addMethod`**，避免误交换到父类的方法
 - swizzled 方法里**用 swizzled 的方法名**调用原实现（不是看起来该用的那个名字）
@@ -2935,19 +2938,19 @@ GCD 时代 `dispatch_async` 派发出去的任务**与创建它的上下文完�
 
 ```objc
 // NSObject 子类做代理
-DogProxyA *proxyA = ...;                        // 继承 NSObject，内部持有 Dog
+DogProxyA *proxyA = [[DogProxyA alloc] initWithTarget:dog];   // 继承 NSObject，内部持有 Dog
 [proxyA bark];                                  // ✅ 未实现 → 转发 → Dog 处理
 [proxyA isKindOfClass:[Dog class]];             // ❌ NO —— NSObject 自己实现了，直接答了
 [proxyA respondsToSelector:@selector(bark)];    // ❌ NO —— 同上
 
 // NSProxy 子类做代理
-DogProxyB *proxyB = ...;                        // 继承 NSProxy，内部持有 Dog
+DogProxyB *proxyB = [DogProxyB proxyWithTarget:dog];          // 继承 NSProxy，内部持有 Dog
 [proxyB bark];                                  // ✅ 转发 → Dog 处理
 [proxyB isKindOfClass:[Dog class]];             // ✅ 转发 → Dog 答 YES
 [proxyB respondsToSelector:@selector(bark)];    // ✅ 转发 → Dog 答 YES
 ```
 
-**所以 `NSProxy` 才是真正「透明」的代理**——外界分不出它和真实对象。这也是 `NSProxy` 被用来解决 `NSTimer` 循环引用的原因（见[第 17 题](#17-timer-的使用注意事项有哪些-)）：做一个弱引用真实 target 的 NSProxy 中间层，timer 强引用 proxy，proxy 弱引用 target，环就断了。
+**所以 `NSProxy` 才是真正「透明」的代理**——外界分不出它和真实对象。这也是 `NSProxy` 被用来解决 `NSTimer` 循环引用的原因（见[第 17 题](#17-timer-的使用注意事项有哪些)）：做一个弱引用真实 target 的 NSProxy 中间层，timer 强引用 proxy，proxy 弱引用 target，环就断了。
 
 `NSProxy` 子类只需重写 `methodSignatureForSelector:` 和 `forwardInvocation:` 两个方法。
 
@@ -3088,7 +3091,7 @@ AssociationsManager
 
 **逃生口**：类型若遵循 `CustomReflectable`，Mirror 会优先调 `customMirror` 属性，跳过默认流程。
 
-> 💡 这几个 section 正是[第 1 题](#1-app-启动的详细流程是什么-)里 Pre-main 第 ⑤ 步注册的那些。那一步只登记指针不解析，**首次 `Mirror(reflecting:)` 才触发真正的字段描述符解析**——两题可以串起来答。
+> 💡 这几个 section 正是[第 1 题](#1-app-启动的详细流程是什么)里 Pre-main 第 ⑤ 步注册的那些。那一步只登记指针不解析，**首次 `Mirror(reflecting:)` 才触发真正的字段描述符解析**——两题可以串起来答。
 
 → [原文：iOS 反射](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS反射.md)
 
@@ -3106,7 +3109,7 @@ AssociationsManager
 
 YYModel 为了性能还做了两件事：**用 `objc_msgSend` 直接调 setter 而不走 KVC**，以及**缓存属性类型信息**避免重复解析。
 
-> 对比 Swift 的 Codable（[第 56 题](#56-codable-的底层原理是什么-)）：那边是编译期合成、类型安全、失败会精确报错；这边是运行时反射、灵活但通常静默失败。
+> 对比 Swift 的 Codable（[第 56 题](#56-codable-的底层原理是什么)）：那边是编译期合成、类型安全、失败会精确报错；这边是运行时反射、灵活但通常静默失败。
 
 → [原文：iOS 反射](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS反射.md)
 
@@ -3264,7 +3267,7 @@ HEADER_SEARCH_PATHS = $(inherited) "${PODS_ROOT}/Headers/Public" "${PODS_ROOT}/H
 >
 > 最后一行是重点：`if ([NSNull null])` 判断结果是**真**。从字典里取值忘了判 `NSNull` 而只判 `nil`，就会拿着一个 `NSNull` 对象当正常值用，然后在后面某个地方 `unrecognized selector` 崩掉——这是 OC 里非常常见的线上崩溃来源。
 
-**向 nil 发消息不崩溃**是 ObjC 的重要特性（见[第 97 题](#97-objc_msgsend-的执行流程-)第 1 步），但代价是某些 bug 会**静默失败**而不暴露。
+**向 nil 发消息不崩溃**是 ObjC 的重要特性（见[第 97 题](#97-objc_msgsend-的执行流程)第 1 步），但代价是某些 bug 会**静默失败**而不暴露。
 
 ### 115. `@synthesize` 和 `@dynamic` 分别是什么？
 
@@ -3393,7 +3396,7 @@ _name = @"Tom";       // 直接访问 ivar，不走 setter
 | `dealloc` 里 | **`_xxx`** | 对象正在销毁，走 setter 可能访问到已释放的东西 |
 | 其他内部方法 | `self.xxx` | 保证 KVO 和懒加载正常工作 |
 
-「KVO 不触发」那一条和[第 19 题的实测](#19-kvo-的底层实现原理是什么-)是同一件事：直接写 ivar 绕过了被 KVO 替换的 setter。
+「KVO 不触发」那一条和[第 19 题的实测](#19-kvo-的底层实现原理是什么)是同一件事：直接写 ivar 绕过了被 KVO 替换的 setter。
 
 ### 120. static 局部变量和普通局部变量有什么区别？
 
@@ -3415,7 +3418,7 @@ _name = @"Tom";       // 直接访问 ivar，不走 setter
 >   第 3 次调用  static=3  普通=1
 > ```
 
-**Block 捕获时的差异**（接[第 20 题](#20-oc-中的-block-是函数指针还是对象底层怎么实现的-)）：
+**Block 捕获时的差异**（接[第 20 题](#20-oc-中的-block-是函数指针还是对象底层怎么实现的)）：
 
 | | 普通局部变量 | `static` 局部变量 |
 | --- | --- | --- |
@@ -3718,7 +3721,7 @@ extension UserViewModel: Observable {}
 | **类型系统** | 动态类型为主，`id` 可指向任意对象，编译期检查弱 | 强静态类型 + 类型推断，编译期检查严格 |
 | **空安全** | 无。`nil` 可以随便传，给 nil 发消息静默失败 | **Optional 强制显式处理**，编译期消除大部分空指针问题 |
 | **值类型** | 几乎全是对象（堆分配） | struct / enum 是一等公民，**优先栈分配 + COW** |
-| **方法派发** | 几乎全走 `objc_msgSend` 消息派发 | 四种派发（见[第 38 题](#38-swift-有哪些方法派发方式-)），大量静态派发可内联 |
+| **方法派发** | 几乎全走 `objc_msgSend` 消息派发 | 四种派发（见[第 38 题](#38-swift-有哪些方法派发方式)），大量静态派发可内联 |
 | **内存管理** | ARC，引用计数在 isa/SideTable | ARC，纯 Swift 类引用计数内联在对象头；编译器优化更激进 |
 | **错误处理** | `NSError **` 出参 + `@try/@catch`（少用） | `throws` / `try` / `Result`，编译器强制处理 |
 | **泛型** | 仅轻量泛型（`NSArray<NSString *> *`），**运行时被擦除** | 真泛型，支持特化，零成本抽象 |
@@ -3768,7 +3771,7 @@ Core Data 给了两种并发模式：
 
 并通过 `perform(_:)` / `performAndWait(_:)` 确保操作在正确的队列上执行。
 
-⚠️ **`performAndWait` 嵌套会死锁**——它本质是串行队列的同步执行，见[第 90 题场景 ⑤](#90-ios-中死锁的常见场景有哪些-)。
+⚠️ **`performAndWait` 嵌套会死锁**——它本质是串行队列的同步执行，见[第 90 题场景 ⑤](#90-ios-中死锁的常见场景有哪些)。
 
 → [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
 
@@ -3803,7 +3806,7 @@ Core Data 给了两种并发模式：
 Realm：   属性访问 → 按偏移量直读映射区            （0 次拷贝）
 ```
 
-原理见[第 29 题](#29-mmap-有哪些优势适用于哪些场景-)的「零拷贝」和「按需加载」两条。
+原理见[第 29 题](#29-mmap-有哪些优势适用于哪些场景)的「零拷贝」和「按需加载」两条。
 
 → [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
 
@@ -3819,7 +3822,7 @@ Realm：   属性访问 → 按偏移量直读映射区            （0 次拷�
 
 mmap 还顺带减少了频繁文件 IO 和用户态拷贝，已写入的映射页由内核管理，进程崩溃后通常比普通用户态缓冲更容易恢复。
 
-⚠️ 但**别把它当强持久化**：mmap 不保证数据一定落盘，关键数据仍需要校验、重放或合适的同步策略。这和[第 29 题](#29-mmap-有哪些优势适用于哪些场景-)里「崩溃现场可恢复」那条的注意事项是一回事。
+⚠️ 但**别把它当强持久化**：mmap 不保证数据一定落盘，关键数据仍需要校验、重放或合适的同步策略。这和[第 29 题](#29-mmap-有哪些优势适用于哪些场景)里「崩溃现场可恢复」那条的注意事项是一回事。
 
 → [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
 
@@ -3969,7 +3972,7 @@ OSI 七层              TCP/IP 四层
 - **TCP** —— 文件传输、网页浏览、邮件，需要可靠传输的
 - **UDP** —— 视频流、DNS 查询、实时游戏，实时性优先、能容忍少量丢包的
 
-「字节流 vs 数据报」这一行是后面[第 152 题粘包](#152-什么是-tcp-粘包拆包如何解决-)的根源：UDP 天然有消息边界，TCP 没有。
+「字节流 vs 数据报」这一行是后面[第 152 题粘包](#152-什么是-dns-劫持有哪些防御手段)的根源：UDP 天然有消息边界，TCP 没有。
 
 → [原文：计算机网络](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/计算机网络.md)
 
@@ -4658,7 +4661,7 @@ void crash_handler(int sig, siginfo_t *info, void *ucontext) {
 }
 ```
 
-⚠️ Mach 端口注册时**要保存旧 handler 并转发**，否则会破坏 Bugly、Sentry 等其它 SDK。详见[第 168–169 题](#168-mach-异常和-unix-信号有什么关系为什么崩溃-sdk-通常两者都捕获-)。
+⚠️ Mach 端口注册时**要保存旧 handler 并转发**，否则会破坏 Bugly、Sentry 等其它 SDK。详见[第 168–169 题](#168-mach-exception-port-的查找顺序和处理流程是怎样的)。
 
 **Watchdog / 卡死** —— 不能只抓一次堆栈。RunLoop Observer + 子线程 Ping 检测主线程长时间停在 `beforeSources` 或 `afterWaiting`，触发后**每 500ms 多次采样**主线程栈，并记录线程状态、CPU、最近页面、最近操作、网络和磁盘现场。服务端聚合多次采样找出现频率最高或阻塞最长的关键帧。死锁场景可以扫描等待锁的线程，解析锁 owner tid，**构建「等待 → 持有」有向图找环**（呼应[第 91 题](#91-死锁如何治理)）。
 
@@ -4676,7 +4679,7 @@ func suspectedFOOM(last: LastState, current: LastState) -> Bool {
 
 FOOM 详情**没有崩溃栈**，所以必须保存内存水位、页面路径、大对象 TopN、机型内存档位和 MetricKit memory diagnostics。
 
-**卡顿/FPS** —— 见[第 73 题](#73-如何检测-ios-应用的卡顿有哪些检测方案-)。⚠️ ProMotion 机型要注意自适应刷新率，**静止页面低 FPS 不一定是卡顿**，要区分 FPS、掉帧、单帧耗时和滚动场景。
+**卡顿/FPS** —— 见[第 73 题](#73-如何检测-ios-应用的卡顿有哪些检测方案)。⚠️ ProMotion 机型要注意自适应刷新率，**静止页面低 FPS 不一定是卡顿**，要区分 FPS、掉帧、单帧耗时和滚动场景。
 
 **网络** —— 优先用 `URLSessionTaskMetrics` 拿 DNS/TCP/TLS/TTFB/download/total 分段耗时。要拦截内容可用 `NSURLProtocol`（注意防重复拦截）。WKWebView 走独立 WebContent 进程，需要**注入 JS SDK** 采集 Navigation Timing、Resource Timing、Paint、Long Task。
 
@@ -4795,3 +4798,604 @@ Issue 还要维护状态、Owner、影响用户、趋势、首现版本、最近
 4. **B 端只有看板**，没有 Owner、告警、工单、修复验证、发布门禁 → 最后没人真正治理
 
 → [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+---
+
+## 十三、崩溃治理
+
+### 166. iOS 崩溃从底层到应用层的完整传递链路是什么？🔥
+
+一次崩溃**不是一开始就表现为 OC 异常或信号**，而是从底层逐层传递上来的：
+
+```
+① CPU 检测到非法操作
+   （访问无效地址 / 非法指令 / 除零 / 断点指令）
+        ↓ 陷入内核态
+② XNU 内核包装成 Mach 异常
+   EXC_BAD_ACCESS / EXC_BAD_INSTRUCTION / EXC_ARITHMETIC / EXC_BREAKPOINT / EXC_CRASH
+        ↓ 按 Thread → Task → Host 顺序查找 Mach Exception Port
+③ 没人处理，或处理器返回失败
+        ↓ 转换成 Unix 信号
+④ SIGSEGV / SIGBUS / SIGILL / SIGFPE / SIGTRAP / SIGABRT
+        ↓ 调用进程注册的 Signal Handler
+⑤ 仍未处理，或处理后恢复默认行为
+        ↓
+⑥ 系统终止进程，生成崩溃日志
+```
+
+**`NSException` 走的是另一条线**：它是应用层异常，未被 `@catch` 时先调用 `NSSetUncaughtExceptionHandler` 注册的处理函数，随后通常调 `abort()`，最终表现为 **`EXC_CRASH (SIGABRT)`**。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 167. Mach 异常和 Unix 信号有什么关系？为什么崩溃 SDK 通常两者都捕获？🔥
+
+Mach 异常是 Darwin/iOS **更底层**的机制，Unix 信号是 **BSD 层**向进程表达异常的机制。很多崩溃先以 Mach 异常出现，未被 Mach 处理器消费时才转成信号：
+
+| Mach 异常 | 对应信号 |
+| --- | --- |
+| `EXC_BAD_ACCESS` | `SIGSEGV` 或 `SIGBUS` |
+| `EXC_BAD_INSTRUCTION` | `SIGILL` |
+| `EXC_ARITHMETIC` | `SIGFPE` |
+| `EXC_BREAKPOINT` | `SIGTRAP` |
+| `EXC_CRASH` | `SIGABRT` |
+
+**各自优势**：
+
+- **Mach 捕获** —— 时机更早，能拿到原始异常类型、异常码、线程状态和更多上下文，且通常由**独立异常处理线程**接收消息
+- **Signal Handler** —— 实现相对简单，能覆盖部分已经转换到 BSD 层的终止
+
+**所以 SDK 的标准做法是三层都注册**：
+
+1. **Mach Exception Handler** —— 尽早采集，然后**返回 `KERN_FAILURE` 让异常继续传递**
+2. **Signal Handler** —— 兜底
+3. **`NSException` Handler** —— 补充异常名、reason 和 `lastExceptionBacktrace` 等应用层信息
+
+⚠️ 关键是**避免重复记录**，以及**正确保存和转发原有处理器**（见下题）。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 168. Mach Exception Port 的查找顺序和处理流程是怎样的？
+
+异常发生后内核构造一条 Mach 消息（含异常类型、异常码、触发线程、所属 task），按三级顺序找处理者：
+
+| 级别 | 说明 |
+| --- | --- |
+| **Thread** Exception Port | 粒度最细，较少用于普通业务 |
+| **Task** Exception Port | 对应整个进程，**LLDB 和崩溃采集 SDK 常用的位置** |
+| **Host** Exception Port | 系统兜底处理程序 |
+
+处理器收到消息后可读取触发线程的寄存器状态（ARM64 的 `pc`、`lr`、`sp`、`fp`），再采集堆栈、镜像列表、异常码。
+
+**处理完要向内核发 reply**：
+
+- 返回 `KERN_SUCCESS` → 表示异常已处理，线程可恢复执行
+- **但崩溃采集场景不应该吞掉真实崩溃** → 应返回失败或转发给原异常端口，让系统继续走信号或终止流程
+
+⚠️ **多 SDK 共存的关键**：必须先用 `task_get_exception_ports` **保存旧端口**，处理完后转发或放行。否则**后注册者会覆盖先注册者**，导致 Bugly、Sentry 或系统 CrashReporter 拿不到异常。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 169. Signal Handler 为什么要求异步信号安全？哪些操作不能在里面做？🔥
+
+**因为信号可能在任何一条指令执行期间打断当前线程**——线程可能正在 `malloc`、`printf`、ObjC runtime 或**持锁代码**中就收到了 `SIGSEGV`。
+
+如果 Signal Handler 再调用同一类非重入函数，就可能：
+
+- **再次获取已经持有的锁 → 死锁**（这就是[第 90 题场景 ⑨](#90-ios-中死锁的常见场景有哪些)）
+- 操作处于**半更新状态**的数据结构 → 二次崩溃
+
+**能用的（async-signal-safe）**：预分配缓冲区、写原始地址、`write()`、`open()`、`close()`、`_exit()`、`sigaction()`、`sigprocmask()`。
+
+**绝对不能用的**：
+
+| 类别 | 例子 |
+| --- | --- |
+| 内存分配 | `malloc`/`free`/`realloc`、`new`/`delete` |
+| 标准 IO | `printf`/`fprintf`/`fopen` |
+| 日志 | `NSLog`、任何可能加锁的日志系统 |
+| 运行时 | **任何 Objective-C 方法**、Foundation API |
+| C++ | 标准库、异常处理 |
+
+**工程做法**：正常运行期就预先准备好文件路径、固定大小缓冲区，以及用于 breadcrumbs、页面路径、网络摘要的**预映射上下文区域**。崩溃时 Crash Report 主体**只写最小现场**——信号编号、故障地址、寄存器、原始 PC 地址。符号化、JSON 补全、压缩、网络上报、mmap 上下文合并**全部放到下次启动**或独立安全阶段。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 170. 为什么 Signal Handler 里推荐使用 `sigaction` 和备用信号栈？
+
+**`sigaction` vs `signal`**
+
+| | `signal()` | `sigaction()` |
+| --- | --- | --- |
+| 能拿到什么 | **只有信号编号** | 通过 `SA_SIGINFO` 拿到 `siginfo_t`（含 `si_code`、发送者、**故障地址 `si_addr`**），第三个参数还能拿 `ucontext_t` 读**崩溃线程的寄存器现场** |
+| 语义 | 不同系统上更弱 | 明确 |
+
+**备用信号栈（`sigaltstack`）解决的是栈溢出类崩溃**：
+
+如果当前线程因递归或大栈对象**耗尽了栈空间**，默认情况下 Signal Handler 也要在同一条栈上执行——**可能根本跑不起来**，采集直接失败。
+
+用 `sigaltstack()` 预先分配备用栈，并在 `sigaction` 中设 `SA_ONSTACK`，处理函数就能在备用栈上执行，提高采集成功率。
+
+**完整实现还要**：保存旧的 `sigaction`；用 `volatile sig_atomic_t` **防止重入**；采集完成后恢复原处理器并 `raise(sig)`，让系统继续生成标准崩溃日志。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 171. `NSException`、Swift Error 和 Swift 运行时崩溃有什么区别？🔥
+
+三个完全不同的东西，经常被混为一谈。
+
+| | 是什么 | 会崩溃吗 | 崩溃日志表现 |
+| --- | --- | --- | --- |
+| **`NSException`** | ObjC 层面的异常。数组越界、字典插 `nil`、`unrecognized selector`、KVO 误用、枚举时改集合 | 未捕获时会 | **`EXC_CRASH (SIGABRT)`** |
+| **Swift `Error`** | **显式、可恢复**的错误模型，配 `throw`/`try`/`catch` | **不会** | — |
+| **Swift 运行时崩溃** | **不可恢复**的运行时检查失败：强解包 `nil`、数组越界、`as!` 失败、`fatalError()`、`preconditionFailure()` | 会 | 真机 ARM64 多为 **`EXC_BREAKPOINT (SIGTRAP)`**（运行时执行 `brk` 指令）；模拟器或旧环境也可能是 `EXC_BAD_INSTRUCTION (SIGILL)` |
+
+⚠️ **`NSException` 是崩溃机制，不是业务错误处理机制**——别拿它当 try/catch 用。
+
+**排查要点**：
+
+- `NSException` → 真正的业务堆栈常在 **`lastExceptionBacktrace` 和 `asi`** 里，不在普通线程首帧
+- Swift 运行时崩溃 → 重点看 **`asi` 里的 `Fatal error` 文案**、Swift runtime 前几帧、符号化后的业务调用点
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 172. 崩溃采集系统应该采集哪些信息？为什么通常下次启动再上报？🔥
+
+**四类必需信息**
+
+| 类别 | 内容 |
+| --- | --- |
+| **崩溃本身** | 异常类型、信号、异常码、故障地址、触发线程、寄存器状态、**所有线程**的原始调用栈 |
+| **符号化所需** | 所有 dyld image 的名称、**UUID**、加载基址、大小、架构、slide。**没有这些就无法把地址映射回 dSYM** |
+| **环境** | App 版本、build、bundle id、设备型号、系统版本、前后台状态、内存水位、启动时长、网络状态 |
+| **业务上下文** | 用户操作面包屑、页面路由、关键接口、实验分组、功能开关、最近日志 |
+
+**为什么不当场上报**
+
+崩溃时立即网络上报**成功率很低**：进程即将终止，运行时和锁状态可能已经损坏。在那个环境里做网络请求本身就可能二次崩溃（见[第 169 题](#169-signal-handler-为什么要求异步信号安全哪些操作不能在里面做)）。
+
+**可靠的做法**：
+
+1. 崩溃现场只用**异步安全方式**把最小必要现场写入本地 Crash Report 文件
+2. mmap 更适合**在崩溃前**作为上下文 ring buffer 持续记录 breadcrumbs、页面路由、关键接口和轻量日志
+3. **下次启动**检测到未上报报告 → 读取 Crash Report 并合并 mmap 上下文 → 解析、压缩、符号化、上传
+
+这样既提高成功率，也避免在崩溃现场做复杂逻辑引发二次崩溃。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 173. 堆栈回溯的原理是什么？Frame Pointer 回溯和 DWARF 回溯如何取舍？
+
+函数调用会形成一串栈帧。ARM64 下 **`x29` 是 Frame Pointer**（指向上一帧 FP），**`x30` 是 Link Register**（保存返回地址）。
+
+| | Frame Pointer 回溯 | DWARF 回溯 |
+| --- | --- | --- |
+| 原理 | 从当前 `pc` 开始，读当前 FP 对应栈帧里的返回地址，沿 `frame[0]` 找上一帧 FP，循环 | 依赖 `__eh_frame` 或 Apple 的 `__unwind_info`，按当前 PC 找到 FDE / compact unwind 信息，计算 CFA 并恢复上一帧寄存器 |
+| 开销 | **极低** | 高（要解析） |
+| 可靠性 | 依赖编译器保留帧指针。**Release 优化、叶子函数优化、内联、栈损坏**都可能导致帧链断裂或缺帧 | **不要求 FP 链完整**，对优化代码更可靠 |
+| 实现 | 简单 | 复杂 |
+| 适合 | 崩溃现场、高频采样 | 帧链异常时的兜底 |
+
+**生产级 SDK 用混合策略**：先用 FP 快速回溯 → 发现帧链异常时切到 DWARF / compact unwind → **崩溃现场尽量只记录原始 PC，离线再符号化**。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 174. 什么是符号化？dSYM、UUID、ASLR、Slide 和 Load Address 分别起什么作用？🔥
+
+**符号化** = 把崩溃日志里的十六进制地址转换成函数名、文件名和行号。
+
+| 概念 | 作用 |
+| --- | --- |
+| **dSYM** | Release 包通常 strip 掉了调试符号，符号信息保存在对应的 dSYM 里 |
+| **UUID** | **每次构建都生成新的 Mach-O UUID**。崩溃日志里的 `slice_uuid` 或 `usedImages[].uuid` 必须和 dSYM 的 UUID **完全一致**，否则符号化结果是错的 |
+| **ASLR** | 让每次启动时镜像加载地址**随机偏移** |
+| **Slide** | 实际加载地址相对编译时地址的**偏移量** |
+| **Load Address** | 镜像的实际加载基址 |
+
+**`atos` 的两种用法**（这是实操中最容易搞错的地方）：
+
+```bash
+# 传的是运行时地址（旧格式崩溃日志）
+atos -o MyApp.app.dSYM/Contents/Resources/DWARF/MyApp -arch arm64 -l <Load Address> <运行时地址>
+
+# 传的是 .ips 里的 imageOffset（已经是相对镜像基址的偏移）
+atos -o ... -arch arm64 -l 0 <imageOffset>
+```
+
+**工程上必须做的**：CI 发版时自动归档 dSYM，**按 UUID 建索引**并上传到崩溃平台。
+
+dSYM 丢了只能尝试从 Xcode Organizer、App Store Connect、CI 产物或崩溃平台找回；实在找不回再用相同 commit 近似重构建做函数级推断（见[第 184 题](#184-如果拿到的崩溃日志没有符号或-dsym-丢失应该怎么办)）。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 175. iOS 14+ 的 `.ips` 崩溃日志应该如何解析？关键字段有哪些？🔥
+
+⚠️ **第一个坑**：iOS 14 以后很多 `.ips` 是**双段 JSON**——第一行是 Header JSON，后续是 Body JSON。**不能把整份文件当一个 JSON 直接解析。**
+
+**先看 Header 的 `bug_type` 判断日志类型**：
+
+| `bug_type` | 类型 |
+| --- | --- |
+| **109** | 普通崩溃 |
+| **298** | JetsamEvent（内存强杀） |
+| **309** | Watchdog |
+| **288** | CPU Resource Limit |
+| **385** | Hang Report |
+
+**普通崩溃 Body 的四个关键字段**：
+
+| 字段 | 看什么 |
+| --- | --- |
+| `exception.type / signal / subtype / codes` | **技术层面**的异常 |
+| `termination.namespace / code / byProc / byPid` | **最终是谁杀了进程** —— 能区分 App 自身崩溃、系统强杀、Watchdog、用户强杀 |
+| `threads` | `triggered` 标识触发线程；`threadState` 含 `pc`、`lr`、`sp`、`fp`、`far`、`esr` |
+| `usedImages` | 镜像 UUID、架构、base、size、path —— **离线符号化的依据** |
+
+⚠️ **遇到 `EXC_CRASH (SIGABRT)` 时**，还要看 `asi` 和 `lastExceptionBacktrace`——ObjC 未捕获异常的真正业务堆栈**往往不在普通线程首帧里**。
+
+**`exception` 和 `termination` 要一起看**：前者说「技术上发生了什么」，后者说「谁动的手」。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 176. 如何根据 Exception Type 快速判断崩溃类型和排查方向？🔥
+
+| Exception Type | 含义 | 排查方向 |
+| --- | --- | --- |
+| **`EXC_BAD_ACCESS`** | 非法内存访问 | `subtype = KERN_INVALID_ADDRESS` → 未映射地址、野指针、**对象释放后访问**、空地址附近偏移<br>`KERN_PROTECTION_FAILURE` → 地址存在但权限不对（写只读段、执行不可执行内存）<br>arm64e 的 `POINTER_AUTHENTICATION_FAILURE` → 指针被破坏或 PAC 校验失败 |
+| **`EXC_CRASH (SIGABRT)`** | 多数是主动 `abort()` | 查是否**未捕获 `NSException`**、C++ exception、断言失败、业务主动终止 |
+| **`EXC_BAD_INSTRUCTION (SIGILL)`**<br>**`EXC_BREAKPOINT (SIGTRAP)`** | 非法指令 / 断点 | 常与 **Swift 运行时 trap** 有关：`fatalError`、`precondition`、强制解包、数组越界 |
+| **`EXC_RESOURCE`** | 资源超限 | `MEMORY` 子类要联动 Jetsam / OOM；`CPU`、`WAKEUPS`、`IO` **很多时候是性能预警而非传统崩溃** |
+| **`EXC_GUARD`** | 系统守护对象被非法使用 | 错误关闭 fd、Mach Port，或非持有方解锁 |
+
+⚠️ **不能只看 Exception Type**，还要结合 `termination.namespace`、触发线程首帧、`far`、`vmRegionInfo`、`asi` 和业务上下文。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 177. 寄存器在崩溃分析中有什么价值？如何用 `pc`、`lr`、`far`、`x0~x7` 定位问题？🔥
+
+触发线程的寄存器是**最接近真相**的信息。
+
+| 寄存器 | 含义 | 怎么用 |
+| --- | --- | --- |
+| **`pc`** | 程序计数器，崩溃时正在执行的指令，通常对应 `frames[0]` | ⚠️ 如果 `pc` 在 `objc_msgSend`、`objc_release`、`swift_retain` 这类 runtime 函数里，**问题往往不是系统库本身，而是传入的对象或引用计数状态有问题** |
+| **`lr`** | 链接寄存器，保存上一级返回地址 | 调用栈缺帧时可以辅助恢复 `frames[1]` |
+| **`far`** | Fault Address Register，`EXC_BAD_ACCESS` 时表示被访问的非法地址 | 见下面的地址特征表 |
+| **`x0~x7`** | ARM64 ABI 的前 8 个参数 | ObjC 消息发送里 **`x0` 是 `self`，`x1` 是 `_cmd`**，`x2` 起是方法参数 |
+
+**`far` 的地址特征**：
+
+| 地址形态 | 通常意味着 |
+| --- | --- |
+| `0x0`、`0x8`、`0x10`、`0x20` 等接近 0 | **空对象附近的成员偏移**或对象布局异常 |
+| 随机高地址 | 野指针 |
+| `0x5555...`、`0xAAAA...` 等模式值 | **内存覆盖** |
+
+**一个重要的推理**：给 `nil` 发普通 OC 消息**本身是安全的**（见[第 97 题](#97-objc_msgsend-的执行流程)）。所以看到 `objc_msgSend` 崩溃时，要综合判断：`x0` 是否为 0、是否为**已释放对象地址**、`x1` 是否为合理 selector、`far` 的值、以及上一级业务帧。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 178. Watchdog 崩溃如何识别和治理？🔥
+
+Watchdog 是 iOS 为保证响应性设的看门狗，常见于**启动、前后台切换、挂起、终止、后台任务**等生命周期阶段超时。
+
+**日志特征**
+
+| 字段 | 值 |
+| --- | --- |
+| `bug_type` | **309** |
+| `termination.namespace` | `FRONTBOARD`、`RUNNINGBOARD`，旧系统 `SPRINGBOARD` |
+| `termination.code` | **`0x8BADF00D`**（"ate bad food"，苹果的冷笑话） |
+| `subtype` | 有时是 `LAUNCH_HANG` |
+| 后台任务超时 | 还可能见到 `0xBADA5E47` |
+
+⚠️ **它不是普通的 Mach/Signal 崩溃**，很多时候是系统因为主线程长时间不响应而**主动杀进程**。
+
+**治理思路**——围绕生命周期关键路径做耗时拆解：
+
+- **启动阶段**减少同步 IO、同步网络、数据库迁移、大量图片解码、主线程初始化
+- **进入后台**时及时结束任务、释放系统资源
+- 用 **RunLoop 卡顿监控在事故前持续记录**主线程堆栈快照（见[第 73 题](#73-如何检测-ios-应用的卡顿有哪些检测方案)）
+- 灰度时**单独看**启动耗时、卡顿率和 Watchdog 数量
+
+⚠️ **Watchdog 必须从 OOM 排除法中单独剥离**，否则会把前台卡死误判成 FOOM（见下题）。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 179. OOM 和普通崩溃有什么不同？为什么说 OOM 需要事前监控？🔥
+
+| | 普通崩溃 | OOM |
+| --- | --- | --- |
+| 有异常类型/信号/触发线程/堆栈吗 | **有** | **没有** |
+| App 有机会记录现场吗 | 有（崩溃处理器里） | **基本没有**——被杀瞬间没有执行代码的机会 |
+| 机制 | Mach 异常 / 信号 | 系统 **Jetsam** 因进程 `phys_footprint` 超限或整机内存压力直接杀进程 |
+
+**所以 OOM 归因必须依赖事前 + 事后的证据链**：
+
+**事前**（持续记录）：`phys_footprint`、`os_proc_available_memory()`、内存压力比例、大内存分配、页面泄漏、图片解码尺寸、缓存规模、关键业务路径。
+
+**事中**：水位达到阈值或收到内存警告时，把 Memory Dump 持续落盘。
+
+**事后**（下次启动排除法）：结合「未正常退出标记 + 是否有普通崩溃日志 + App/OS 是否升级 + 是否 Watchdog + 是否低电量 + 上次前后台状态 + 上次内存水位」判断 **FOOM**（前台）还是 **BOOM**（后台）。完整判定逻辑见[第 165 题](#165-如何从-0-到-1-实现-apm-系统)。
+
+**补充工具**：iOS 14+ 可用 MetricKit 辅助获取部分 OOM / 退出原因；研发和客诉场景可结合 JetsamEvent 原始日志做更精确归因（见下题）。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 180. JetsamEvent 日志怎么看？如何根据它判断 OOM 根因？
+
+JetsamEvent（`bug_type = 298`）**不是单个 App 的崩溃日志**，而是**一次整机 Jetsam 事件的内存画像**。它没有线程堆栈，但有 `reason`、`pageSize`、`memoryStatus` 和 `processes`。
+
+**五步读法**
+
+**① 看 `reason`**
+
+| reason | 含义 | 排查方向 |
+| --- | --- | --- |
+| `per-process-limit` | 单进程超过自己的 `phys_footprint` 限额 | **重点查本进程** |
+| `vm-pageshortage` | 整机物理页不足 | 可能是系统按优先级清理 |
+| `fc-thrashing` | 文件缓存颠簸 | — |
+| `vnode-limit` | vnode / fd 资源过多 | — |
+| `idle-exit` | **正常后台空闲退出** | ⚠️ **不应算 OOM** |
+
+**② 在 `processes` 里找 `reason` 非空的条目** —— 那个才是被杀进程。⚠️ **`largestProcess` 不一定等于被杀对象**，这是最常见的误读。
+
+**③ 换算当时 footprint**：
+
+```
+footprint (MB) = rpages × pageSize / 1024 / 1024
+```
+
+结合 `states` 判断 **FOOM**（`frontmost`）还是 **BOOM**（`background`/`suspended`）。
+
+**④ 看 `coalition`** —— 主 App、WebKit 子进程和 Extension 可能**共享 coalition 账本**，同组兄弟进程也可能是真正的大户。
+
+**⑤ 看 `memoryStatus.memoryPages`** 的 `free`/`compressor`/`anonymous`/`fileBacked`/`wired`，判断压力来自 App 堆内存、文件缓存、压缩池还是内核占用。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 181. Memory Dump 在 OOM 治理中解决什么问题？实现时有哪些关键点？
+
+**要解决的问题**：排除法、MetricKit、JetsamEvent 能告诉你「可能发生了 OOM」和「当时占了多少内存」，**但不能告诉你「哪段代码分配的对象还活着」**。
+
+**目标**：运行期持续记录存活对象及其分配堆栈；内存触顶、收到 Memory Warning、进入后台或达到水位阈值时，把存活对象表、堆栈表、镜像列表和内存上下文落盘，下次启动上报分析。
+
+**典型实现**：hook `malloc_logger` 和 `__syscall_logger` 捕获 `malloc`/`calloc`/`realloc`/`free`、`vm_allocate`/`mmap` 等事件，记录 `ptr → size → stack_id`。
+
+⚠️ **回调里不能再 malloc 或调 Foundation**（同[第 169 题](#169-signal-handler-为什么要求异步信号安全哪些操作不能在里面做)的约束），所以要用**无锁 ring buffer、预分配结构和异步处理线程**。
+
+**五个降开销的关键点**：
+
+1. 堆栈**只记录原始 PC**，离线符号化
+2. 存活对象表避免**节点级 malloc**
+3. 大量相似堆栈做**后缀压缩**
+4. 核心数据通过**预映射文件或 WAL** 持续落盘——提高 OOM 后的恢复概率，降低用户态缓冲在瞬间被杀时丢失的风险
+5. 分析时按**类名、对象数、总字节、Top 分配堆栈、Caller1 + Caller2 + Category** 聚合
+
+**重点找**：大图、无界缓存、页面泄漏、循环引用、单堆栈大分配。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 182. 常见 Objective-C 崩溃如何防护？防崩溃 SDK 的边界在哪里？🔥
+
+**常见 OC 崩溃**：数组/字符串越界、字典插 `nil`、`unrecognized selector`、KVO 重复移除或释放前未移除、可变集合多线程读写、野指针、枚举时修改集合。
+
+**两层防护**
+
+- **业务层（根本）** —— 边界检查、参数校验、生命周期管理、线程同步、Swift 可选安全访问
+- **运行时兜底** —— Method Swizzling 给 `NSArray`、`NSMutableDictionary`、`NSString` 等**类族**加安全方法；对消息转发提供**空实现桩对象**；对 KVO 做 proxy 封装。记录异常但不让进程退出
+
+#### 边界在哪里（这才是这题的考点）
+
+**防护不是根因修复**：
+
+| 风险 | 说明 |
+| --- | --- |
+| **吞掉越界可能隐藏数据错误** | 崩溃没了，但数据已经错了 |
+| **消息转发兜底可能让业务状态继续污染** | 本该停下的流程继续跑 |
+| **Swizzling 私有类族有系统版本兼容风险** | `__NSArrayI` 这类私有类随时可能变 |
+| **多 SDK swizzle 顺序可能冲突** | 和[第 168 题](#168-mach-exception-port-的查找顺序和处理流程是怎样的)同类问题 |
+
+**所以**：线上防护要**谨慎灰度**，**所有被拦截的问题必须上报**，按影响用户数治理。
+
+**核心链路宁可失败可见，也不要无声吞错**——否则资金、数据或状态错误会一直藏着，比崩溃更糟。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 183. 线上崩溃治理应该看哪些指标？如何做聚合、报警、灰度和回滚？
+
+**指标优先级**：首要看**崩溃用户率**（崩溃用户数 / 活跃用户数），因为它比**崩溃次数率**更能反映用户受影响面——一个用户崩 100 次和 100 个用户各崩 1 次，后者严重得多。
+
+辅助指标：崩溃次数率、Session 崩溃率、FOOM/BOOM、Watchdog、启动崩溃率、新增崩溃数、版本分布。
+
+**聚合**：⚠️ **不要只按完整堆栈字符串聚合**（地址随 ASLR 变化，永远聚不到一起）。要提取崩溃类型、信号、异常码、**触发线程 top N 帧、相对地址**、业务版本和设备维度生成稳定 fingerprint。对 `UserForceQuit`、`idle-exit`、部分系统强杀要**过滤或单独归类**。
+
+**报警分四类**：总崩溃率超阈值 / 新版本新增高频崩溃 / 特定机型或系统集中爆发 / 灰度版本相对基线劣化。
+
+**修复流程**：
+
+```
+发现 → 符号化 → 定位根因 → 修复和回归 → 小流量灰度
+     → 观察崩溃率、用户反馈和新类型 → 扩大灰度 → 全量
+```
+
+⚠️ **iOS 不能依赖传统动态代码热修复**（见[第 23 题](#23-为什么-ios-app-不能用-dlopen-加载任意动态库)：代码签名不允许）。合规手段只有：**服务端功能开关、配置降级、接口绕行、关闭实验、紧急发版、App Store 加急审核**。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 184. 如果拿到的崩溃日志没有符号或 dSYM 丢失，应该怎么办？
+
+**有地址但未符号化**：
+
+1. 从日志 Header、`usedImages` 或 Binary Images 找到 App 二进制的 **UUID、架构、Load Address**
+2. `dwarfdump --uuid` 校验本地或平台上的 dSYM 是否匹配
+3. 匹配后用 `atos`、`symbolicatecrash`、Xcode Organizer 或崩溃平台重新符号化
+
+**dSYM 丢失** —— 第一优先级是**找回**：
+
+- Xcode Archives
+- CI/CD 构建产物
+- 内部 dSYM 仓库
+- **App Store Connect 下载的 dSYM**（尤其历史 Bitcode 版本）
+- Firebase / Bugly / Sentry 等平台存档
+
+**确认找不回的兜底分析**：
+
+| 手段 | 做法 |
+| --- | --- |
+| 近似重构建 | 崩溃地址减 Load Address 得相对偏移，在**相同 release tag、相同编译参数**下重构建一份近似 dSYM 做函数级定位 |
+| 反推入口 | 符号化系统库帧，反推业务入口 |
+| 缩小范围 | 结合面包屑、路由日志、接口日志、版本分布、机型分布 |
+| 聚合 | 按崩溃类型 + top 地址指纹聚合高频问题 |
+
+**长期机制**：CI 每次 Archive 后自动上传和归档 dSYM，**按 UUID 建索引**，发版前校验所有架构和动态库符号是否齐全。
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+### 185. 调试器会如何影响崩溃捕获和崩溃表现？
+
+**根本原因：LLDB 本身会在 Task 级别注册 Mach 异常端口**（正是[第 168 题](#168-mach-exception-port-的查找顺序和处理流程是怎样的)里 SDK 用的那个位置）。所以调试状态下异常**先被调试器截获**，再由它决定是否停止、通知或传给进程。
+
+**四个现象**
+
+| 现象 | 说明 |
+| --- | --- |
+| `EXC_BREAKPOINT` 表现不同 | 线上是崩溃，调试器下可能**只是停住** |
+| Watchdog 不复现 | 调试时可能被系统**放宽或禁用**，启动超时不一定出现 |
+| 野指针问题消失 | 调试器、Zombie、Sanitizer 会**改变内存布局和释放行为**，野指针可能消失，或变成更早暴露 |
+| 自定义 Signal Handler 不执行 | LLDB 的信号处理策略会影响它是否被调用 |
+
+**处理办法**：
+
+- 用 `process handle` 查看和修改信号策略，例如让某些信号继续传给进程
+- **崩溃 SDK 应检测是否被调试**，避免和 LLDB 抢异常端口
+- 本地复现时要区分「**调试器下的停顿**」和「**脱离调试器后的真实线上终止**」
+
+→ [原文：崩溃系列知识点](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/崩溃/崩溃.md)
+
+---
+
+## 十四、耗电治理
+
+### 186. iOS App 耗电的原理是什么？🔥
+
+#### 能量模型：耗电是功率对时间的积分
+
+```
+Energy = Power × Time
+```
+
+电池消耗的是**能量**，不是某个瞬间的功率。所以耗电优化逃不开三件事：
+
+| 方向 | 本质 | 例子 |
+| --- | --- | --- |
+| **降低平均功率** | 让硬件用更低功耗档位工作 | 降低定位精度、降低刷新率、降低采样频率、降低视频清晰度 |
+| **缩短活跃时间** | 让硬件更快完成任务并休眠 | 任务完成后及时释放 CPU、GPS、相机、音频、后台任务 |
+| **减少唤醒次数** | 避免频繁把硬件从低功耗状态拉起来 | 合并 Timer、合并请求、批量上报、延后非关键任务 |
+
+苹果说的 **Race to Sleep**、**Coalesce Work**、**Defer and Batch**，对应的正是这三类策略。
+
+#### CPU：P-State 决定工作功率，C-State 决定休眠深度
+
+现代 iPhone 的 CPU 通过 **DVFS**（动态电压频率调整）在性能和功耗间切换。
+
+**P-State（工作时）**：高 P-State = 高频高压 = 性能强但瞬时功耗高；低 P-State 反之。
+
+⚠️ **但"永远低频慢慢跑"并不最省电**——任务拖得久，CPU 就长时间停在活跃状态，**总能耗反而增加**。所以系统倾向于：短时间高性能完成任务，然后尽快休眠。这就是 **Race to Sleep**。
+
+**C-State（空闲时）**：
+
+| 状态 | 含义 | 功耗 |
+| --- | --- | --- |
+| C0 | 正在执行代码 | 最高 |
+| C1 | 浅休眠，时钟门控 | 较低 |
+| C2 | 更深休眠，部分电源门控 | 很低 |
+| C3+ | 深度休眠，核心下电 | **接近 0** |
+
+**真正耗电的很多场景不是 CPU 一直满载，而是频繁唤醒导致 CPU 进不了深度 C-State**：
+
+- 多个 1s / 500ms 的 Timer 分散触发
+- 短间隔轮询状态
+- `CADisplayLink` 在页面不可见后仍然回调
+- 后台线程忙等
+- 小任务不断打断系统休眠
+
+**共同点：每次任务都不重，但它们让系统一直睡不深。**
+
+#### 定位
+
+| 变量 | 影响 |
+| --- | --- |
+| 精度 | 精度越高越可能启用 GPS，功耗越高 |
+| 持续时间 | 定位持续越久总能耗越高 |
+| 启停成本 | **GPS 冷启动搜星成本高，频繁启停也浪费能量** |
+
+#### Thermal State 与降级策略
+
+| 状态 | 含义 | App 该做什么 |
+| --- | --- | --- |
+| `.nominal` | 正常 | 正常运行 |
+| `.fair` | 略热 | 准备降级 |
+| `.serious` | 明显过热 | 降帧、暂停非核心任务、降低采样率 |
+| `.critical` | 危险 | 关闭高耗电能力，只保留核心功能 |
+
+#### 三类根因
+
+| 根因 | 解释 | 典型例子 |
+| --- | --- | --- |
+| **高功率** | 硬件工作在高功耗档位 | CPU/GPU 长时间高负载、高精度 GPS、相机、AR、蜂窝传输 |
+| **长时间** | 高功耗模块没及时释放 | 后台任务不结束、定位不停止、音视频/相机长驻 |
+| **高频唤醒** | 单次任务不重但频繁打断休眠 | 高频 Timer、轮询、小请求、短心跳、频繁传感器采样 |
+
+→ [原文：耗电](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/耗电/耗电.md)
+
+### 187. 如何治理能耗？🔥
+
+#### 建立观测体系
+
+| 层级 | 关键指标 | 作用 |
+| --- | --- | --- |
+| **系统大盘** | `cumulativeCPUTime`、`cumulativeGPUTime`、`cumulativeBackgroundTime`、蜂窝/WiFi 流量、`cumulativeBestAccuracyTime`、`averagePixelLuminance` | 建立版本/机型/系统维度的耗电基线 |
+| **异常诊断** | CPU Exception、Hang、Disk Write Exception、Thermal serious+ | 发现高 CPU、卡死、磁盘写入超限、发热 |
+| **电量窗口** | 前台/后台/场景掉电速率（`% / hour`） | 衡量**用户真实感知**的掉电速度 |
+| **CPU 实时采样** | 1~5 秒采样、窗口平均 CPU、持续高 CPU 事件、触发式堆栈 | 捕获 **MetricKit 发现不了**的 CPU 空转、死循环、后台高 CPU |
+| **网络埋点** | 请求数、失败数、重试数、流量、接口维度、网络类型 | 判断小请求过多、弱网重试风暴、蜂窝流量异常 |
+| **定位埋点** | `start/stop`、精度、前后台、`activityType`、持续时长 | 判断高精度定位、后台定位、生命周期未收敛 |
+| **硬件生命周期** | 音视频、相机、传感器、模型推理的开始/结束、参数、耗时 | 识别高功耗能力长驻或参数过高 |
+
+#### 指标口径（关键：都要用「强度」而非绝对值）
+
+| 指标 | 推荐口径 |
+| --- | --- |
+| CPU 强度 | `CPU 秒 / 前台小时`，同时看 P50/P95/P99 |
+| 后台强度 | `后台秒 / DAU` 或 `后台秒 / 后台用户` |
+| 蜂窝流量强度 | `蜂窝 MB / 前台小时` |
+| 高精度定位强度 | `高精度定位秒 / 定位用户` |
+| 前台掉电速率 | `电量下降百分比 / 前台小时` |
+| 后台掉电速率 | `电量下降百分比 / 后台小时` |
+| Thermal 升级率 | `serious/critical 用户数 / DAU` |
+
+#### 排查维度
+
+版本（是否某次发布/实验/配置引入）、机型（是否集中在低端机）、系统版本（是否和 iOS 后台策略变化有关）、前后台状态、业务场景、硬件模块、代码路径。
+
+#### 现象 → 怀疑方向对照表
+
+| 异常现象 | 优先怀疑 | 典型证据 |
+| --- | --- | --- |
+| **CPU 时间上涨** | 高频计算、Timer、轮询、死循环、锁竞争 | MetricKit CPU、实时采样、触发式堆栈、Time Profiler |
+| **后台时长上涨** | 后台任务未结束、后台定位、后台音频、Silent Push | `cumulativeBackgroundTime`、后台任务日志、能力生命周期 |
+| **蜂窝流量上涨** | 请求过多、重试风暴、心跳过密、预加载过度 | 蜂窝流量、请求密度、重试率、接口 TopN |
+| **高精度定位时长上涨** | 精度过高、生命周期未收敛、后台持续定位 | `cumulativeBestAccuracyTime`、定位 `start/stop`、精度和前后台字段 |
+| **Thermal 变差** | CPU/GPU 长时间高负载、相机/音视频/AR/模型推理长驻 | Thermal 事件、CPU/GPU 指标、硬件生命周期、页面场景 |
+| **用户反馈后台耗电** | 后台任务、定位、音频、网络同步、蓝牙扫描 | 前后台切换日志、后台掉电窗口、后台能力使用记录 |
+
+#### 落到代码上的具体做法
+
+对应[第 186 题](#186-ios-app-耗电的原理是什么)的三类根因：
+
+- **降功率** —— 定位按场景选精度（导航才用 `kCLLocationAccuracyBest`）、列表滚动时降图片解码质量、非关键动画降帧
+- **缩时长** —— 页面消失就 `stopUpdatingLocation`、`CADisplayLink` 在 `viewWillDisappear` 里 `invalidate`、后台任务及时 `endBackgroundTask`
+- **减唤醒** —— **合并 Timer**（多个 1s Timer 合成一个）、批量上报代替逐条上报、用 `NSTimer.tolerance` 让系统合并触发时机、非关键任务延后到 RunLoop 空闲或充电时
+
+最后一条呼应[第 17 题](#17-timer-的使用注意事项有哪些)：`tolerance` 不只是精度问题，**它直接让系统能把多个 Timer 的唤醒合并到一起，是省电的实招**。
+
+→ [原文：耗电](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/耗电/耗电.md)
