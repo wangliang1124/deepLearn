@@ -36,7 +36,7 @@ open http://127.0.0.1:8081/cross-origin-a.html
 | [状态管理对比](state-management-comparison.md) | Flux → Redux → Vuex → MobX 横向对比 |
 | [React-Redux 原理](react-redux-internals.md) | Provider 与 connect 源码剖析 |
 | [原生 / RN / H5 通信](native-rn-h5-bridge.md) | iOS 与 Android 双向桥接方案 |
-| [搞懂 Safe Area](safe-area.md) | 刘海屏安全区与横竖屏适配 |
+| [搞懂 Safe Area](safe-area.md) | 安全区概念，H5 用 `env()` 与 RN 的适配方式 |
 
 ## Demo
 
