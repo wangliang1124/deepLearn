@@ -1,4 +1,4 @@
-## 1.实现 new 操作符
+## 1. 实现 new 操作符
 
 > ▶ 运行 demo：[handwritten-new.html](handwritten-new.html)
 
@@ -16,7 +16,7 @@ function New(constructor, ...args) {
 }
 ```
 
-## 2.实现 JSON.stringify
+## 2. 实现 JSON.stringify
 
 > ▶ 运行 demo：[handwritten-json-stringify-parse.html](handwritten-json-stringify-parse.html)
 
@@ -58,26 +58,64 @@ function jsonStringify(obj) {
 }
 ```
 
-## 3.实现 JSON.parse
+## 3. 实现 JSON.parse
 
 > ▶ 运行 demo：[handwritten-json-stringify-parse.html](handwritten-json-stringify-parse.html)
 
+两种写法都依赖把字符串当代码执行，**只能用于可信数据**；解析用户输入会导致任意代码执行，生产环境一律用原生 `JSON.parse`。
+
+**推荐**：`new Function`。它在独立的函数作用域里求值，拿不到调用处的局部变量，比 `eval` 泄露面小。
+
 ```js
 function jsonParse(json) {
-    return eval("(" + json + ")");
-}
-function jsonParse2(json) {
     return new Function("return " + json)();
+}
+```
+
+`eval` 版本。`eval` 能访问并修改当前作用域，风险更大：
+
+```js
+function jsonParse2(json) {
+    // 加括号把 {} 变成表达式而不是代码块
+    return eval("(" + json + ")");
 }
 ```
 
 > JSON.parse 三种实现方式 https://github.com/youngwind/blog/issues/115
 
-## 4.实现 call & apply
+## 4. 实现 call & apply
 
 > ▶ 运行 demo：[handwritten-call-apply.html](handwritten-call-apply.html)（用到 ES module，需起 http server）
 
-### 实现 call
+核心思路都一样：把目标函数临时挂到 `context` 上，以 `context.fn()` 的形式调用，借此让 `this` 指向 `context`，调用完再删掉。
+
+### 推荐：ES6 写法
+
+用剩余参数和展开运算符，不需要 `eval`：
+
+```js
+Function.prototype._call = function(context = window, ...args) {
+    const key = Symbol("fn"); // 用 Symbol 作键，避免覆盖 context 上已有的同名属性
+    context[key] = this;
+    const result = context[key](...args);
+    delete context[key];
+    return result;
+};
+
+Function.prototype._apply = function(context = window, argsArr = []) {
+    const key = Symbol("fn");
+    context[key] = this;
+    const result = context[key](...argsArr); // 与 _call 的唯一区别：参数以数组传入
+    delete context[key];
+    return result;
+};
+```
+
+原版用固定的 `context.fn` 作键，如果 `context` 本身就有 `fn` 属性会被覆盖，且调用后被 `delete` 掉。换成 `Symbol` 可以避开。
+
+### ES5 写法（仅作原理参考）
+
+ES5 没有展开运算符，只能拼出参数列表字符串再 `eval`：
 
 ```js
 Function.prototype._call = function(context) {
@@ -91,22 +129,7 @@ Function.prototype._call = function(context) {
     delete context.fn;
     return result;
 };
-```
 
-### 用 ES6 实现 call
-
-```js
-Function.prototype._call = function(context = window, ...args) {
-    context.fn = this;
-    let result = context.fn(...args);
-    delete context.fn;
-    return result;
-};
-```
-
-### 实现 apply
-
-```js
 Function.prototype._apply = function(context, argsArr) {
     context = context || window;
     argsArr = argsArr || [];
@@ -123,36 +146,26 @@ Function.prototype._apply = function(context, argsArr) {
 };
 ```
 
-### 用 ES6 实现 call apply bind
+### 用 call 实现一个简版 bind
 
 ```js
-// call
-Function.prototype.call2 = function(context = window, ...args) {
-    context.fn = this;
-    const result = context.fn(...args);
-    delete context.fn;
-    return result;
-};
-// apply
-Function.prototype.apply2 = function(context = window, arr = []) {
-    context.fn = this;
-    const result = context.fn(...arr); // 相当于执行了context.fn(arguments[1], arguments[2]);
-    delete context.fn;
-    return result; // 因为有可能this函数会有返回值return
-};
-// bind
-Function.prototype.bind2 = function() {
+Function.prototype.bind2 = function(context, ...args) {
     const fn = this;
-    const args = [...arguments];
-    return function() {
-        fn.call(...args, ...arguments);
+    return function(...rest) {
+        return fn.call(context, ...args, ...rest); // 必须 return，否则绑定后的函数拿不到返回值
     };
 };
 ```
 
-## 5.实现 bind
+这个简版不支持 `new`（用 `new` 调用时 `this` 应指向新实例而非 `context`），完整实现见下一节。
+
+## 5. 实现 bind
 
 > ▶ 运行 demo：[handwritten-bind.html](handwritten-bind.html)
+
+`bind` 比 `call`/`apply` 难的地方在于：返回的函数既可以直接调用（`this` 指向 `context`），也可以被 `new` 调用（此时 `this` 应指向新实例，绑定的 `context` 要失效）。两种写法都靠 `this instanceof bound` 来区分这两种调用方式。
+
+### 推荐：通过原型链继承处理 new
 
 ```js
 Function.prototype._bind = function(context) {
@@ -178,7 +191,11 @@ Function.prototype._bind = function(context) {
 };
 ```
 
-### 另一种写法，参考 underscore
+让 `bound.prototype` 继承 `source.prototype`，这样 `new bound()` 产生的实例仍然 `instanceof source`，且实例的原型链完整。中间垫一个空函数 `fNOP`，是为了避免直接 `bound.prototype = source.prototype` 时修改实例原型会污染原函数的原型。
+
+### 另一种写法：参考 underscore，在函数体内处理
+
+不动 `bound.prototype`，而是在被 `new` 调用时现场创建实例。多了一步「构造函数返回对象则以其为准」的判断，逻辑更贴近 `new` 的真实语义，但每次 `new` 都要新建一个 `fNOP`：
 
 ```js
 var bound = function() {
@@ -201,7 +218,7 @@ var bound = function() {
 
 > bind 方法的兼容实现 https://github.com/lessfish/underscore-analysis/issues/19
 
-## 6.实现一个 Object.create
+## 6. 实现一个 Object.create
 
 > ▶ 运行 demo：[handwritten-object-create.html](handwritten-object-create.html)
 
@@ -216,9 +233,11 @@ function create(proto) {
 }
 ```
 
-## 7.实现函数柯里化
+## 7. 实现函数柯里化
 
 > ▶ 运行 demo：[handwritten-currying.html](handwritten-currying.html)
+
+### 推荐：剩余参数写法
 
 ```js
 function curry(func) {
@@ -240,7 +259,9 @@ curriedSum(1)(2, 3); // 6
 curriedSum(1)(2)(3); // 6
 ```
 
-ES5 写法。注意判断条件是 `>=` 而不是 `===`，否则传入多于形参个数的实参时会一直返回函数而不执行：
+### ES5 写法
+
+用 `arguments` 拼接参数并递归。注意判断条件是 `>=` 而不是 `===`，否则传入多于形参个数的实参时会一直返回函数而不执行：
 
 ```js
 function currying(func) {
@@ -256,7 +277,7 @@ function currying(func) {
 }
 ```
 
-## 8.实现 Promise
+## 8. 实现 Promise
 
 > ▶ 运行 demo：[handwritten-promise.html](handwritten-promise.html)
 
@@ -569,7 +590,7 @@ Promise.all = function(promises) {
 };
 ```
 
-## 9.防抖和节流
+## 9. 防抖和节流
 
 > ▶ 运行 demo：[handwritten-debounce.html](handwritten-debounce.html) · [handwritten-throttle.html](handwritten-throttle.html)
 
@@ -620,7 +641,7 @@ function throttle(func, wait) {
 }
 ```
 
-## 10.实现一个 JS 深拷贝
+## 10. 实现一个 JS 深拷贝
 
 > ▶ 运行 demo：[handwritten-deep-clone.html](handwritten-deep-clone.html)
 
@@ -675,7 +696,7 @@ function deepClone(obj, map = new Map()) {
 }
 ```
 
-## 11.实现一个 instanceOf
+## 11. 实现一个 instanceOf
 
 > ▶ 运行 demo：[handwritten-instanceof.html](handwritten-instanceof.html)
 
@@ -691,7 +712,7 @@ function instanceOf(source, target) {
 }
 ```
 
-> 浅谈 instanceof 和 typeof 的实现原理 https://juejin.im/post/5b0b9b9051882515773ae714
+> 浅谈 instanceof 和 typeof 的实现原理 https://juejin.cn/post/6844903613584654344
 
 ## 12. 简单实现 async/await 中的 async 函数
 
@@ -802,7 +823,7 @@ function formatParams(data) {
 }
 ```
 
-## 14.JSONP 的原理是什么？
+## 14. JSONP 的原理是什么？
 
 > ▶ 运行 demo：[jsonp.html](jsonp.html)（需后端接口）
 
@@ -844,10 +865,31 @@ function jsonp(url, data) {
 
 > ▶ 运行 demo：[shuffle.html](shuffle.html)
 
-Fisher–Yates Shuffle
+用 Fisher–Yates Shuffle。核心是从后往前遍历，每次在「还没处理的区间」里随机取一个元素与当前位置交换，这样每种排列的概率均等。
+
+不要用 `arr.sort(() => Math.random() - 0.5)`：比较函数返回值不一致会让排序结果偏向原始顺序，各排列的概率并不均等，而且不同引擎的排序算法不同，结果不可预期。
+
+### 推荐：倒序遍历 + 解构交换
+
+写法最短，且用解构交换省掉临时变量：
 
 ```js
-// 方法一
+function shuffle(arr) {
+    let len = arr.length,
+        random;
+    while (len) {
+        random = (Math.random() * len--) >>> 0; // 无符号右移运算符用于向下取整
+        [arr[len], arr[random]] = [arr[random], arr[len]];
+    }
+    return arr;
+}
+```
+
+### 等价写法：显式临时变量
+
+同样是倒序 Fisher–Yates，只是用 `temp` 交换、下标算得更直白：
+
+```js
 function shuffle(arr) {
     var len = arr.length;
     for (var i = 0; i < len - 1; i++) {
@@ -858,19 +900,13 @@ function shuffle(arr) {
     }
     return arr;
 }
+```
 
-// 方法二
-function shuffle(arr) {
-    let len = arr.length,
-        random;
-    while (len) {
-        random = (Math.random() * len--) >>> 0; // 无符号右移位运算符向下取整
-        [arr[len], arr[random]] = [arr[random], arr[len]];
-    }
-    return arr;
-}
+### 正序遍历，返回新数组
 
-// 从前往后遍历元素的方式
+上面两种都会原地修改入参。这种从前往后遍历、写入新数组，不改动原数组——需要保留原数组时用它：
+
+```js
 function shuffle(a) {
     var length = a.length;
     var shuffled = Array(length);
@@ -885,7 +921,7 @@ function shuffle(a) {
 }
 ```
 
-> 数组乱序 https://github.com/hanzichi/underscore-analysis/issues/15
+> 数组乱序 https://github.com/lessfish/underscore-analysis/issues/15
 
 ## 16. 实现异步循环打印
 
@@ -910,8 +946,35 @@ start();
 
 ## 17. 深度优先遍历
 
+### 推荐：非递归，用栈显式模拟
+
+不受调用栈深度限制，DOM 层级很深时也不会爆栈。子节点要**倒序**入栈，弹出时才是从左到右的顺序：
+
 ```js
-/*深度优先遍历三种方式*/
+function deepTraversal(node) {
+    let stack = [];
+    let nodes = [];
+    if (node) {
+        stack.push(node);
+        while (stack.length) {
+            let item = stack.pop(); // 栈：后进先出
+            let children = item.children;
+            nodes.push(item);
+            // 倒序入栈，保证先处理最左边的子节点
+            for (let i = children.length - 1; i >= 0; i--) {
+                stack.push(children[i]);
+            }
+        }
+    }
+    return nodes;
+}
+```
+
+### 递归写法：传入数组累积结果
+
+递归版更短，但层级过深会栈溢出。这一版把结果数组一路传下去，只有一个数组，没有额外分配：
+
+```js
 function deepTraversal1(node, nodeList = []) {
     if (node !== null) {
         nodeList.push(node);
@@ -922,6 +985,13 @@ function deepTraversal1(node, nodeList = []) {
     }
     return nodeList;
 }
+```
+
+### 递归写法：靠返回值拼接
+
+逻辑上更「纯」，但每层递归都要 `concat` 出一个新数组，节点多时开销明显高于上一版：
+
+```js
 function deepTraversal2(node) {
     let nodes = [];
     if (node !== null) {
@@ -933,40 +1003,24 @@ function deepTraversal2(node) {
     }
     return nodes;
 }
-// 非递归
-function deepTraversal3(node) {
-    let stack = [];
-    let nodes = [];
-    if (node) {
-        // 推入当前处理的node
-        stack.push(node);
-        while (stack.length) {
-            let item = stack.pop();
-            let children = item.children;
-            nodes.push(item);
-            for (let i = children.length - 1; i >= 0; i--) {
-                stack.push(children[i]);
-            }
-        }
-    }
-    return nodes;
-}
 ```
 
-## 18.广度优先遍历
+## 18. 广度优先遍历
+
+和深度优先的非递归版只差一个数据结构：把**栈**换成**队列**（`pop` 换成 `shift`），就从「一路走到底」变成「逐层展开」。子节点正序入队即可。
 
 ```js
 function BFS(node) {
     let nodes = [];
-    let stack = [];
+    let queue = []; // 队列：先进先出
     if (node) {
-        stack.push(node);
-        while (stack.length) {
-            let item = stack.shift();
+        queue.push(node);
+        while (queue.length) {
+            let item = queue.shift();
             let children = item.children;
             nodes.push(item);
             for (let i = 0; i < children.length; i++) {
-                stack.push(children[i]);
+                queue.push(children[i]);
             }
         }
     }
@@ -1006,6 +1060,25 @@ var q = function(url) {
 
 ## 数组 flatten
 
+原生已有 `Array.prototype.flat(depth)`，`arr.flat(Infinity)` 即可完全展开。下面是手写实现。
+
+### 推荐：reduce 递归
+
+```js
+function flatten(array) {
+    return array.reduce((result, current) => {
+        return Array.isArray(current) ? result.concat(flatten(current)) : result.concat(current);
+    }, []);
+}
+
+console.log(flatten([1, [2, [[3, 4], 5], 6]])); // [1, 2, 3, 4, 5, 6]
+console.log(flatten(["abc", ["a", [[3, "a"], { a: "a" }], null, false]]));
+```
+
+### 等价写法：显式循环
+
+逻辑与上面完全一致，只是把 `reduce` 展开成 `for`：
+
 ```js
 var flatten = function(array) {
     var result = [];
@@ -1019,22 +1092,59 @@ var flatten = function(array) {
     }
     return result;
 };
-
-function flatten(array) {
-    return array.reduce((result, current) => {
-        return Array.isArray(current) ? result.concat(flatten(current)) : result.concat(current);
-    }, []);
-}
-console.log(flatten([1, [2, [[3, 4], 5], 6]]));
-console.log(flatten(["abc", ["a", [[3, "a"], { a: "a" }], null, false]]));
 ```
 
 ## 解析 url
 
 > ▶ 运行 demo：[parse-url-params.html](parse-url-params.html)
 
+### 推荐：交给浏览器解析
+
+不要自己写正则去拆 URL，边界情况太多（IPv6 地址、编码字符、相对路径、默认端口）。浏览器和 Node 都内置了 `URL`：
+
 ```js
-var parseURL = function(url) {
+function parseURL(url) {
+    const u = new URL(url); // Node 与浏览器均支持
+    return {
+        href: u.href,
+        origin: u.origin,
+        protocol: u.protocol,
+        host: u.host, // 含端口
+        hostname: u.hostname, // 不含端口
+        port: u.port,
+        pathname: u.pathname,
+        search: u.search,
+        hash: u.hash,
+        params: Object.fromEntries(u.searchParams), // 顺带拿到解析好的查询参数
+    };
+}
+
+console.log(parseURL("https://www.cnblogs.com:8080/speeding/p/5097790.html?xxx=9999#test"));
+```
+
+早期常用的 `a` 标签技巧，原理是让浏览器的 URL 解析器做事，效果和 `new URL` 一样，但依赖 DOM，Node 环境用不了：
+
+```js
+function URLParser(url) {
+    const a = document.createElement("a");
+    a.href = url;
+    return {
+        protocol: a.protocol,
+        hostname: a.hostname,
+        port: a.port,
+        pathname: a.pathname,
+        search: a.search,
+        hash: a.hash,
+    };
+}
+```
+
+### 手写正则（面试题写法）
+
+只覆盖常见的 `协议://主机:端口/路径?查询#片段` 形式，不要用在生产代码里：
+
+```js
+var parseURLByRegExp = function(url) {
     var result = {};
     var keys = ["href", "origin", "protocol", "host", "hostname", "port", "pathname", "search", "hash"];
     var regexp = /(((?:https?|ftp|file):)\/\/(([^:\/\?#]+)(:\d+)?))(\/[^?#]*)?(\?[^#]*)?(#.*)?/;
@@ -1047,42 +1157,33 @@ var parseURL = function(url) {
     }
     return result;
 };
-
-function URLParser(url) {
-    const a = document.createElement("a");
-    a.href = url;
-    // 非浏览器环境  const urlObj = new URL(url);
-    return {
-        protocol: a.protocol,
-        username: a.username,
-        password: a.password,
-        hostname: a.hostname, // host 可能包括 port, hostname 不包括
-        port: a.port,
-        pathname: a.pathname,
-        search: a.search,
-        hash: a.hash,
-    };
-}
-
-console.log(parseURL("https://www.cnblogs.com:8080/speeding/p/5097790.html?xxx=9999#test"));
 ```
 
-### 数组去重
+## 数组去重
+
+### 推荐：Set
+
+```js
+const unique = arr => [...new Set(arr)];
+
+console.log(unique([1, 2, 3, 3, 4, 4, 5, 5, 6, 1, 9, 3, 25, 4])); // [1, 2, 3, 4, 5, 6, 9, 25]
+```
+
+### 不依赖 Set 的写法
+
+`indexOf` 逐个回查，时间复杂度 O(n²)，数据量大时明显慢于 `Set`：
 
 ```js
 var unique = function(arr) {
-    // 实现一
-    // return [...new Set(arr)]
-    // 实现二
     const result = [];
     arr.forEach(item => {
         if (result.indexOf(item) === -1) result.push(item);
     });
     return result;
 };
-var arrarr = [1, 2, 3, 3, 4, 4, 5, 5, 6, 1, 9, 3, 25, 4];
-console.log(unique(arrarr));
 ```
+
+两者对 `NaN` 的行为不同：`Set` 认为 `NaN` 等于自身，能正确去重；`indexOf` 内部用 `===` 比较，`NaN === NaN` 为 `false`，重复的 `NaN` 会被全部保留。
 
 ## 转义函数 escapeHtml
 
@@ -1109,8 +1210,11 @@ var escapeHtml = function(htmlStr) {
 
 > ▶ 运行 demo：[thousands-separator-template-engine.html](thousands-separator-template-engine.html)
 
+把浮点数小数点左边的部分每三位插一个逗号，如 `12000000.11` → `12,000,000.11`。
+
+外层 `/\d+/` 不带 `g`，只匹配第一段连续数字（即整数部分），所以小数部分不会被插逗号，负号也会原样保留。内层 `(\d)(?=(\d{3})+$)` 用前向断言找「后面剩余位数正好是 3 的整数倍」的数字，在它后面补逗号。
+
 ```js
-// 如何将浮点数点左边的数每三位添加一个逗号，如 12000000.11 转化为『12,000,000.11』?
 function milliFormat(num) {
     return (
         num &&
@@ -1119,28 +1223,47 @@ function milliFormat(num) {
         })
     );
 }
+
+milliFormat(12000000.11); // "12,000,000.11"
+milliFormat(-1200000123123.223); // "-1,200,000,123,123.223"
 ```
 
-## 模版引擎
+注意 `num &&` 这个短路：传入 `0` 时直接返回数字 `0` 而不是字符串 `"0"`，返回类型不一致。要修就把它换成 `num == null ? "" : ...`。
+
+实际项目里直接用原生方法，不用手写：
+
+```js
+(12000000.11).toLocaleString("en-US", { maximumFractionDigits: 20 }); // "12,000,000.11"
+new Intl.NumberFormat("en-US").format(12000000); // "12,000,000"
+```
+
+## 模板引擎
 
 > ▶ 运行 demo：[thousands-separator-template-engine.html](thousands-separator-template-engine.html)
 
+用正则匹配 `{{ key }}` 占位符，再用 `data` 里的同名字段替换掉。
+
 ```js
 function render(template, data) {
-    return template.replace(/{{\s*(\w+)\s*}}/g, function(a, b) {
-        return data[b] || "";
+    return template.replace(/{{\s*(\w+)\s*}}/g, function(match, key) {
+        // 用 == null 判断，只把 undefined 和 null 当作缺失
+        return data[key] == null ? "" : data[key];
     });
 }
 
-var t = '<p><a href="{{url}}">{{name}}</a><span>{{greetting}}</span></p>';
+var t = '<p><a href="{{url}}">{{name}}</a><span>{{greeting}}</span></p>';
 console.log(
     render(t, {
-        url: "http://www.alibaba.com",
-        name: "Alibaba",
-        greetting: "Welcome",
+        url: "https://www.example.com",
+        name: "Example",
+        greeting: "Welcome",
     }),
 );
 ```
+
+原版写的是 `data[b] || ""`，会把 `0`、`false`、空字符串这些**合法但为假值**的数据一并替换成空串，比如 `render("{{count}}", { count: 0 })` 会得到空字符串而不是 `"0"`。改用 `== null` 判断只排除 `undefined` 和 `null`。
+
+这个实现直接把数据拼进 HTML，**不做转义**，渲染用户输入会导致 XSS。配合上面的 `escapeHtml` 使用。
 
 > Underscore \_.template 方法使用详解 https://github.com/lessfish/underscore-analysis/issues/26
 
@@ -1148,78 +1271,67 @@ console.log(
 
 > ▶ 运行 demo：[data-structures.js](data-structures.js) · [sort-algorithms.js](sort-algorithms.js)
 
-> 窥探数据结构的世界- ES6 版 https://juejin.im/post/5cd1ab3df265da03587c142a
+> 窥探数据结构的世界- ES6 版 https://juejin.cn/post/6844903840681033742
 
-> 在 JavaScript 中学习数据结构与算法 https://juejin.im/post/594dfe795188250d725a220a
+> 在 JavaScript 中学习数据结构与算法 https://juejin.cn/post/6844903482432962573
 
 > 十大经典排序算法 https://www.cnblogs.com/onepixel/p/7674659.html
 
 > Data Structure Visualizations https://www.cs.usfca.edu/~galles/visualization/Algorithms.html
 
-> 从斐波那契数列求值优化谈 \_.memoize 方法 https://github.com/hanzichi/underscore-analysis/issues/23
+> 从斐波那契数列求值优化谈 \_.memoize 方法 https://github.com/lessfish/underscore-analysis/issues/23
 
 ## 请分别用深度优先思想和广度优先思想实现一个拷贝函数
+
+两者拷贝出的结果完全一样，区别只在遍历顺序：深度优先靠递归一路钻到底，广度优先用队列逐层展开。都不处理循环引用，需要的话参考第 10 节的 `Map` 缓存做法。
+
 ```js
 function DFClone(obj) {
-  // 如果obj是基本数据类型或null，则直接返回
-  if (typeof obj !== 'object' || obj === null) {
-    return obj;
-  }
+    // 基本数据类型和 null 直接返回
+    if (typeof obj !== "object" || obj === null) {
+        return obj;
+    }
 
-  let result;
-  // 判断obj是数组还是对象
-  if (Array.isArray(obj)) {
-    result = [];
-  } else {
-    result = {};
-  }
+    const result = Array.isArray(obj) ? [] : {};
 
-  // 递归遍历obj的每个属性或元素，并进行拷贝
-  for (let key in obj) {
-    result[key] = deepClone(obj[key]);
-  }
+    // 递归遍历每个属性，遇到引用类型就往下钻
+    for (const key in obj) {
+        result[key] = DFClone(obj[key]); // 递归调用自身，不是第 10 节的 deepClone
+    }
 
-  return result;
+    return result;
 }
 
 function BFClone(obj) {
-  // 如果obj是基本数据类型或null，则直接返回
-  if (typeof obj !== 'object' || obj === null) {
-    return obj;
-  }
-
-  let result;
-  // 判断obj是数组还是对象
-  if (Array.isArray(obj)) {
-    result = [];
-  } else {
-    result = {};
-  }
-
-  let queue = [obj];
-  let resQueue = [result];
-
-  // 循环遍历队列
-  while (queue.length > 0) {
-    let curObj = queue.shift();
-    let curRes = resQueue.shift();
-
-    // 遍历当前元素的每个属性或元素，并进行拷贝
-    for (let key in curObj) {
-      let val = curObj[key];
-      if (typeof val === 'object' && val !== null) {
-        // 如果当前属性或元素是一个对象或数组，则将其放入队列中
-        let newVal = Array.isArray(val) ? [] : {};
-        curRes[key] = newVal;
-        queue.push(val);
-        resQueue.push(newVal);
-      } else {
-        // 如果是基本数据类型则直接进行复制
-        curRes[key] = val;
-      }
+    // 基本数据类型和 null 直接返回
+    if (typeof obj !== "object" || obj === null) {
+        return obj;
     }
-  }
 
-  return result;
+    const result = Array.isArray(obj) ? [] : {};
+
+    // 两个队列并行推进：queue 存待拷贝的源节点，resQueue 存对应的目标节点
+    const queue = [obj];
+    const resQueue = [result];
+
+    while (queue.length > 0) {
+        const curObj = queue.shift();
+        const curRes = resQueue.shift();
+
+        for (const key in curObj) {
+            const val = curObj[key];
+            if (typeof val === "object" && val !== null) {
+                // 引用类型：先建好空壳挂上去，再连同源节点一起入队，下一轮再填内容
+                const newVal = Array.isArray(val) ? [] : {};
+                curRes[key] = newVal;
+                queue.push(val);
+                resQueue.push(newVal);
+            } else {
+                curRes[key] = val;
+            }
+        }
+    }
+
+    return result;
 }
 ```
