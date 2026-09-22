@@ -1,6 +1,8 @@
 # deepLearn
 
-前端原理笔记与手写代码 demo。49 个单文件示例，无构建、无依赖，绝大多数双击就能在浏览器里跑。
+原理笔记与手写代码 demo。以前端为主，也覆盖跨端开发要用到的原生知识（RN 桥接、Safe Area、iOS 底层）。
+
+49 个浏览器单文件示例 + 15 个可编译运行的 iOS 验证程序，都无构建、无依赖。
 
 ## 怎么跑
 
@@ -28,6 +30,12 @@ python3 -m http.server 8081 &
 open http://127.0.0.1:8081/cross-origin-a.html
 ```
 
+[ios-snippets/](ios-snippets/) 是另一类东西——不在浏览器里跑，是 [iOS 面试题](ios-interview.md)里标「✅ 实测」结论的验证代码。需要 Xcode 命令行工具：
+
+```bash
+cd ios-snippets && ./run-all.sh      # 15 个程序，全部通过
+```
+
 ## 笔记
 
 | 文档 | 内容 |
@@ -39,6 +47,7 @@ open http://127.0.0.1:8081/cross-origin-a.html
 | [React-Redux 原理](react-redux-internals.md) | Provider 与 connect 源码剖析 |
 | [原生 / RN / H5 通信](native-rn-h5-bridge.md) | iOS 与 Android 双向桥接方案 |
 | [搞懂 Safe Area](safe-area.md) | 安全区概念，H5 用 `env()` 与 RN 的适配方式 |
+| [iOS 面试题](ios-interview.md) | 187 题，启动 / Runtime / 内存 / 并发 / 崩溃，配 [15 个可运行验证程序](ios-snippets/) |
 
 ## Demo
 
