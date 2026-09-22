@@ -1642,3 +1642,441 @@ struct ExistentialContainer {
 **优劣**：编译期约束强、性能可控、错误路径清晰（`DecodingError` + `codingPath` 能精确定位是哪个字段哪一层出错）。代价是不够动态——复杂字段映射、默认值、条件编码、扁平化/嵌套转换都得手写 `CodingKeys` 或 `init(from:)`。
 
 → [原文：Codable 底层原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Codable底层原理.md)
+
+---
+
+## 五、UI 与渲染
+
+> 📖 本章全部依据 Apple 文档与公开资料整理。macOS 上只有 AppKit 没有 UIKit，这些结论**无法在本仓库的验证环境里实跑**，所以一律不标「✅ 实测」。
+
+### 57. UIView 和 CALayer 的区别是什么？🔥
+
+| | UIView | CALayer |
+| --- | --- | --- |
+| 框架 | UIKit | Core Animation |
+| 继承自 | `UIResponder` | `NSObject` |
+| 职责 | **事件处理**（触摸、手势）、响应链、Auto Layout | **视觉渲染**（位图管理、圆角、阴影、边框、动画） |
+
+关系：每个 `UIView` 内部持有一个 `CALayer`，且 **UIView 是这个 layer 的 delegate**。
+
+**为什么要分开**：职责分离 + 跨平台复用。`CALayer` 能在 iOS（UIKit）和 macOS（AppKit）之间共享，平台特有的交互逻辑交给各自的 View 层去封装。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 58. CALayer 的隐式动画是什么？为什么 UIView 的 layer 没有隐式动画？
+
+**独立创建的** `CALayer` 改可动画属性（`backgroundColor`、`position`、`opacity` 等）时会自动产生 0.25s 过渡动画，这就是隐式动画。
+
+UIView 的 backing layer 没有，是因为 **UIView 作为 layer 的 delegate，在 `action(for:forKey:)` 里返回了 `NSNull`**，把默认动画行为挡掉了。
+
+所以给 UIView 加动画得显式来：`UIView.animate` 系列，或显式 `CAAnimation`。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 59. Auto Layout 的工作原理是什么？🔥
+
+核心是 **Cassowary 约束求解算法**。
+
+每条约束被转成线性等式或不等式：
+
+```
+view1.attr = m × view2.attr + c
+```
+
+所有约束组成线性方程组，每个视图有 x、y、width、height 四个未知数。Cassowary 用**单纯形法增量求解**——改一条约束不用从头算，在已有解的基础上增量更新。
+
+约束有**优先级 1–1000**：Required（1000）必须满足，Optional 尽量满足，冲突时低优先级的被打破。
+
+⚠️ 性能上的要点：**约束求解的复杂度随约束数量非线性增长**。视图层级一深、约束一多，Layout 阶段耗时会急剧上升——这是列表卡顿的常见原因之一（见[第 74 题](#74-卡顿的常见原因和解决方案有哪些-)）。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 60. `setNeedsLayout` 和 `layoutIfNeeded` 的区别是什么？🔥
+
+| | `setNeedsLayout` | `layoutIfNeeded` |
+| --- | --- | --- |
+| 同步性 | **异步**，只设标志位 | **同步**，立即执行 |
+| 何时触发 `layoutSubviews` | 下一个 RunLoop 周期 | 当场（前提是有待处理的布局标记） |
+
+两者常配合用：约束动画里先改约束（系统自动打标记），再在动画 block 里调 `layoutIfNeeded` 让布局变化被动画系统捕获。详见下一题。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 61. `layoutSubviews` 在什么时候会被调用？
+
+- 视图首次加入视图层级并显示
+- `bounds` 变化（含 `frame.size` 改变）
+- 添加或移除子视图
+- `UIScrollView` 滚动（`contentOffset` 变化导致 `bounds.origin` 变化）→ **高频触发**
+- 设备旋转导致父视图尺寸变化
+- 调 `setNeedsLayout` 后的下一个布局周期
+- 调 `layoutIfNeeded`（有待处理标记时）
+
+⚠️ 添加子视图时，**更直接触发的是父视图的布局**；子视图自己会不会触发取决于它自身是否也需要重新布局。详细展开见[第 11 题](#11-uiview-的-layoutsubviews-在什么时机被调用-)。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 62. 为什么约束动画要在动画 block 里调 `layoutIfNeeded`，而不是修改约束？🔥
+
+```swift
+// ✅ 正确
+someConstraint.constant = 100
+UIView.animate(withDuration: 0.3) {
+    self.view.layoutIfNeeded()
+}
+
+// ❌ 错误
+UIView.animate(withDuration: 0.3) {
+    someConstraint.constant = 100
+}
+```
+
+**改约束只是更新了约束对象的值 + 标记视图需要布局，本身不产生任何可动画的属性变化。** 真正改变 `frame` 的是 `layoutSubviews`，而它由 `layoutIfNeeded` 触发。
+
+动画系统只能捕获 block **内**发生的可动画属性（如 frame）变化。所以必须把 `layoutIfNeeded` 放进 block，让 frame 的实际变化发生在动画上下文里。
+
+错误写法的结果是：约束值变了，但 frame 是在下个 RunLoop 周期才更新的，那时动画上下文早没了——于是**瞬间跳变，没有动画**。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 63. 为什么不能在 `layoutSubviews` 中修改约束？
+
+会**死循环**：改约束 → 系统重新标记该视图需要布局 → 再次触发 `layoutSubviews` → 又改约束 → ……
+
+约束更新应该放在 `updateConstraints` 里，用 `setNeedsUpdateConstraints` 标记触发。这样约束更新在布局**之前**完成，不产生循环依赖。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 64. `setNeedsDisplay` 和 `setNeedsLayout` 的区别是什么？
+
+| | `setNeedsDisplay` | `setNeedsLayout` |
+| --- | --- | --- |
+| 触发回调 | `draw(_:)` | `layoutSubviews` |
+| 所属阶段 | **绘制** | **布局** |
+| 用途 | 重绘视图内容（颜色、形状） | 重算子视图的位置和大小 |
+| 会互相触发吗 | **不会** | **不会** |
+
+两者属于不同的更新阶段，完全独立。既要重新布局又要重绘，得**分别调用**。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 65. 约束、布局、绘制三个阶段的执行顺序和方向分别是什么？🔥
+
+| 阶段 | 方向 | 为什么 |
+| --- | --- | --- |
+| **约束** | 叶子 → 根（由内到外） | 父视图的布局可能依赖子视图的固有尺寸 `intrinsicContentSize` |
+| **布局** | 根 → 叶子（由外到内） | 子视图的位置和大小依赖父视图的 `bounds` |
+| **绘制** | 根 → 叶子（由外到内） | 同上 |
+
+记住这个方向差异就能解释很多现象——比如为什么 `UILabel` 不设宽度约束也能撑开父视图（约束阶段由内到外，label 的固有尺寸先被算出来）。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 66. 如何在添加约束后立即获取视图的 frame？
+
+```swift
+let label = UILabel()
+label.translatesAutoresizingMaskIntoConstraints = false
+view.addSubview(label)
+NSLayoutConstraint.activate([...])
+
+print(label.frame)      // (0, 0, 0, 0) —— 布局还没执行
+
+view.layoutIfNeeded()   // 强制同步执行布局
+print(label.frame)      // 正确的值
+```
+
+加约束后系统只是**打了标记**，要到下一个 RunLoop 周期才执行。`layoutIfNeeded` 同步触发布局计算，之后就能拿到正确 frame。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 67. 连续调用多次 `setNeedsLayout` 会触发多次 `layoutSubviews` 吗？
+
+**不会。** `setNeedsLayout` 只是设一个布尔标志位，调 100 次和调 1 次效果相同。系统在下一个 RunLoop 周期检查该标志，为 YES 就调**一次** `layoutSubviews`，调完清零。
+
+这是 iOS 视图更新的**合并（coalescing）机制**，避免重复计算。同理适用于 `setNeedsDisplay`。
+
+> 这也是为什么 `layoutSubviews` 里的操作必须**幂等**——你无法控制它被调用几次。
+
+→ [原文：布局方法详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/布局方法详解.md)
+
+### 68. 描述一下 iOS 触摸事件从产生到响应的完整流程？🔥
+
+分四段。
+
+#### ① 硬件与系统层
+
+1. 触摸屏硬件检测到电容变化，**IOKit.framework** 接收硬件中断，生成 `IOHIDEvent`
+2. **SpringBoard** 收到事件，根据当前前台 App 判断该转发给哪个进程
+3. 通过 **mach port**（内核级 IPC）把 `IOHIDEvent` 转给目标 App 进程
+4. App 主线程 RunLoop 被唤醒：事件先由 **Source1**（基于 port，收系统/跨进程消息）接收，包装后交给 **Source0**（基于回调，处理 App 内部事件）
+5. 封装成 `UIEvent`，内含一个或多个 `UITouch`。每个 `UITouch` 对应一根手指，记录位置、阶段（began/moved/ended）、时间戳
+
+#### ② Hit-Testing（自上而下找到响应者）
+
+6. `UIApplication` 调 `sendEvent:` 把事件交给 `UIWindow`
+7. `UIWindow` 调 `hitTest:withEvent:` 开始递归：对每个子视图先 `pointInside:withEvent:` 判断触点是否在 bounds 内，再**逆序**递归子视图的 `hitTest:`。**逆序是因为后添加的子视图在视觉上更靠前，应该优先响应**。最终确定层级最深的可交互视图作为 Hit-Test View
+8. 三类视图会被**跳过**：`hidden = YES`、`alpha <= 0.01`、`userInteractionEnabled = NO`
+9. ⚠️ **Hit-Testing 只在 touch began 阶段执行一次**。后续同一触摸序列的 moved/ended 直接发给已确定的 Hit-Test View，**不会因为手指移到别的视图上就重新寻址**
+
+#### ③ 事件分发（手势识别器优先）
+
+10. `UIWindow` 的 `sendEvent:` 在同一次 RunLoop 迭代中，**先**把触摸发给 Hit-Test View 自身及其**父视图链上所有关联的手势识别器**
+11. **然后**才发给 Hit-Test View 的 `touchesBegan:`。若手势识别器设了 `delaysTouchesBegan = YES`，系统会暂扣 began 及后续 moved，等手势结果确定后再决定补发还是丢弃
+12. 手势识别过程**可能跨越多次 RunLoop 迭代**——tap 要等手指抬起，long press 要等一段时间，swipe 要判断方向和速度
+
+**识别结果：**
+
+- 识别成功 且 `cancelsTouchesInView = YES`（默认）→ 系统给 View 发 `touchesCancelled:`，View 不再收后续事件，手势的 action 触发
+- 识别失败 → View 继续正常接收后续触摸事件，手势不产生 action
+
+#### ④ 响应者链传递（自下而上）
+
+13. 所有能接收触摸的对象（`UIView`、`UIViewController`、`UIWindow`、`UIApplication`）都继承自 `UIResponder`，`touchesBegan:withEvent:` 正是 `UIResponder` 定义的
+14. Hit-Test View 不处理（回调里调了 `super`）就沿 `nextResponder` 向上传：
+
+    ```
+    Hit-Test View → 父 View → … → UIViewController → 父 VC → UIWindow
+                 → UIApplication → UIApplicationDelegate
+    ```
+
+15. 链上任一响应者重写了回调**且没调 super**，传递终止。到链末端仍无人处理，事件被丢弃
+
+→ [原文：响应者链与事件处理机制](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/响应者链.md)
+
+### 69. 父视图加了 UITapGestureRecognizer，点击子视图 UIButton 或自定义 UIControl，分别会怎样？🔥
+
+**结果不一样**，这是个很好的区分题。
+
+**UIButton：只触发按钮的 action，手势不触发。**
+UIButton **重写了 `gestureRecognizerShouldBegin:`**，对非自身视图上的单指单击 `UITapGestureRecognizer` 返回 `NO`，手势识别器直接进 Failed 状态，按钮的 target-action 正常触发。
+
+**自定义 UIControl：手势触发，控件的 action 不触发。**
+`UIControl` 基类**没有**重写 `gestureRecognizerShouldBegin:`。父视图链上的手势正常识别成功后，会 cancel 掉控件的触摸，导致 target-action 触发不了。
+
+**解法**：在自定义控件里重写 `gestureRecognizerShouldBegin:`，对冲突手势返回 `NO`。
+
+> 补充：系统内置控件普遍做了这类防御——`UISlider` 会阻止 swipe，`UIButton` 会阻止单击 tap。自己写的 `UIControl` 子类不会自动获得这个待遇。
+
+→ [原文：响应者链与事件处理机制](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/响应者链.md)
+
+### 70. UIButton 上盖了一个 UIView，点击该 UIView，UIButton 的 action 会触发吗？
+
+**不会。**
+
+虽然 `UIControl` 重写了 `touchesBegan:`，但它内部会检查 **`touch.view` 是不是自身**。而 `UITouch` 的 `view` 属性在 **Hit-Testing 阶段就已确定**，指向 Hit-Test View。
+
+覆盖的那个 UIView 默认 `userInteractionEnabled = YES`，于是它成了 Hit-Test View。即使它不处理事件、事件沿响应者链传回 UIButton 的 `touchesBegan:`，此时 `touch.view` 指的仍是那个 UIView —— UIButton 不会启动 tracking 流程，action 无法触发。
+
+**解法**：把覆盖视图的 `isUserInteractionEnabled` 设为 `false`，让它在 Hit-Testing 中被跳过，Hit-Test View 重新落回 UIButton。
+
+→ [原文：响应者链与事件处理机制](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/响应者链.md)
+
+### 71. 有哪些常见场景需要利用响应者链和 Hit-Testing？
+
+| 场景 | 做法 |
+| --- | --- |
+| **扩大按钮点击区域** | 重写 `pointInside:withEvent:`，把判定范围扩到 bounds 之外（如四周各 10pt），**不用改实际 frame** |
+| **子视图超出父视图 bounds 仍可点** | 默认父视图 `pointInside:` 返回 NO 会让 Hit-Testing 提前终止。重写父视图的 `hitTest:withEvent:`，跳过 `pointInside:` 限制，直接对子视图坐标转换后递归检查 |
+| **穿透遮罩层让下层响应** | 重写遮罩层的 `hitTest:withEvent:`：命中自身就返回 `nil`（穿透），命中子视图正常返回（遮罩上的关闭按钮仍可交互） |
+| **跨层级通信** | `UIApplication` 的 `sendAction:to:from:forEvent:` 中 target 传 `nil` 时，action 会沿响应者链向上找第一个能响应该 selector 的对象。深层嵌套 Cell 里的按钮事件可以直接传给 VC，**不用逐层 delegate 或闭包** |
+| **手势与控件冲突** | 手势代理的 `gestureRecognizer:shouldReceiveTouch:` 排除 UIControl 区域；或设 `cancelsTouchesInView = NO` 让两者同时响应 |
+| **全局点击收起键盘** | 根视图/Window 上加 `UITapGestureRecognizer` 并设 `cancelsTouchesInView = NO`，点空白处调 `endEditing:`，同时不影响其他控件 |
+
+→ [原文：响应者链与事件处理机制](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/响应者链.md)
+
+### 72. iOS 中卡顿的本质是什么？如何产生的？🔥
+
+**本质是掉帧。** 屏幕以固定频率刷新（60Hz 设备 16.67ms 一帧），每次 VSync 信号到来时系统从帧缓冲区取一帧显示。这一帧的渲染没按时完成，屏幕只能**重复显示上一帧**，用户就感到卡。
+
+#### 先搞清三棵图层树
+
+| 树 | 在哪 | 是什么 |
+| --- | --- | --- |
+| **Model Tree** | App 进程 | 开发者直接操作的属性（`layer.position = …`），改了立即生效但不触发渲染 |
+| **Presentation Tree** | App 进程 | 反映当前屏幕上**实际显示**的值。非动画时与 Model Tree 同步；动画时 Model Tree 已是终点值，而它在 `layer.presentation()` 被调用时**根据本地动画描述实时计算插值**（不是 Render Server 回传的） |
+| **Render Tree** | Render Server 进程 | GPU 实际渲染依据的私有副本。每次 Commit 时 Model Tree 的变更通过 IPC 同步过来 |
+
+⚠️ **动画过程中做命中测试必须用 `layer.presentation()`**，因为 Model Tree 早就是终点值了。
+
+#### 一帧的三个阶段
+
+**阶段一：App 进程（CPU，主线程）**
+
+主线程在 Handle Events 阶段处理触摸、手势、Timer，这些回调里的 UI 修改写进 **Model Tree** 并把图层标记为 dirty。然后 RunLoop 在 **BeforeWaiting** 时触发 `CA::Transaction::commit()`，进入 Commit Transaction 的四个子阶段：
+
+| 子阶段 | 干什么 | 性能坑 |
+| --- | --- | --- |
+| **Layout** | 遍历 dirty 图层，调 `layoutSubviews()` 解 Auto Layout，frame 写回 Model Tree | 约束复杂度**非线性增长**，层级深时耗时急剧上升 |
+| **Display** | 对需重绘的图层调 `draw(_:)`，用 Core Graphics 在 **CPU** 上生成位图 | 重写 `draw(_:)` 会额外分配大块内存 |
+| **Prepare** | 图片延迟解码（PNG/JPEG → 位图）和格式转换 | **没提前在后台解码的大图会在这里阻塞主线程** |
+| **Commit** | Model Tree → Render Tree 的**同步点**，也是 Presentation Tree 的更新时机。dirty 属性序列化后经 Mach Port 发给 Render Server | 图层越多序列化开销越大 |
+
+**阶段二：Render Server（`backboardd`，独立进程）**
+
+收到图层树快照后合并进 Render Tree。**进行中的动画直接在 Render Tree 上按曲线插值——从插值到渲染指令生成再到 GPU 提交，整条链路都由 Render Server 独立驱动，不依赖 App 主线程。这就是 Core Animation 动画不受主线程卡顿影响的原因。**
+
+然后遍历 Render Tree：图层排序（画家算法）、可见性剔除、离屏渲染判定，最后翻译成 Metal 渲染指令（Draw Calls）提交给 GPU。
+
+**离屏渲染**是这个阶段的头号杀手：`cornerRadius + masksToBounds`、无 `shadowPath` 的阴影、`mask`、`allowsGroupOpacity` 等会让 GPU 额外分配离屏缓冲区，产生上下文切换和内存带宽开销。
+
+**阶段三：GPU 渲染**
+
+顶点处理 → 图元装配（一个矩形 CALayer 被拆成**两个三角形**，GPU 原生只处理三角形）→ 光栅化（三角形转成离散片段，每片段对应一个像素位置）→ 片段着色（按纹理坐标采样颜色；圆角裁剪、高斯模糊要更复杂的计算）→ 混合：
+
+```
+Result = Source.RGB × Source.A + Dest.RGB × (1 − Source.A)
+```
+
+不透明图层可跳过混合直接覆写。GPU 瓶颈主要来自**过度绘制**（多层半透明重叠，像素被反复处理）、**离屏 Pass 切换**、**大纹理上传占带宽**。
+
+**最终显示**：VSync 到来，前后缓冲区交换（双缓冲），显示新帧。
+
+#### 为什么掉帧
+
+三个阶段的时间预算是**串行叠加**的——CPU 多花 1ms，留给 GPU 的就少 1ms。60Hz 设备上 CPU + Render Server + GPU 的总耗时必须挤进 16.67ms。任何环节超时，VSync 到来时帧缓冲区没有新数据，屏幕重复上一帧，即掉帧。
+
+| 瓶颈类型 | 典型原因 | 排查工具 |
+| --- | --- | --- |
+| CPU | 复杂布局、主线程同步 IO、大量文本绘制、图片主线程解码 | Time Profiler |
+| GPU | 离屏渲染、过度绘制、超大纹理 | GPU Report / Core Animation |
+| 带宽 | 高分辨率图片频繁上传显存 | Metal System Trace |
+
+→ [原文：卡顿原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-原理.md)
+
+### 73. 如何检测 iOS 应用的卡顿？有哪些检测方案？🔥
+
+六种方案 + 一个所有方案共有的难题。
+
+| 方案 | 原理 | 适用 | 局限 |
+| --- | --- | --- | --- |
+| **① CADisplayLink 帧率** | 记录每次回调时间戳，每秒算一次 FPS，低于 55 就是掉帧 | 开发阶段悬浮窗实时看 | 只知道"掉帧了"，**不知道是哪段代码**；主线程阻塞时它自己的回调也被延迟 |
+| **② RunLoop Observer** | 子线程用信号量等 RunLoop 状态变化，超阈值（如 100ms）没等到就判定卡顿，向主线程发 `SIGURG` 触发 `backtrace` 采集真实堆栈 | 开发 + 线上 | 有 `BeforeWaiting` 盲区，见下 |
+| **③ 子线程 Ping** | 子线程定期 `DispatchQueue.main.async` 丢个置标志位的任务，超时未执行就判定阻塞 | 线上 | 实现简单但精度受阈值限制，还得自己实现堆栈采集 |
+| **④ Instruments** | Time Profiler（CPU 热点）、Core Animation（FPS、离屏渲染）、System Trace（线程调度、锁竞争、IO） | 仅开发 | **无法部署线上** |
+| **⑤ MetricKit（iOS 13+）** | 系统级收集，**零额外开销**。iOS 14+ 还能拿卡顿堆栈 `MXCallStackTree` 和滚动卡顿率 `scrollHitchTimeRatio` | 线上长期趋势 | **每日回调一次，不实时** |
+| **⑥ Sentry ANR V2** | 基于**帧延迟**分析，能区分完全阻塞和非完全阻塞 | 线上 | 见下 |
+
+**② 的盲区值得单独说**：简单方案（单个 Observer，order=0）盯的是 `BeforeSources` 和 `AfterWaiting`，但 **UI 布局/绘制、手势回调等系统 Observer 是在 `kCFRunLoopBeforeWaiting` 阶段执行的**，它们的耗时捕获不到。微信 Matrix 的解法是注册**两个** Observer（order 分别为 `LONG_MIN` 和 `LONG_MAX`）把所有系统 Observer 夹在中间。
+
+#### ⑥ Sentry ANR V2 的思路
+
+三个组件协作：`SentryFramesTracker`（CADisplayLink 记录每帧实际耗时，超 16.67ms 标为延迟帧）→ `SentryDelayedFramesTracker`（存储并支持按区间查询，返回 `delayDuration` 和 `framesContributingToDelayCount`）→ `SentryANRTrackerV2`（Watchdog 线程，把 2 秒超时切成 5 份，每 0.4 秒查一次）。
+
+判定：
+
+```
+framesContributingToDelayCount == 1 且 delayDuration >= 2s
+    → Fully Blocking（完全阻塞）
+
+framesContributingToDelayCount > 1 且 delayDuration > 2s × 99%
+    → Non-Fully Blocking（非完全阻塞）
+```
+
+```
+Fully Blocking：
+0s                                    2s
+|-------------------------------------|
+|      一个函数 A 一直占着主线程         |
+|      整个周期只产生了 1 帧延迟          |
+                                      └─ 采集堆栈 → 指向 A → 可信 ✅
+
+Non-Fully Blocking：
+0s      0.5s   0.8s   1.2s   1.5s    2s
+|-------|------|------|------|--------|
+| 函数A  |函数B |函数C |函数D |函数E   |
+| 5 帧都贡献了延迟，累加超过 99% 阈值      |
+                                      └─ 采集堆栈 → 指向 E → 不可信 ⚠️
+```
+
+**99% 这个阈值的设计考量**：就算卡 0.5 秒、渲染约 5 帧、再卡 0.5 秒，用户仍有机会响应输入（比如点返回），此时帧延迟约 97%。只有超过 99%，应用才真正「看起来卡死了」。
+
+**Sentry 的价值不在于解决了堆栈采集时机问题**（没有方案能完美解决），而在于用 `framesContributingToDelayCount` 告诉你这份堆栈**可不可信**。
+
+#### 所有超时采集方案的共同难题
+
+```
+阈值 2 秒：
+0s                   1.9s  2.0s
+|---------------------|-----|
+|      函数 A (1.9s)   |函数B|
+                            ↑ 超时触发采集 → 堆栈指向 B
+                              但真凶是 A
+```
+
+检测机制是「定时检查」而非「持续监控」，只能在超时那一刻拍快照，无法回溯。五个优化策略：
+
+1. **周期性采样** —— 整个检测期间每 100ms 采一次，留最近 N 个样本，分析出现频率最高的调用路径。⚠️ CPU 开销大（要靠 `SIGURG` + `backtrace`），只适合灰度/测试
+2. **堆栈聚合** —— 把样本按调用路径去重，统计每条出现次数降序排列，数据量大减后才好上报
+3. **退火算法** —— 解决的是**检测本身的性能损耗**：连续采到相同堆栈时按**斐波那契数列**递增检测间隔（1→1→2→3→5→8→13…），堆栈变了就重置为 1。好处是避免重复写入、主线程已卡死时不再雪上加霜
+4. **火焰图** —— 聚合数据的可视化，横轴是采样次数占比，越宽越可能是瓶颈。本身零运行时开销，是对已有数据的后处理
+5. **标记堆栈可信度** —— 即上面 Sentry 的思路，不增加额外采样开销
+
+→ [原文：卡顿检测](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-检测.md)
+
+### 74. 卡顿的常见原因和解决方案有哪些？🔥
+
+#### 一、CPU 瓶颈
+
+**1. 主线程阻塞** —— 耗时计算、文件 IO（`Data(contentsOf:)`）、数据库操作、同步网络请求。
+
+- **任务异步化**：挪到后台线程，完成回主线程更新 UI。GCD 按 QoS 选队列（`userInitiated` 计算密集、`utility` IO、`background` 低优先级），或用 `async/await` + `TaskGroup`
+- **任务拆分与调度**：必须在主线程做的（如大量 Cell 更新）切成小块，每批之后 `DispatchQueue.main.async` 让出主线程。高频操作（`scrollViewDidScroll`）用 CADisplayLink 节流，合并成每帧最多一次
+- **去重与条件更新**：Debounce 合并短时间内多次请求（搜索框）；值没变就跳过；只更新屏幕上可见的视图
+
+**2. 锁竞争** —— 后台线程持锁做耗时操作，主线程抢同一把锁就被阻塞。
+
+- **读写锁**：`pthread_rwlock_t` 或 GCD 并发队列 + barrier，多读并发、写独占。**推荐 GCD barrier**，更简洁不易错
+- **减小锁粒度**：一把大锁拆成多把细锁；简单计数器用 `os_unfair_lock`
+- **串行队列替代锁**：用串行 `DispatchQueue` 保证线程安全，免去手动管锁
+
+**3. 复杂布局计算** —— 约束多、`layoutSubviews` 频繁、层级深。
+
+- **预计算与缓存**：后台线程预算文本高度、Cell 高度并缓存
+- **手动 frame 替代 Auto Layout**：高频滚动的 Cell 里值得这么干
+- **第三方库**：Texture（AsyncDisplayKit）的 Flexbox 布局在后台线程执行；IGListKit 的自动 Diff 只更新变化的 Cell
+
+**4. 图片解码** —— PNG/JPEG 是压缩格式，GPU 要位图。默认 `UIImage` 加载时**不解码**，拖到 Commit Transaction 的 Prepare 阶段才在**主线程**解。一张 1000×1000 RGBA 解码后占 4MB。
+
+- **异步解码**：后台线程建 `CGContext` 绘制强制解码；或 ImageIO 的 `kCGImageSourceShouldCacheImmediately`；或 `UIGraphicsImageRenderer`
+- **降采样**：显示尺寸远小于原图时用 `CGImageSourceCreateThumbnailAtIndex` 按目标尺寸加载。**4000×4000 原本要 64MB，降到 100×100 只要 40KB**
+- **多级缓存**：内存（`NSCache`，设 `countLimit` / `totalCostLimit` 并监听内存警告）→ 磁盘 → 网络
+- **直接用成熟库**：SDWebImage / Kingfisher / Nuke 已经把上面全做了
+
+**5. 文本渲染** —— 字体查找、字形排版、断行计算在 CPU 端开销大。
+
+- `NSCache` 缓存算好的 `NSAttributedString`
+- TextKit 在后台线程排版（`NSTextStorage` + `NSLayoutManager` + `NSTextContainer`），或用 YYText
+
+#### 二、GPU 瓶颈
+
+**1. 离屏渲染** —— GPU 没法一次性完成，得先渲到离屏缓冲区再合成。额外的缓冲区创建、上下文切换、合成，以及**对渲染流水线的打断**都是开销。
+
+触发条件：`cornerRadius` + `masksToBounds`、无 `shadowPath` 的阴影、`layer.mask`、`allowsGroupOpacity`、`UIBlurEffect`。
+
+| 问题 | 优化 |
+| --- | --- |
+| **圆角** | ① 只设 `cornerRadius` 不设 `masksToBounds`——圆角只作用于 backgroundColor 和 border，不裁剪 contents，**不触发离屏**（适合纯色背景控件）② 让 CDN 处理（如 OSS 的 `?x-oss-process=image/rounded-corners,r_20`），**零 GPU 开销** ③ 后台线程用 `UIBezierPath` + `UIGraphicsImageRenderer` 预裁圆角图 |
+| **阴影** | ① 指定 `shadowPath` 明确告诉系统形状，免得系统遍历像素算轮廓（注意要在 `layoutSubviews` 里同步更新）② 用预制的 9-patch 阴影图 |
+| **遮罩** | ① 后台用 Core Graphics 预渲染成已裁剪位图（不适合形状动态变化）② `draw(_:)` 里用 blend mode 实现，避开 `layer.mask` |
+| **透明度** | ① 关掉 `allowsGroupOpacity` ② 把透明度应用到 `backgroundColor`（`UIColor.white.withAlphaComponent(0.5)`）而非视图的 `alpha` |
+| **毛玻璃** | ① CDN 处理（`?x-oss-process=image/blur,r_50,s_50`）② 背景不变时用 `CIGaussianBlur` 预生成静态模糊图 ③ 先缩小截图再模糊再放大 ④ 控制 `UIVisualEffectView` 的大小和数量 |
+
+**2. `shouldRasterize`** —— 这是**主动触发离屏渲染**的优化手段：把复杂图层渲成位图缓存，后续帧直接用。适合内容不常变的复杂视图（带阴影和圆角的卡片），本质是空间换时间。
+
+⚠️ 两个坑：必须设 `rasterizationScale = UIScreen.main.scale` 否则 Retina 屏发虚；**内容频繁变化时缓存不断失效重建，反而更慢**。
+
+#### 三、列表场景
+
+| 手段 | 要点 |
+| --- | --- |
+| **Cell 复用** | `dequeueReusableCell(withIdentifier:for:)`；在 `prepareForReuse` 里重置状态并**取消进行中的异步任务**（如图片加载） |
+| **高度缓存** | 预算并缓存到字典。或 `estimatedRowHeight` + `automaticDimension`，在 `willDisplay` 里缓存实际高度。**所有 Cell 等高时直接设固定 `rowHeight` 性能最好** |
+| **异步渲染** | 后台用 `UIGraphicsImageRenderer` 把文本图形绘成位图，回主线程赋给 `layer.contents`。每次配置新 Item 时**取消上一次的渲染任务**，否则复用 Cell 会显示错乱 |
+| **预加载** | `UITableViewDataSourcePrefetching` 的 `prefetchRowsAt` / `cancelPrefetchingForRowsAt` |
+| **减少视图层级** | 多个子视图合并异步绘制到单个 CALayer，减轻 GPU 合成压力 |
+| **Diff 更新** | `UITableViewDiffableDataSource` 或 IGListKit，只更新真正变化的 Cell，别 `reloadData` |
+| **快速滚动优化** | 快滚时只显示占位，停下再渲染完整内容 |
+| **分页加载** | 接近底部时异步加载下一页，用 `insertRows` 增量更新 |
+
+→ [原文：卡顿原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-原理.md) · [主线程优化](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-主线程优化.md) · [图片优化](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-图片优化.md) · [离屏渲染](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-离屏渲染.md) · [TableView 优化](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-TableView优化.md)
