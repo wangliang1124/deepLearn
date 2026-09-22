@@ -3739,3 +3739,86 @@ extension UserViewModel: Observable {}
 - `NSClassFromString` 对 Swift 类要带模块名前缀（见[第 107 题](#107-nsclassfromstring-在什么场景下使用有什么注意事项)）
 
 → [原文：Objective-C 与 Swift 区别](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C与Swift区别.md)
+
+---
+
+## 十、数据持久化
+
+### 134. SQLite 的 WAL 模式是什么？为什么推荐使用？
+
+**WAL**（Write-Ahead Logging）是 SQLite 的一种日志模式。与默认的回滚日志模式相反：
+
+| | 回滚日志（默认） | WAL |
+| --- | --- | --- |
+| 写入去向 | 先把**原数据**备份到日志，再**直接改数据库文件** | 修改**先写 WAL 文件**，不动数据库主文件 |
+| 读写并发 | 写会阻塞读 | **读写可并发** |
+
+核心优势是读写并发：**读取者看到的是最近一次提交前的一致性快照，写入者不阻塞读取者。** iOS 上推荐开 WAL 换更好的并发性能。
+
+→ [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
+
+### 135. Core Data 的 `NSManagedObjectContext` 为什么不能跨线程使用？
+
+因为它内部维护了**注册对象的缓存、变更追踪**等状态，**这些状态不是线程安全的**。跨线程访问会数据竞争，导致崩溃或数据损坏。
+
+Core Data 给了两种并发模式：
+
+- `mainQueueConcurrencyType` —— 绑定主队列
+- `privateQueueConcurrencyType` —— 绑定私有串行队列
+
+并通过 `perform(_:)` / `performAndWait(_:)` 确保操作在正确的队列上执行。
+
+⚠️ **`performAndWait` 嵌套会死锁**——它本质是串行队列的同步执行，见[第 90 题场景 ⑤](#90-ios-中死锁的常见场景有哪些-)。
+
+→ [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
+
+### 136. 数据库索引为什么能加速查询？什么时候不该建索引？🔥
+
+**为什么快**：没索引就只能全表扫描，O(N)。索引本质是一棵独立的 **B-Tree**，把被索引列的值按顺序组织成树。由于 B-Tree 每个节点能容纳**数百个 Key**，树高度极低——**百万级数据通常只有 3~4 层**，查找任意值只需 3~4 次节点比较，O(log N)。
+
+具体对比：100 万行数据，全表扫描最坏 100 万次比较，B-Tree 查找只需约 20 次。
+
+**什么时候不该建**：
+
+| 情况 | 为什么 |
+| --- | --- |
+| **低选择性的列** | 如 `is_deleted` 只有 0 和 1，索引无法有效缩小范围 |
+| **数据量很小的表** | 全表扫描本身就很快 |
+| **写多读少的表** | 每次写入都要维护索引 B-Tree |
+| **频繁更新的列** | 每次 UPDATE 都触发索引重排 |
+| **查询条件对列用了函数** | `WHERE LOWER(name) = 'test'` —— **索引存的是原始值，命不中** |
+
+最后一条最容易踩：索引建了却因为写法不对完全没生效。
+
+→ [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
+
+### 137. Realm 的零拷贝是怎么实现的？
+
+用 **mmap** 把数据文件映射到进程虚拟地址空间。Realm 对象的属性访问实际上是**计算属性**，直接读取 mmap 区域中对应偏移量的数据。
+
+这就消除了传统 ORM 的多次内存拷贝：
+
+```
+传统 ORM：读取行 → 解析 → 创建对象 → 赋值属性     （多次拷贝）
+Realm：   属性访问 → 按偏移量直读映射区            （0 次拷贝）
+```
+
+原理见[第 29 题](#29-mmap-有哪些优势适用于哪些场景-)的「零拷贝」和「按需加载」两条。
+
+→ [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
+
+### 138. MMKV 相比 UserDefaults 的性能优势在哪里？🔥
+
+| | UserDefaults | MMKV |
+| --- | --- | --- |
+| 写入方式 | **整个 plist 字典重新序列化并写盘** | **增量追加**到文件末尾 |
+| 单次写入耗时 | 与**总数据量**成正比 | 与**本次写入数据量**成正比，与总量无关 |
+| 底层 | 普通文件 IO | mmap + protobuf 序列化 |
+
+差异的本质在那一行加粗的地方：UserDefaults 存了 10MB 数据，改一个 Bool 也要把 10MB 重新序列化写一遍；MMKV 只追加那几个字节。
+
+mmap 还顺带减少了频繁文件 IO 和用户态拷贝，已写入的映射页由内核管理，进程崩溃后通常比普通用户态缓冲更容易恢复。
+
+⚠️ 但**别把它当强持久化**：mmap 不保证数据一定落盘，关键数据仍需要校验、重放或合适的同步策略。这和[第 29 题](#29-mmap-有哪些优势适用于哪些场景-)里「崩溃现场可恢复」那条的注意事项是一回事。
+
+→ [原文：iOS 中的数据库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的数据库.md)
