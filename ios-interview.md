@@ -2080,3 +2080,403 @@ Non-Fully Blocking：
 | **分页加载** | 接近底部时异步加载下一页，用 `insertRows` 增量更新 |
 
 → [原文：卡顿原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-原理.md) · [主线程优化](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-主线程优化.md) · [图片优化](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-图片优化.md) · [离屏渲染](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-离屏渲染.md) · [TableView 优化](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/卡顿/卡顿-TableView优化.md)
+
+---
+
+## 六、内存管理
+
+### 75. iOS 有哪些内存区域和内存分类？🔥
+
+这题要答**两个角度**，只答一个就少了一半。
+
+**角度一：程序内存布局**
+
+| 区域 | 存什么 | 谁管 |
+| --- | --- | --- |
+| 栈 Stack | 局部变量、函数参数、返回地址 | 系统自动，先进后出 |
+| 堆 Heap | 动态分配的对象实例 | 引用计数 |
+| 全局/静态区 BSS/Data | 全局变量、静态变量 | 程序启动时分配 |
+| 常量区 Rodata | 字符串常量等只读数据 | — |
+| 代码区 Text | 编译后的机器码 | — |
+
+**角度二：系统内存管理（这个才是优化时真正关心的）**
+
+| 类型 | 是什么 | 特点 |
+| --- | --- | --- |
+| **Clean Memory** | 可重新加载的：代码段、mmap 映射文件、未写入的内存页 | **可被系统随时回收** |
+| **Dirty Memory** | 被写入过的：堆对象、解码后的图片、缓存数据 | **无法被系统自动回收** |
+| **Compressed Memory** | 被压缩的 Dirty Memory | 访问时自动解压 |
+
+```
+Memory Footprint = Dirty Memory + Compressed Memory
+```
+
+这是 iOS 衡量 App 内存占用的**核心指标**。**Clean Memory 不计入 footprint**（系统随时能回收）。footprint 超限 App 就被杀。所以优化内存 = 减少 Dirty Memory。
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
+
+### 76. Swift 和 Objective-C 在内存管理上有什么区别？
+
+**内存分配**
+
+| | Swift | Objective-C |
+| --- | --- | --- |
+| 值类型 | 大量用 struct/enum，**优先栈分配** | 几乎全是对象，全部堆分配 |
+| 引用类型 | class 始终在堆 | 对象始终在堆 |
+| 复制行为 | 值类型深拷贝，引用类型浅拷贝 | 对象浅拷贝，要显式 `copy` |
+
+**值类型的逃逸**：值类型需要活过创建它的函数作用域时，编译器会把它分配到堆上——被逃逸闭包捕获、被存进堆上的属性、通过返回值逃逸。
+
+**协议类型变量的隐式堆分配**：`let shape: Shape = Circle()` 会包进存在容器。容器内联缓冲区 24 字节，超过就堆分配。**这意味着即使是值类型，通过协议类型持有也可能产生堆分配开销**——这在 ObjC 里不存在（ObjC 的协议类型本质就是个 `id` 指针）。详见[第 40 题](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么-)。
+
+**COW**：Array / Dictionary / Set 实现了写时拷贝，赋值时共享底层存储，改的时候才真拷贝。见[第 121 题](#121-swift-中-copy-on-write-的底层原理是什么-)有实测。
+
+**ARC 实现差异**
+
+| | Swift | Objective-C |
+| --- | --- | --- |
+| 引用计数存储 | 纯 Swift 类在**对象头部** | 非指针 isa 或 SideTable |
+| ARC 优化 | 更激进（栈提升、RC 消除） | 较保守 |
+| 逃逸分析 | 编译器自动做，可把堆分配优化成栈分配 | 不支持 |
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md) · [值类型和引用类型的区别](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/值类型和引用类型的区别.md)
+
+### 77. 什么是引用计数？它是如何工作的？🔥
+
+每个对象维护一个计数器：新强引用 +1，强引用移除 -1，归零就销毁释放。
+
+**ObjC 对象是两级存储**：
+
+1. **isa 内嵌（小引用计数）** —— Non-Pointer isa 模式下 `extra_rc` 字段直接存「引用计数 - 1」。arm64 下 19 位，最多表示 524288
+2. **侧表（大引用计数）** —— `extra_rc` 溢出时 `has_sidetable_rc` 置 1，计数转存到 `SideTable` 的 `RefcountMap` 哈希表。传统指针 isa（32 位）也走侧表
+
+**纯 Swift 类**的引用计数直接在对象头部的 RefCount 字段，不用 SideTable，访问更快。
+
+> ✅ **实测**（[objc-weak-and-arc.m](ios-snippets/objc-weak-and-arc.m) / [swift-memory-arc.swift](ios-snippets/swift-memory-arc.swift)）
+>
+> ```
+>   刚创建                 rc=2
+>   多一个强引用            rc=3
+>   再加一个 weak           rc=3  <- weak 不增加引用计数
+> ```
+>
+> ⚠️ **注意这里的绝对值**。常见说法是「刚 alloc 出来 retainCount 是 1」，但实测是 **2** —— 因为 ARC 为那个强引用的局部变量也插了一次 retain（`-O0` 下不会被优化掉）。
+>
+> **`CFGetRetainCount` 的绝对值受编译器插入的临时 retain 影响，只有相对变化才有意义。** 面试时说「加一个强引用 +1、加 weak 不变」是对的；说死「新对象就是 1」就容易被追问翻车。
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
+
+### 78. weak 和 assign 有什么区别？什么时候用 weak？🔥
+
+| | `weak` | `assign` / `unsafe_unretained` |
+| --- | --- | --- |
+| 对象释放后 | **自动置 nil** | 不置 nil，**变野指针** |
+| 安全性 | 安全，给 nil 发消息不崩 | 不安全，可能 `EXC_BAD_ACCESS` |
+| 性能 | 稍高（要维护弱引用表） | 更低 |
+| 适用 | 对象类型 | 基本数据类型，或明确知道自己在干什么的特殊场景 |
+
+**用 weak 的场景**：delegate（避免循环引用）、IBOutlet（已被父视图强引用）、Block 里引用 self 时配合 strong-weak dance。
+
+> ✅ **实测**（[objc-weak-and-arc.m](ios-snippets/objc-weak-and-arc.m)）两者的差别在出作用域那一刻立刻显形：
+>
+> ```
+> == weak 在对象销毁后自动置 nil ==
+>   出作用域前 weakRef = B
+>     [dealloc] B
+>   出作用域后 weakRef = nil  <- runtime 在 dealloc 时清空了 weak 表
+>
+> == assign（unsafe_unretained）不会置 nil，变成野指针 ==
+>     [dealloc] C
+>   出作用域后 unsafeRef 指针 = 0x102f352c0（非 nil，已指向已释放内存）
+> ```
+>
+> 注意 `unsafeRef` 打印出来是个**看起来很正常的地址**——这正是野指针危险的地方，判空判不出来。
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
+
+### 79. 什么是循环引用？如何解决？🔥
+
+两个或多个对象**相互强引用**，引用计数永远归不了零 → 内存泄漏。
+
+**四个常见场景**：
+
+1. 两个对象互相持有
+2. Block 捕获 self，而 self 又持有 Block
+3. delegate 用了 `strong`
+4. `NSTimer` 强引用 target，target 又持有 timer
+
+**解法**：`weak`/`unowned` 打破循环；Block 里用 `__weak`/`[weak self]`；适当时机手动断开（如 `viewDidDisappear` 里 `invalidate` timer）。
+
+> ✅ **实测**（[swift-memory-arc.swift](ios-snippets/swift-memory-arc.swift)）泄漏和修复的对比非常直观：
+>
+> ```
+> == 循环引用：两个 strong 互指，谁都释放不掉 ==
+>   构造完毕，即将离开作用域（下面应该没有任何 deinit）
+>   离开了——两个对象都泄漏了          ← 一行 deinit 都没有
+>
+> == 用 weak 打破循环 ==
+>   构造完毕，即将离开作用域
+>     - deinit Parent2
+>     - deinit Child2                  ← 两个都正常销毁了
+>   离开了
+> ```
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
+
+### 80. weak 的实现原理是什么？🔥
+
+**SideTable + weak_table + weak_entry** 三层结构。
+
+**数据结构**：系统维护一个固定大小的 `SideTable` 数组（`StripedMap`），对象地址哈希取模定位到其中一个。对象数量远大于 SideTable 数量，所以多个对象会映射到同一个——**这样设计的核心目的是分散锁竞争**，每个 SideTable 有独立的 `os_unfair_lock`，不同 SideTable 上的操作可以并行。
+
+每个 SideTable 内含一个 `weak_table_t`：以对象地址为 key 的**开放寻址哈希表**（线性探测，用 `mask` 快速取模，用 `max_hash_displacement` 限制探测范围）。表里每个 `weak_entry_t` 对应一个被弱引用的对象，记录指向它的所有弱引用**指针地址**（≤4 个时内联存储，超过就切换成动态哈希表）。
+
+**三个操作：**
+
+| 操作 | 链路 |
+| --- | --- |
+| **创建** `__weak id p = obj` | → `objc_initWeak(&p, obj)` → `storeWeak` → 哈希定位 SideTable 并加锁 → `weak_register_no_lock` 查找或创建 entry → 把 `&p` 加进 referrers → 设置 isa 的 `weakly_referenced` 标志位 |
+| **读取** `id o = p` | → `objc_loadWeakRetained(&p)` → **无锁 do-while 重试**读指针并尝试 `rootTryRetain()`，成功返回对象（调用方稍后 release），失败且 `*location` 已置 nil 则返回 nil |
+| **清理** | `dealloc` → `rootDealloc` → 慢速路径 → `clearDeallocating_slow` → `weak_clear_no_lock` 遍历所有弱引用指针执行 `*referrer = nil` |
+
+→ [原文：weak 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/weak详解.md)
+
+### 81. Block 中直接用 weakSelf 和转成 strongSelf 有什么区别？🔥
+
+```objc
+// 写法 A
+__weak typeof(self) weakSelf = self;
+view.action = ^{ [weakSelf action]; };
+
+// 写法 B
+__weak typeof(self) weakSelf = self;
+view.action = ^{
+    __strong typeof(weakSelf) strongSelf = weakSelf;
+    [strongSelf action];
+};
+```
+
+**两者都能避免循环引用**，区别不在这儿。区别是：**A 是每次使用时读一次弱引用；B 是先取出来强持有，在作用域内复用这个稳定对象。**
+
+底层上 `[weakSelf action]` 并不是直接对裸指针发消息，ARC 会转换成：
+
+```objc
+id tmp = objc_loadWeakRetained(&weakSelf);
+objc_msgSend(tmp, @selector(action));
+objc_release(tmp);
+```
+
+`objc_loadWeakRetained` 读出对象并尝试 retain，成功才返回——**保证这一次消息发送期间对象不会被释放**。对象已在释放或 weak 已清零就返回 `nil`。
+
+**所以：如果 Block 里只访问一次，两种写法底层差异很小。** 差异出现在多次访问时：
+
+```objc
+[weakSelf step1];   // objc_loadWeakRetained + msgSend + release
+[weakSelf step2];   // 又来一遍
+[weakSelf step3];   // 再来一遍
+```
+
+三次弱引用读取。而 strongSelf 写法**只读一次**：
+
+```objc
+id strongSelf = objc_loadWeakRetained(&weakSelf);
+objc_msgSend(strongSelf, @selector(step1));
+objc_msgSend(strongSelf, @selector(step2));
+objc_msgSend(strongSelf, @selector(step3));
+objc_release(strongSelf);                      // 作用域结束时 ARC 插入
+```
+
+**两个收益**：省掉重复的弱引用读取开销；更重要的是**保证三步之间对象不会中途被释放**——用 A 写法时 `step1` 执行完、`step2` 还没开始的间隙里对象可能已经没了，后两步就静默变成了给 nil 发消息。
+
+> ✅ **实测**（[objc-weak-and-arc.m](ios-snippets/objc-weak-and-arc.m)）
+>
+> ```
+>     只用 weakSelf：进入 block 时 还活着
+>     strongSelf 提升成功，rc=3 —— 在 block 执行期间对象不会被释放
+>   对象已释放后再调用：
+>     strongSelf = nil（这就是提升的意义：判空后安全返回）
+> ```
+>
+> 提升后 `rc` 确实涨了，证明它真的是**强**引用。所以标准写法一定要配判空：
+>
+> ```objc
+> __strong typeof(weakSelf) strongSelf = weakSelf;
+> if (!strongSelf) return;      // ← 这句不能少
+> ```
+
+→ [原文：weak 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/weak详解.md)
+
+### 82. weak 变量在对象释放后为什么能自动变成 nil？
+
+靠对象析构时 runtime 的**主动清理**：
+
+```
+-[NSObject dealloc]
+  → _objc_rootDealloc → rootDealloc()
+    ├── 快速路径：isa 标志位全 false（无弱引用/关联对象/SideTable 引用计数）→ 直接 free
+    └── 慢速路径：object_dispose → objc_destructInstance
+          → clearDeallocating() → clearDeallocating_slow()
+                ├── weak_clear_no_lock()   // 清弱引用
+                └── refcnts.erase()        // 清 SideTable 引用计数
+```
+
+关键在 `rootDealloc()` 的**快速路径判断**：检查 isa 里的 `weakly_referenced` 标志位，**只有为 true 才走慢速路径**。没被弱引用过的对象直接 free，省掉整套查表开销。
+
+`weak_clear_no_lock` 做四件事：
+
+1. 以对象地址为 key 在 `weak_table` 哈希查 `weak_entry`
+2. 按 entry 的 `out_of_line_ness` 标志判断用内联数组还是动态数组
+3. 遍历所有弱引用指针地址，**校验 `*referrer == referent` 后**才执行 `*referrer = nil`
+4. 从 `weak_table` 移除 entry
+
+整个过程在 SideTable 锁保护下进行，保证与其他线程的 `storeWeak`、`objc_loadWeakRetained` 线程安全。
+
+→ [原文：weak 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/weak详解.md)
+
+### 83. weak 和 unowned 的区别是什么？分别适用于什么场景？🔥
+
+两者都**不增加引用计数**，区别在对象释放之后：
+
+| | `weak` | `unowned` |
+| --- | --- | --- |
+| 对象释放后 | 自动置 nil | **不置 nil** |
+| 类型 | 必须是 Optional | 非 Optional |
+| 访问已释放对象 | 得到 nil，安全 | **确定性崩溃**（不是野指针） |
+| 开销 | 有注册/清理开销 | 更低 |
+| 适用 | 对象可能随时被释放（delegate） | **确定被引用对象的生命周期 ≥ 自己** |
+
+`unowned` 默认是 `unowned(safe)`：它依赖 Swift 对象头里的 **unowned 引用计数**实现「僵尸状态」检测，所以访问已释放对象时是一个明确的 fatal error，而不是读到随机内存。报错长这样：
+
+```
+Fatal error: Attempted to read an unowned reference but object 0x… was already deallocated
+```
+
+> ✅ **实测**（[swift-memory-arc.swift](ios-snippets/swift-memory-arc.swift)）
+>
+> ```
+>   对象存活时：weak = 非 nil
+>     - deinit Owner
+>   对象销毁后：weak = nil（自动置空，安全）
+> ```
+>
+> `unowned` 那一半没有实跑——跑了进程就直接 fatal error 终止了，所以代码里只保留了说明。这本身也说明了问题：**`unowned` 猜错了就是崩，没有中间地带。**
+
+→ [原文：weak 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/weak详解.md)
+
+### 84. 纯 Swift 类的 weak 实现和 OC 有什么不同？
+
+三处显著差异。
+
+**① 对象布局** —— OC 对象以 `isa` 开头，引用计数溢出才进 SideTable；纯 Swift 类以 `HeapObject` 为基础，含 `metadata`（等效 isa）+ `InlineRefCounts`（8 字节，内联编码 strong/unowned 计数）。
+
+**② 弱引用存储路径**
+
+- **OC**：对象地址 → `StripedMap` 哈希 → `SideTable` → `weak_table` → `weak_entry`。**weak 指针直接指向对象**
+- **Swift**：首次创建 weak 引用时，Runtime 分配 `HeapObjectSideTableEntry`（含完整引用计数和对象指针），把对象的 `InlineRefCounts` 替换成指向该 entry 的指针。**weak 变量存的是 entry 指针而非对象指针**，读取时需通过 entry 间接取对象
+
+  > 这就是[第 37 题](#37-纯-swift-类和继承自-nsobject-的-swift-类在底层有什么区别)说的「bit 63 置 1 后切换不可逆」。
+
+**③ 置 nil 时机**
+
+- **OC**：`dealloc` 时**同步**遍历 `weak_entry` 把所有弱引用置 nil
+- **Swift**：**延迟置 nil** —— dealloc 时不主动清理，而是在**下一次读取 weak 变量时**检查 strong count 是否为 0，已释放才返回 nil
+
+**native vs non-native**：编译器在**编译期**按继承关系决定走哪条路——纯 Swift 类走 `HeapObject` 路径；继承自 `NSObject` 或 OC 类的 Swift 类**退回 OC 的 SideTable + weak_table 路径**，行为与 OC weak 完全一致。
+
+→ [原文：weak 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/weak详解.md)
+
+### 85. 详细介绍 Autorelease Pool 的工作机制和底层实现🔥
+
+一种**延迟释放机制**：对象被标记 autorelease 后不立即释放，而是注册到当前 pool，等池销毁时统一 `release`。
+
+| | 立即释放 | 延迟释放 |
+| --- | --- | --- |
+| 怎么创建 | `alloc/init`、`new`、`copy` | 便利构造方法如 `stringWithFormat:` |
+| 何时释放 | 引用计数归零就 dealloc | pool 销毁时 |
+| 依赖 RunLoop | 否 | 主线程依赖 |
+
+⚠️ 现代 ARC 有 **autorelease elision** 优化，进一步减少了 autorelease 对象数量，所以**实际上大部分对象都是立即释放的**。
+
+#### AutoreleasePoolPage
+
+- 每个 page **4096 字节**（一个虚拟内存页），约存 **505 个**对象指针
+- 多个 page 通过 `parent`/`child` 形成**双向链表**
+- page 内部是**栈**，`next` 指针指向栈顶
+- **每个线程有独立的 pool**（通过 TLS 存 hotPage）
+
+#### POOL_BOUNDARY（哨兵）
+
+值为 `nil` 的特殊标记。进 `@autoreleasepool {` 时 push 一个，出 `}` 时从栈顶逐个 `release` 直到遇见**对应的**那个哨兵。**这个设计就是为了支持嵌套**：
+
+```objc
+@autoreleasepool {          // push POOL_BOUNDARY_1
+    NSString *a = ...;      // push a
+    @autoreleasepool {      // push POOL_BOUNDARY_2
+        NSString *b = ...;  // push b
+    }                       // pop 到 BOUNDARY_2，释放 b
+}                           // pop 到 BOUNDARY_1，释放 a
+```
+
+#### autorelease 的流程
+
+1. 对象调 `autorelease` → 实际执行 `objc_autorelease()`
+2. 通过 TLS 拿当前线程的 `hotPage`
+3. 添加：**快速路径** page 有空间就存进 `next` 位置并 `next++`；**慢速路径** page 满了就创建新 page 作为 child
+4. 作用域结束调 `objc_autoreleasePoolPop()`，逐个 release 到哨兵为止
+
+#### 主线程的 pool 由 RunLoop 自动管理
+
+| RunLoop 状态 | 动作 |
+| --- | --- |
+| `kCFRunLoopEntry` | 创建 pool |
+| `kCFRunLoopBeforeWaiting` | **释放旧池、创建新池** ← autorelease 对象在此释放 |
+| `kCFRunLoopExit` | 释放 pool |
+
+这和[第 15 题](#15-runloop-的运作流程是怎样的-)说的「BeforeWaiting 时系统做三件事」的第三件是同一回事。
+
+> ✅ **实测**（[objc-weak-and-arc.m](ios-snippets/objc-weak-and-arc.m)）嵌套 pool 的释放时机：
+>
+> ```
+>   进入外层 pool
+>   内层 pool 中，对象存活 rc=3
+>     [dealloc] E
+>   内层 pool 结束后 wp = nil（已随 pool drain 释放）
+>   外层 pool 结束
+> ```
+>
+> `dealloc` 精确发生在内层 `}` 处，不是等到外层——哨兵机制生效。
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
+
+### 86. 收到内存警告时应该注意什么？
+
+这题的考点是一个**反直觉的陷阱**：别「先解压再释放」。
+
+iOS 的内存压缩机制会把长时间未访问的 Dirty Memory 压缩。如果你在 `didReceiveMemoryWarning` 里遍历并释放这些**已压缩**的数据，系统**必须先解压才能释放**。于是清理操作会先**临时增加**内存占用（解压后比压缩时更大），然后才降下来——**可能适得其反地加剧内存压力**，同时 CPU 飙升造成卡顿。
+
+**推荐用 `NSCache`**：它内部实现了对内存压力的智能响应，系统紧张时自动清理，且**优先清理未压缩的、访问频率低的数据**，避开了上面这个坑。
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
+
+### 87. 如何检测和定位内存泄漏？
+
+**工具**
+
+| 工具 | 用途 |
+| --- | --- |
+| Instruments - **Leaks** | 检测循环引用导致的泄漏 |
+| Instruments - **Allocations** | 分析分配情况，找内存增长点 |
+| **Memory Graph Debugger** | Xcode 内置，可视化看对象引用关系 |
+| **MLeaksFinder** | 第三方，运行时自动检测 UIViewController 泄漏 |
+
+**排查顺序**
+
+1. Memory Graph 看引用关系，找环
+2. 检查 delegate 是不是 `weak`
+3. 检查 Block 里 self 处理对不对
+4. 检查 Timer、NotificationCenter 有没有正确移除
+5. Allocations 追踪内存增长
+
+> 💡 补充一个本地就能用的土办法：给关键类加 `deinit`/`dealloc` 打印。[swift-memory-arc.swift](ios-snippets/swift-memory-arc.swift) 就是靠这个把循环引用演示出来的——**该打印的 deinit 没出现，就是泄漏了**。不用开 Instruments，跑一遍就知道。
+
+→ [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
