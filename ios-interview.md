@@ -40,23 +40,23 @@ cd ios-snippets && ./run-all.sh      # 15 个程序，全部通过
 
 ## 目录
 
-| 章节 | 题数 |
-| --- | --- |
-| [一、App 启动与优化](#一app-启动与优化) | 3 |
-| [二、生命周期](#二生命周期) | 8 |
-| [三、RunLoop](#三runloop) | 6 |
-| [四、底层原理](#四底层原理) | 38 |
-| [五、UI 与渲染](#五ui-与渲染) | 18 |
-| [六、内存管理](#六内存管理) | 13 |
-| [七、多线程与并发](#七多线程与并发) | 9 |
-| [八、运行时机制](#八运行时机制) | 11 |
-| [九、语言特性](#九语言特性) | 27 |
-| [十、数据持久化](#十数据持久化) | 5 |
-| [十一、计算机网络](#十一计算机网络) | 19 |
-| [十二、架构设计](#十二架构设计) | 8 |
-| [十三、崩溃治理](#十三崩溃治理) | 20 |
-| [十四、耗电治理](#十四耗电治理) | 2 |
-| **合计** | **187** |
+| 章节 | 题号 | 题数 |
+| --- | --- | --- |
+| [一、App 启动与优化](#一app-启动与优化) | 1–3 | 3 |
+| [二、生命周期](#二生命周期) | 4–11 | 8 |
+| [三、RunLoop](#三runloop) | 12–17 | 6 |
+| [四、底层原理](#四底层原理) | 18–56 | 39 |
+| [五、UI 与渲染](#五ui-与渲染) | 57–74 | 18 |
+| [六、内存管理](#六内存管理) | 75–87 | 13 |
+| [七、多线程与并发](#七多线程与并发) | 88–96 | 9 |
+| [八、运行时机制](#八运行时机制) | 97–107 | 11 |
+| [九、语言特性](#九语言特性) | 108–133 | 26 |
+| [十、数据持久化](#十数据持久化) | 134–138 | 5 |
+| [十一、计算机网络](#十一计算机网络) | 139–157 | 19 |
+| [十二、架构设计](#十二架构设计) | 158–165 | 8 |
+| [十三、崩溃治理](#十三崩溃治理) | 166–185 | 20 |
+| [十四、耗电治理](#十四耗电治理) | 186–187 | 2 |
+| | **合计** | **187** |
 
 > 「计算机网络」一章和 [02-deep-dive.md 的 HTTP 章](02-deep-dive.md#http-协议)主题重叠：那边是链接索引，这里是成文答案，可以对照着看。
 
@@ -117,7 +117,7 @@ cd ios-snippets && ./run-all.sh      # 15 个程序，全部通过
 
 ⚠️ 这对埋点统计是个坑：预热时进程早就创建了，`sysctl` 拿到的 `p_starttime` 可能比用户点击早几小时。用 `ProcessInfo.processInfo.environment["ActivePrewarm"] == "1"` 判断，别把后台预热时间算进用户感知耗时。
 
-> ✅ 上面 ④ 里「Category 方法插到列表前面」和「`+load` 不走 msgSend」两条都有实测，见 [第 2 题](#4-load-方法的执行顺序是怎样的-) 与 [第 105 题](#105-category可以添加实例变量实例方法类方法吗-)。
+> ✅ 上面 ④ 里「Category 方法插到列表前面」和「`+load` 不走 msgSend」两条都有实测，见第 4 题与第 102 题。
 
 → [原文：App 启动流程](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/App启动流程.md)
 
@@ -1269,3 +1269,376 @@ func drawB<T: Shape>(_ shape: T) { shape.draw() }  // 泛型约束
 这套机制不只服务 `as?`/`as!`，泛型约束检查、协议类型赋值等所有「判断类型是否遵循协议」的场景都走它。
 
 → [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
+
+### 42. 下面代码 `sayGoodbye()` 的输出是什么？为什么？🔥
+
+```swift
+protocol Greeting {
+    func sayHello()                                     // 协议要求
+}
+extension Greeting {
+    func sayHello()   { print("Hello from protocol") }
+    func sayGoodbye() { print("Goodbye from protocol") } // 只在扩展里，不是协议要求
+}
+struct Person: Greeting {
+    func sayHello()   { print("Hello from Person") }
+    func sayGoodbye() { print("Goodbye from Person") }
+}
+
+let greeter: Greeting = Person()
+greeter.sayHello()     // ?
+greeter.sayGoodbye()   // ?
+```
+
+> ✅ **实测**（Swift 6.2.3）
+>
+> ```
+> greeter.sayHello()      -> Hello from Person       ← 见证表，找到了 Person 的
+> greeter.sayGoodbye()    -> Goodbye from protocol   ← 静态派发，调到了扩展的默认实现
+>
+> 对比：用具体类型调用
+> concrete.sayHello()     -> Hello from Person
+> concrete.sayGoodbye()   -> Goodbye from Person     ← 同一个方法，结果变了
+> ```
+>
+> SIL 给出了机制层面的直接证据：
+>
+> ```
+> witness_method  #Greeting.sayHello                      ← 走见证表
+> function_ref    Greeting.sayGoodbye （扩展版本）          ← 静态绑定
+> function_ref    Person.sayGoodbye   （具体类型调用时）
+> ```
+
+**原因在于函数地址存在哪里：**
+
+`sayHello` 是**协议要求**，编译器在见证表里给它留了槽位。通过协议类型调用时，运行时从存在容器取出见证表，找到 `Person.sayHello` 的函数指针跳过去——动态派发，能找到具体实现。
+
+`sayGoodbye` **只在扩展里**，不是协议要求，所以它**不在任何派发表中**（既不在见证表也不在 vtable），编译后就是 `__TEXT,__text` 段里一个普通函数符号。编译器在编译期按变量的**声明类型** `Greeting` 直接绑定到扩展版本，运行时**根本没有机会发现** `Person` 还有自己的 `sayGoodbye`。
+
+**结论**：想让具体类型的实现在通过协议类型调用时生效，方法**必须写进 `protocol` 声明体**，不能只放在 extension 里。
+
+→ [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
+
+### 43. 类型遵循多个协议时，这些协议的方法信息怎么组织？为什么不像虚函数表那样都放进类型元数据？
+
+每个（类型, 协议）组合各有一张**独立的见证表**。
+
+| | 虚函数表 VTable | 见证表 Witness Table |
+| --- | --- | --- |
+| 归属 | 属于**类** | 属于**一致性关系**（类型-协议组合） |
+| 存储 | 内嵌在类的元数据里 | 独立全局符号，在 `__DATA,__const` |
+| 怎么找到 | 通过实例头部的 isa / HeapMetadata 直达 | 通过 `__TEXT,__swift5_proto` 的一致性记录间接关联 |
+| 数量 | 每个类一张 | **每个类型对每个协议各一张** |
+
+**为什么不内嵌**：一个类型能遵循任意多个协议。都塞进元数据，元数据大小就随协议数量变化，**结构不固定**——运行时就没法用固定偏移量访问 vtable 等其他字段了。独立存储后元数据保持固定布局，见证表靠一致性记录间接关联即可。
+
+→ [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
+
+### 44. Swift 的完整编译流程是怎样的？
+
+七步：
+
+1. **词法分析 Lexer** —— 切成 Token 流（关键字、标识符、运算符、字面量），剥掉注释和空白但保留位置信息供诊断用
+2. **语法分析 Parser** —— Token 流组织成 AST，此时**还没有类型信息**
+3. **语义分析 Sema** —— 前端最复杂的一步：类型推断（基于约束求解器）、类型检查、重载决议、协议一致性检查、访问控制检查，产出**带类型标注的 AST**
+4. **SILGen** —— 降为 **Raw SIL**：控制流变成基本块 + 分支指令组成的 CFG，表达式变成 SSA 指令序列，**保守地插入所有必要的 retain/release**
+5. **SIL 优化** —— 两组 Pass：**Guaranteed Passes**（任何优化级别都跑，负责诊断：确定初始化、排他性检查、所有权验证）和 **General Passes**（`-O` 才跑：ARC 优化、泛型特化、去虚拟化、内联），产出 **Canonical SIL**
+6. **IRGen** —— 降为 LLVM IR：SIL 类型映射成 LLVM 类型，堆分配变成运行时函数调用（`swift_allocObject`），VTable/Witness Table 变成全局常量数组
+7. **LLVM 优化 + 代码生成** —— LLVM 自己那套 Pass（指令合并、循环优化、向量化、寄存器分配），生成机器码，链接器产出可执行文件
+
+→ [原文：SIL](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/SIL.md)
+
+### 45. 什么是 SIL？SIL 存在的意义？
+
+SIL（Swift Intermediate Language）是 Swift 编译器的中间表示，夹在 AST 和 LLVM IR 之间。
+
+**为什么需要它**：LLVM IR 是为 C/C++ 设计的通用低级表示，**表达不了 Swift 的高级语义**——ARC、值语义、泛型、协议见证表在 LLVM IR 里都看不出来了。SIL 保留这些信息，让编译器能在降到 LLVM IR 之前做 Swift 特有的优化和检查。
+
+具体解决六个问题：
+
+1. **消除冗余 retain/release** —— SILGen 保守插了一大堆，SIL 层做数据流分析识别并删掉成对的、不影响生命周期的。LLVM IR 层做不到，因为那里 retain/release 只是普通函数调用
+2. **消除泛型开销** —— 泛型默认通过值见证表间接操作，SIL 的泛型特化 Pass 在编译期确定具体类型后生成去泛型版本
+3. **优化协议动态派发** —— 去虚拟化 Pass 把 `witness_method` 间接调用换成 `function_ref` 直接调用，还能触发内联等级联优化
+4. **编译期诊断** —— 基于完整 CFG 和数据流做确定初始化检查、不可达代码检测、switch 穷举检查
+5. **内存访问排他性检查** —— `begin_access` / `end_access` 标记访问区间，编译期检测重叠的排他性冲突，测不准的插运行时检查
+6. **函数签名优化** —— 死参数消除、Owned-to-Guaranteed 转换（省掉不必要的 retain/release）、未使用返回值消除
+
+→ [原文：SIL](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/SIL.md)
+
+### 46. SIL 中的 OSSA 是什么？有什么作用？
+
+**SSA**（静态单赋值）要求每个变量只被赋值一次，便于数据流分析。**OSSA**（Ownership SSA）是 Swift 5.1 起在 SSA 之上加的所有权模型：**每个非平凡 SIL 值有且仅有一个明确的"所有者"，所有权在编译期被静态验证**。
+
+四种所有权：
+
+| 类别 | 含义 |
+| --- | --- |
+| `@owned` | 持有所有权，必须负责销毁或转移 |
+| `@guaranteed` | 借用语义，调用者保证存活，被调用者**不得销毁** |
+| `@unowned` | 无主引用，不保证生命周期 |
+| trivial | `Int` 之类平凡类型，无需管理 |
+
+OSSA 里 `strong_retain` / `strong_release` 被换成语义更明确的 `copy_value` / `destroy_value`，并用 `begin_borrow` / `end_borrow` 显式标记借用作用域。好处是能精确消除冗余引用计数、把销毁**提前到最后一次使用之后**；它也是 `consuming` / `borrowing` 参数和 `~Copyable` 类型的底层基础。
+
+→ [原文：SIL](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/SIL.md)
+
+### 47. 开发者可以利用 SIL 做什么？
+
+SIL 虽是编译器内部表示，但可以直接看：
+
+```bash
+swiftc -emit-silgen x.swift   # Raw SIL
+swiftc -emit-sil    x.swift   # Canonical SIL
+swiftc -emit-sil -O x.swift   # 优化后 SIL
+```
+
+实际用途：
+
+- **看内存分配在哪** —— `alloc_stack`（栈）、`alloc_ref`（堆）、`alloc_box`（闭包捕获提升到堆）
+- **看方法派发方式** —— `function_ref`（静态）、`class_method`（vtable）、`witness_method`（见证表）、`objc_method`（消息）
+- **验证优化是否生效** —— 对比优化前后：冗余 retain/release 消了吗、泛型特化了吗、虚调用去虚拟化了吗
+- **指导性能调优** —— 按实际生成的指令有针对性地上 `final`/`private`（促进去虚拟化）、值类型（减 ARC）、`@inlinable`（跨模块内联）、WMO
+- **理解语言行为** —— Optional 的枚举本质（`switch_enum`）、闭包捕获的 box 提升（`alloc_box` + `partial_apply`）、struct 与 class 的内存模型差异
+
+> ✅ 本文[第 38 题](#38-swift-有哪些方法派发方式-)和[第 42 题](#42-下面代码-saygoodbye-的输出是什么为什么-)的结论就是这么验出来的。
+
+→ [原文：SIL](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/SIL.md)
+
+### 48. Swift 二进制兼容带来的好处是什么？
+
+**① App 体积变小.** ABI 稳定之前每个 Swift App 都要嵌完整的 Swift 标准库（约 10-15MB）。iOS 12.2+ 起 Swift 运行时内置于系统，不用再打包。
+
+**② 启动变快.** 系统级 Swift 运行时进了 dyld shared cache，多 App 共享同一份物理内存页，省掉各自加载的开销。
+
+**③ 能分发预编译二进制框架了.** 这是三个机制合力的结果：
+
+- **ABI 稳定** —— 不同 Swift 版本编译的二进制能正确链接
+- **模块稳定性** —— `.swiftinterface` 让不同版本编译器都能导入模块
+- **Library Evolution** —— 库可以独立于客户端更新而不破坏兼容
+
+在此之前第三方框架只能发源码（CocoaPods / SPM 源码依赖）或给每个 Swift 版本各编一份。现在直接发 `.xcframework` 就行。
+
+**④ 系统框架可以用 Swift 写.** Apple 自己也受益——系统更新时框架的 Swift 代码可独立升级而不破坏已装的 App，于是能逐步把系统框架从 ObjC 迁到 Swift（SwiftUI、Observation 就是这么来的）。
+
+**⑤ 跨团队协作成本降低.** 各团队独立编译各自模块，产出二进制给别人用，不必全公司锁死同一个 Xcode 版本。
+
+→ [原文：Swift 二进制兼容性](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift二进制兼容性.md)
+
+### 49. 什么是编译插桩？在 iOS 中有哪些应用场景？
+
+编译器在生成代码时自动注入额外指令，**不改变程序逻辑**但能在运行时收集执行信息。发生在 LLVM IR 层，通过 Instrumentation Pass 实现，对源码透明。
+
+| 场景 | 怎么插 |
+| --- | --- |
+| **Sanitizer** | ASan 在每次内存访问前插边界检查（Shadow Memory 追踪合法区域）；TSan 在内存访问和同步操作处插记录指令查数据竞争；UBSan 在可能未定义行为的操作前插检查 |
+| **二进制重排** | SanitizerCoverage（`-fsanitize-coverage=func,trace-pc-guard`）在函数入口插回调，收集启动期调用顺序生成 Order File |
+| **代码覆盖率** | `-fprofile-instr-generate` 在基本块边界插计数器，`-fcoverage-mapping` 嵌映射表关联源码位置 |
+| **PGO** | 先跑插桩版收集热路径数据，再用 Profile 指导重新编译，优化分支预测、内联和基本块排布 |
+
+⚠️ 插桩有运行时开销：**ASan 约 2x，TSan 约 5-15x**，所以只在 Debug/测试用。PGO 是例外——最终 Release 产物不含插桩。
+
+> 💡 [swift-concurrency.swift](ios-snippets/swift-concurrency.swift) 里的数据竞争可以用 TSan 直接抓出来：`swiftc -sanitize=thread x.swift`。
+
+→ [原文：iOS 编译原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS编译原理.md)
+
+### 50. 什么是类型擦除？为什么 Swift 需要类型擦除？
+
+类型擦除 = 运行时隐藏具体类型信息，让不同类型能通过统一接口操作。
+
+Swift 需要它的**直接原因是 PAT（带关联类型的协议）的限制**：协议一旦有关联类型或 `Self` 约束，就不能直接当类型用，因为编译器不知道关联类型绑定到什么，算不出内存布局和方法签名。
+
+```swift
+protocol Container {
+    associatedtype Item
+    func add(_ item: Item)
+}
+
+// ❌ Protocol 'Container' can only be used as a generic constraint
+//    because it has Self or associated type requirements
+let containers: [Container] = []
+```
+
+编译器不知道 `Item` 是 `String` 还是 `Int`，就定不了 `add` 收什么参数，也没法给容器里的值分配正确大小的内存。
+
+两种绕法：
+
+1. **存在类型 `any`** —— 编译器建存在容器，运行时通过见证表间接派发，不需要编译期知道具体类型
+2. **手动包装器 `AnyXxx<T>`** —— 把协议层面的关联类型转成泛型参数，`AnyContainer<String>` 就是个完整的具体类型了
+
+→ [原文：类型擦除](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/类型擦除.md)
+
+### 51. Swift 中的存在类型和不透明类型有什么区别？🔥
+
+核心区别：**谁知道具体类型、什么时候确定。**
+
+**存在类型 `any P`** —— 来自存在量词 ∃，「存在某个遵循 P 的类型，但不关心是哪个」。**运行时**确定，同一变量不同时刻可以持有不同具体类型。底层走存在容器 + 见证表间接派发，有运行时开销。
+
+```swift
+var animals: [any Animal] = [Dog(), Cat()]   // 异构集合，OK
+var pet: any Animal = Dog()
+pet = Cat()                                   // 换个类型，OK
+```
+
+**不透明类型 `some P`** —— 来自全称量词 ∀，「有一个**确定的**具体类型遵循 P，但不告诉你是哪个」。**编译期**就确定，可静态派发和内联，零额外开销。代价是同一位置必须**始终**是同一种具体类型。
+
+```swift
+func makePet() -> some Animal { Dog() }       // ✅
+
+func makeRandomPet() -> some Animal {
+    Bool.random() ? Dog() : Cat()             // ❌ 返回类型不一致，编译失败
+}
+```
+
+> ✅ **实测**（[swift-existential-generic.swift](ios-snippets/swift-existential-generic.swift)）代码里 `returnsAny` 可以按 flag 返回 `Small` 或 `Large`，`returnsSome` 换成两种类型就直接编译不过。
+
+**`any` 关键字的意义**：Swift 5.6 才引入。之前 `let x: Animal` 就是存在类型，但语法上**毫无提示**这里有运行时开销。`any` 强迫开发者有意识地选：要零开销的 `some`/泛型，还是要有开销但灵活的 `any`。Swift 5.7 起，带关联类型的协议**必须**写 `any` 才能当存在类型用。
+
+→ [原文：类型擦除](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/类型擦除.md)
+
+### 52. `any` 和 `some` 分别在什么场景下使用？
+
+**用 `some`** —— 返回类型/属性类型要隐藏具体实现，但**始终返回同一种**具体类型。经典例子是 SwiftUI 的 `var body: some View`：编译器知道 body 的具体类型是 `VStack<TupleView<(Text, Button<Text>)>>` 这种鬼东西，但你不用写出来，改 UI 时也不用跟着改返回类型。
+
+**用 `any`** —— 需要**异构集合**，或函数在不同条件下要返回不同具体类型。
+
+```swift
+let shapes: [any Shape] = [Circle(radius: 5), Square(side: 3)]
+func randomShape() -> any Shape { Bool.random() ? Circle(radius: 1) : Square(side: 1) }
+```
+
+**用泛型约束 `<T: P>`** —— 集合内元素**类型相同**（同构）且要最大化性能。编译器能特化，静态派发甚至内联。
+
+```swift
+func process<T: Shape>(_ items: [T]) { for i in items { print(i.area()) } }
+// process([Circle(), Square()])   // ❌ 类型不一致
+```
+
+**决策**：`some` / 泛型约束是**默认选择**（编译期确定，零开销）；只有真的需要异构能力时才用 `any`。
+
+→ [原文：类型擦除](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/类型擦除.md)
+
+### 53. 标准库 `AnySequence` 这类类型擦除包装器的内部原理是什么？
+
+**Box 模式**：抽象基类 + 具体 Box 子类 + 公开包装器，三层。
+
+```swift
+// ① 抽象基类：泛型参数只剩 Element，没有具体序列类型 S
+internal class _AnySequenceBox<Element> {
+    func makeIterator() -> AnyIterator<Element> { fatalError() }
+}
+
+// ② 具体 Box 子类：持有具体类型 S
+internal final class _SequenceBox<S: Sequence>: _AnySequenceBox<S.Element> {
+    let _base: S
+    init(_ base: S) { _base = base }
+    override func makeIterator() -> AnyIterator<S.Element> {
+        AnyIterator(_base.makeIterator())
+    }
+}
+
+// ③ 公开包装器
+public struct AnySequence<Element>: Sequence {
+    internal let _box: _AnySequenceBox<Element>
+    public init<S: Sequence>(_ base: S) where S.Element == Element {
+        _box = _SequenceBox(base)   // ← 擦除就发生在这一行
+    }
+    public func makeIterator() -> AnyIterator<Element> {
+        _box.makeIterator()          // vtable 派发到子类的 override
+    }
+}
+```
+
+**擦除是怎么发生的**：`_SequenceBox<Array<Int>>` 被赋给类型为 `_AnySequenceBox<Int>` 的属性时发生**向上转型**，泛型参数 `Array<Int>` 从类型签名里消失，只剩 `Element`（即 `Int`）。之后调 `_box.makeIterator()` 通过 vtable 派发到子类的 override，那里面才调用真正的 `Array<Int>.makeIterator()`。
+
+**本质**就是面向对象的子类型多态：父类引用指向子类实例，具体类型信息藏在子类里，被继承层级「吞掉」了。
+
+> ✅ **实测**（[swift-reflection-codable.swift](ios-snippets/swift-reflection-codable.swift)）更轻量的做法是**把方法存成闭包**——标准库的 `AnyPublisher` 走的就是这条路：
+>
+> ```swift
+> struct AnyShape: Shape {
+>     private let _area: () -> Double
+>     init<T: Shape>(_ s: T) { _area = s.area }   // 捕获具体类型，只留签名
+>     func area() -> Double { _area() }
+> }
+> ```
+>
+> ```
+>   AnyShape(Small(r:2)).area() = 12.566370614359172
+>   MemoryLayout<AnyShape>.size = 16 字节（一个闭包 = 2 word）
+> ```
+>
+> 对比 `any Shape` 的 40 字节，闭包方案只要 16 字节。
+
+→ [原文：类型擦除](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/类型擦除.md)
+
+### 54. 存在类型的底层是怎么实现的？为什么有性能开销？
+
+见[第 40 题](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么-)，那里有完整的实测数据。补充结构定义：
+
+```c
+struct ExistentialContainer {
+    void*         valueBuffer[3];   // 24 字节
+    TypeMetadata* type;             // 类型元数据指针
+    WitnessTable* witnessTable;     // 协议见证表指针
+};
+```
+
+三部分各司其职：
+
+1. **值缓冲区（24 字节）** —— 具体类型 ≤ 24 字节就内联存这儿；超过就堆分配，缓冲区退化成存堆指针。这就是「小类型的存在类型比大类型快」的原因
+2. **类型元数据** —— 运行时靠它对一个「不认识」的类型执行内存分配、拷贝、销毁
+3. **协议见证表** —— 类似 C++ 虚表，存协议每个方法要求对应的函数指针
+
+开销来自三处：**见证表间接跳转且无法内联**、**大值类型触发 `malloc`**、**多协议组合时容器里有多张见证表**（`any Hashable & Comparable` 就有两张）。
+
+→ [原文：类型擦除](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/类型擦除.md)
+
+### 55. 泛型约束比存在类型更高效的原因是什么？
+
+特化后的优化是**链式**的：
+
+1. **内存布局已知** —— `Circle` 的大小编译期确定，直接按值操作，不用值见证表
+2. **方法地址已知** —— `Circle.area()` 地址编译期确定，直接 `call`，不查见证表
+3. **可以内联** —— 实现够短就直接展开进循环，连函数调用开销都省了
+
+| | 泛型 `<T: Shape>` | 存在类型 `any Shape` |
+| --- | --- | --- |
+| 类型信息 | 编译期已知（特化后） | 运行时才知道 |
+| 方法派发 | 静态派发 | 见证表间接派发 |
+| 内联 | 可以 | 不可能 |
+| 内存操作 | 按已知大小直接操作 | 通过值见证表间接操作 |
+| 函数副本 | 每个具体类型一份（空间换时间） | 只有一份通用版本 |
+
+⚠️ **关键的一句**：泛型特化**依赖编译器优化**。`-Onone` 下泛型同样走见证表，性能和 `any` 接近。区别在于泛型**有能力**被特化，而 `any` 在语义上就排除了这个可能——因为数组里每个元素的具体类型都可能不同，编译器没法为"某一个"类型特化。
+
+这也正是[第 40 题实测](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么-)里 `-O` 差 10.31x、`-Onone` 只差 1.27x 的原因。
+
+→ [原文：类型擦除](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/类型擦除.md)
+
+### 56. Codable 的底层原理是什么？🔥
+
+**不是运行时反射**，也不是 ObjC 那种遍历属性 + 拼字符串 + KVC 赋值。核心是**编译器合成 + 标准库协议抽象 + 具体 Encoder/Decoder 实现**三层。
+
+`Codable` 本身只是 `Encodable & Decodable` 的组合。关键在于：类型声明遵循 `Codable` 后，只要存储属性也满足编解码条件，编译器就在**编译期自动生成** `CodingKeys`、`encode(to:)`、`init(from:)`。
+
+生成的代码本质就是一份强类型的手写编解码逻辑：
+
+- 编码时 `encode(to:)` 先从 `Encoder` 拿合适的容器（对象用 keyed container、数组用 unkeyed、单值用 single value），按 `CodingKey` 把属性逐个写进去
+- 解码时 `init(from:)` 拿对应容器，按属性类型读。**非可选属性走 `decode`**，字段缺失或类型不匹配就抛错；**可选属性走 `decodeIfPresent`**，字段不存在或为 `null` 时得到 `nil`
+
+`Encoder` / `Decoder` 只是抽象协议，不关心最终是 JSON 还是 Plist；真正做格式转换的是 `JSONEncoder` / `JSONDecoder` / `PropertyListEncoder`。`JSONEncoder` 递归调用模型和子模型的 `encode(to:)`，用一个 `storage` 栈维护嵌套层级，最后序列化成 `Data`；`JSONDecoder` 方向相反。
+
+> ✅ **实测**（[swift-reflection-codable.swift](ios-snippets/swift-reflection-codable.swift)）「严格」体现在哪，跑一遍就清楚了：
+>
+> ```
+>   多出未知字段       -> 忽略，正常解码：true
+>   缺失 Optional 字段 -> 正常（变 nil）：true
+>   缺失非 Optional 字段 -> 抛 keyNotFound(id)，不会静默给默认值
+>   类型不匹配         -> 抛 typeMismatch(期望 Int)
+> ```
+>
+> 这是和 OC 字典转模型**最大的行为差异**：Swift 默认严格且报错精确，OC 那套通常静默失败给个 nil/0。
+
+**优劣**：编译期约束强、性能可控、错误路径清晰（`DecodingError` + `codingPath` 能精确定位是哪个字段哪一层出错）。代价是不够动态——复杂字段映射、默认值、条件编码、扁平化/嵌套转换都得手写 `CodingKeys` 或 `init(from:)`。
+
+→ [原文：Codable 底层原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Codable底层原理.md)
