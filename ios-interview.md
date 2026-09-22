@@ -2129,7 +2129,7 @@ Memory Footprint = Dirty Memory + Compressed Memory
 
 **协议类型变量的隐式堆分配**：`let shape: Shape = Circle()` 会包进存在容器。容器内联缓冲区 24 字节，超过就堆分配。**这意味着即使是值类型，通过协议类型持有也可能产生堆分配开销**——这在 ObjC 里不存在（ObjC 的协议类型本质就是个 `id` 指针）。详见[第 40 题](#40-为什么协议类型作为函数参数比泛型约束慢底层区别是什么-)。
 
-**COW**：Array / Dictionary / Set 实现了写时拷贝，赋值时共享底层存储，改的时候才真拷贝。见[第 121 题](#121-swift-中-copy-on-write-的底层原理是什么-)有实测。
+**COW**：Array / Dictionary / Set 实现了写时拷贝，赋值时共享底层存储，改的时候才真拷贝。[第 125 题](#125-swift-中-copy-on-write-的底层原理是什么-)有实测。
 
 **ARC 实现差异**
 
@@ -3127,3 +3127,615 @@ YYModel 为了性能还做了两件事：**用 `objc_msgSend` 直接调 setter �
 这个模块名前缀的问题，根子在[第 25 题](#25-objc-和-swift-的符号名有什么区别)：Swift 符号包含模块信息，ObjC 不包含。
 
 → [原文：iOS 反射](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS反射.md)
+
+---
+
+## 九、语言特性
+
+### Objective-C
+
+### 108. `#include`、`#import ""`、`#import <>`、`@import` 的区别？🔥
+
+| 写法 | 本质 | 主要搜索范围 | 防重复 | 自动链接 Framework |
+| --- | --- | --- | --- | --- |
+| `#include` | C 预处理器**文本包含** | 看引号还是尖括号 | ❌ 要自己写 include guard | ❌ |
+| `#import "A.h"` | ObjC 文本包含 | Includer 目录 + Quoted + Angled + System | ✅ | ❌ |
+| `#import <A.h>` | ObjC 文本包含 | Angled + System | ✅ | ❌ |
+| `@import UIKit;` | **Clang Module 导入** | Module Map + Framework 搜索路径 + 编译器内置 Module | ✅ | **✅** |
+
+前三个都是文本包含，只有 `@import` 是真正不同的机制——它导入的是预编译好的模块，不是复制头文件文本。
+
+**六种搜索路径**（能说清楚这个就够了）：
+
+| 路径 | 编译器参数 | Xcode 设置 | 谁能用 |
+| --- | --- | --- | --- |
+| Includer 目录 | — | — | **只有双引号形式** |
+| Quoted | `-iquote` | User Header Search Paths | 只有双引号形式 |
+| Angled | `-I` | Header Search Paths | 双引号和尖括号都搜 |
+| System | `-isystem` | System Header Search Paths | 两者都搜 |
+| Framework | `-F` | Framework Search Paths | 查 `X.framework/Headers/` 和 `X.framework/Modules/module.modulemap` |
+| Module | `-fmodule-map-file` | — | modulemap、Framework 里的 `Modules/module.modulemap`、编译器内置 |
+
+注意 `#import <Framework/Header.h>` 这种形式**也会查 `-F` 路径**。
+
+→ [原文：Objective-C 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C中import详解.md)
+
+### 109. Clang Module 只能通过 `@import` 使用吗？
+
+**不是。**
+
+- `#import <Framework/Header.h>` 在启用 Modules 后会**自动转换成 Module 引用**
+- `#import "FrameworkHeader.h"` 经 Header Map 映射后也可能触发 Module 引用
+
+所以项目里没写过一个 `@import`，不代表没用到 Module。
+
+→ [原文：Objective-C 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C中import详解.md)
+
+### 110. Clang Module 的作用是什么？解决了什么问题？🔥
+
+把头文件预编译成高效的二进制格式（`.pcm`），编译器直接加载，不用每次重新解析文本头文件。
+
+解决五个问题：
+
+1. **编译效率** —— 传统 `#include`/`#import` 每次编译都重新解析。Module 编译一次缓存成 `.pcm`，多个源文件复用
+2. **宏污染** —— 传统方式下头文件 A 定义的宏会影响后面引入的头文件 B。**Module 有隔离性**，内部的宏不泄露到外部，反之亦然
+3. **编译顺序依赖** —— 传统方式下头文件引入顺序可能影响编译结果。Module 是独立编译单元，**不受顺序影响**
+4. **手动链接** —— `@import` 自动链接对应 Framework，不用在 Build Phases 里手动加
+5. **PCH 的局限**：
+
+   | | PCH | Module |
+   | --- | --- | --- |
+   | 数量 | **只能有一个** | 多个独立缓存 |
+   | 依赖形式 | 只支持线性依赖 | 支持 **DAG** |
+   | 增量编译 | 改任何头文件都要全部重新生成 | 高效得多 |
+
+→ [原文：Objective-C 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C中import详解.md)
+
+### 111. 为什么修改 PCH 后编译很慢？
+
+PCH 是**单一的**预编译文件，包含所有放进去的头文件的完整 AST。任何一个头文件改了：
+
+1. 整个 PCH 要重新生成
+2. **所有依赖这个 PCH 的源文件都要重新编译**
+
+这就是 PCH 最大的缺点。三条建议：
+
+- 只把**几乎不会改**的头文件放进 PCH
+- **项目自己的头文件不要放进 PCH**（这是最常见的错误用法）
+- 考虑迁移到 Clang Modules
+
+→ [原文：Objective-C 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C中import详解.md)
+
+### 112. CocoaPods 是如何支持 Clang Module 的？
+
+CocoaPods **默认不给静态库 Pod 生成 modulemap**。三种启用方式：
+
+```ruby
+use_modular_headers!                          # 全局启用
+pod 'AFNetworking', :modular_headers => true  # 单个 Pod 启用
+use_frameworks!                               # 构建为 Framework，自动支持
+```
+
+实现机制不同：
+
+- **`use_frameworks!`** —— Pod 构建为 Framework，Framework 本身就支持 Module（设 `DEFINES_MODULE = YES`，modulemap 在 Framework 目录结构里）
+- **`use_modular_headers!`** —— Pod 仍是静态库 `.a`，CocoaPods 生成 `module.modulemap` 和 Umbrella Header，然后在**使用方**的 xcconfig 里加 `-fmodule-map-file` 指向它。所以 Pod 自身的 `DEFINES_MODULE` 保持 NO，但使用方仍能按 Module 引用
+
+配合[第 27 题](#27-cocoapods-有哪些库的链接方式各有什么优缺点)的链接方式表一起看。
+
+→ [原文：Objective-C 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C中import详解.md)
+
+### 113. 为什么 `#import ""` 也能引用到 Pod 库里的 Objective-C 文件？
+
+`pod install` 时做了两件事：
+
+1. 在 `Pods/Headers/Public/` 下为每个 Pod 的公开头文件创建**符号链接**
+2. 在生成的 xcconfig 里加 `HEADER_SEARCH_PATHS`：
+
+```
+HEADER_SEARCH_PATHS = $(inherited) "${PODS_ROOT}/Headers/Public" "${PODS_ROOT}/Headers/Public/AFNetworking"
+```
+
+于是写 `#import "AFNetworking.h"` 时：Clang 先在 includer 目录找（找不到）→ 遍历 SearchDirs，在 `${PODS_ROOT}/Headers/Public/AFNetworking/` 找到符号链接 → 顺着链接定位到真实头文件。
+
+→ [原文：Objective-C 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C中import详解.md)
+
+### 114. `nil`、`Nil`、`NULL`、`NSNull` 有什么区别？🔥
+
+| 符号 | 类型 | 含义 | 用在哪 |
+| --- | --- | --- | --- |
+| `nil` | `id` | 空对象指针 | ObjC 对象为空 |
+| `Nil` | `Class` | 空类指针 | 类对象为空 |
+| `NULL` | `void *` | C 风格空指针 | 任意 C 指针为空 |
+| `NSNull` | `NSNull *` | **单例对象**，表示"空值" | 放进集合里占位 |
+
+**前三个的值都是 0，区别纯粹在语义和类型上。** `NSNull` 完全不同——它是个**真实存在的对象**。
+
+> ✅ **实测**（[objc-value-semantics.m](ios-snippets/objc-value-semantics.m)）
+>
+> ```
+>   nil    = 0x0  用于对象指针 (id)
+>   Nil    = 0x0  用于类对象 (Class)
+>   NULL   = 0x0  用于 C 指针
+>   NSNull = NSNull，是个真实对象，指针 = 0x1f2035688
+>   容器不能装 nil，只能用 NSNull 占位：( 1, "<null>", 3 )
+>   [NSNull null] 自身非空：真
+> ```
+>
+> 最后一行是重点：`if ([NSNull null])` 判断结果是**真**。从字典里取值忘了判 `NSNull` 而只判 `nil`，就会拿着一个 `NSNull` 对象当正常值用，然后在后面某个地方 `unrecognized selector` 崩掉——这是 OC 里非常常见的线上崩溃来源。
+
+**向 nil 发消息不崩溃**是 ObjC 的重要特性（见[第 97 题](#97-objc_msgsend-的执行流程-)第 1 步），但代价是某些 bug 会**静默失败**而不暴露。
+
+### 115. `@synthesize` 和 `@dynamic` 分别是什么？
+
+| 关键字 | 含义 |
+| --- | --- |
+| `@synthesize` | 让编译器**自动生成** getter/setter 实现 |
+| `@dynamic` | 告诉编译器**别生成**，我自己提供（或运行时提供） |
+
+```objc
+@implementation MyClass
+@synthesize name = _name;   // 指定 ivar 名为 _name
+@dynamic createdAt;         // 常用于 Core Data 的 NSManagedObject 子类
+@end
+```
+
+现代 ObjC（Xcode 4.4+）里 `@property` 会**自动**合成 getter/setter 和带下划线的 ivar，所以一般不用显式写 `@synthesize`。
+
+`@dynamic` 的典型用途就是 Core Data：属性访问器由 `NSManagedObject` 在运行时动态提供，编译期生成反而会覆盖掉。
+
+### 116. `[self class]` 和 `[super class]` 结果一样吗？🔥
+
+**一样。** 这是个经典陷阱题。
+
+```objc
+// B 继承自 A
+@implementation B
+- (void)test {
+    NSLog(@"%@", [self class]);    // B
+    NSLog(@"%@", [super class]);   // B —— 不是 A！
+}
+@end
+```
+
+**`super` 的本质是：消息接收者仍然是 `self`，只是告诉编译器从父类的方法列表开始查找。**
+
+`NSObject` 的 `-class` 实现大致是：
+
+```objc
+- (Class)class { return object_getClass(self); }
+```
+
+它拿到的 `self` 仍是当前对象，按对象的 isa 取真实类型，结果自然还是 `B`。
+
+> ✅ **实测**（[objc-value-semantics.m](ios-snippets/objc-value-semantics.m)）
+>
+> ```
+>   [self class]      = Sub
+>   [self superclass] = Super
+>   [super class]     = Sub   <- 仍是 Sub！
+>   [super superclass]= Super
+> ```
+>
+> 四个组合一起看就清楚了：**变的是「从哪开始找方法」，不变的是「接收者是谁」。** `[super superclass]` 也返回 `Super` 而不是 `Super` 的父类，同理。
+
+⚠️ 唯一的例外：如果当前类**重写了 `-class`**，两者就会不同——`[super class]` 会跳过当前类的实现。
+
+### 117. `NSString` 用 `==` 和 `isEqualToString:` 有什么区别？🔥
+
+`==` 比**指针地址**，`isEqualToString:` 比**内容**。
+
+> ✅ **实测**（[objc-value-semantics.m](ios-snippets/objc-value-semantics.m)）
+>
+> ```
+>   a == b                    -> YES  (同一份编译期常量，指针相同)
+>   a == c                    -> NO   (运行时构造，另一块内存)
+>   [a isEqualToString:c]     -> YES  (内容相同)
+>   a=__NSCFConstantString  c=NSTaggedPointerString
+> ```
+>
+> 最后一行解释了为什么 `a == b` 是 YES 而 `a == c` 是 NO：两个字面量 `@"hello"` 被编译器合并成了**同一个** `__NSCFConstantString`；而运行时 `stringWithFormat:` 构造的是 `NSTaggedPointerString`，完全另一个对象。
+>
+> ⚠️ **正因为常量有时会让 `==` 恰好返回 YES，这个 bug 特别隐蔽**——测试时用字面量一切正常，线上换成服务端下发的字符串就全错了。比较字符串永远用 `isEqualToString:`。
+
+### 118. `NSArray` 和 `NSMutableArray` 的 `copy` 和 `mutableCopy` 有什么区别？🔥
+
+| 源对象 | `copy` | `mutableCopy` |
+| --- | --- | --- |
+| 不可变 `NSArray` | **返回自身**，不产生新对象 | 新的 `NSMutableArray` |
+| 可变 `NSMutableArray` | 新的 `NSArray` | 新的 `NSMutableArray` |
+
+**规律：只有「不可变对象 `copy`」会直接返回自身，其余三种都产生新对象。**
+
+> ✅ **实测**（[objc-value-semantics.m](ios-snippets/objc-value-semantics.m)）
+>
+> ```
+>   [不可变 copy]        新对象? 否  类型=NSConstantArray
+>   [不可变 mutableCopy] 新对象? 是  类型=__NSArrayM
+>   [可变   copy]        新对象? 是  类型=__NSArrayI
+>   [可变   mutableCopy] 新对象? 是  类型=__NSArrayM
+> ```
+
+⚠️ **这里要纠正一个流传很广的说法。** 常见资料会写「对可变对象 `copy` 是深拷贝」——**这是错的**。它确实产生了新的不可变数组，但**仍然是浅拷贝**：新数组里装的还是原来那些元素对象本身，没有复制它们。
+
+> ✅ **实测**：
+>
+> ```
+>   都是浅拷贝——元素本身不复制：
+>   改了原始元素后，拷贝里也变了：( x, y )
+> ```
+>
+> 对 `outer = @[inner]` 做 `copy` 得到 `shallow`，然后往 `inner` 里 `addObject:@"y"`，`shallow[0]` 跟着变成了 `(x, y)`。**「产生新容器」和「深拷贝」是两回事。**
+
+真正的深拷贝要用 `initWithArray:copyItems:YES`（仍只深一层）或归档/反归档。
+
+### 119. `self.xxx` 和 `_xxx` 有什么区别？🔥
+
+```objc
+self.name = @"Tom";   // 调 setter，走属性修饰符逻辑
+_name = @"Tom";       // 直接访问 ivar，不走 setter
+```
+
+| | `self.xxx` | `_xxx` |
+| --- | --- | --- |
+| 本质 | 调 getter/setter **方法** | 直接访问**成员变量** |
+| KVO 通知 | ✅ 触发 | ❌ 不触发 |
+| 属性修饰符（如 `copy`） | ✅ 生效 | ❌ 不生效 |
+| 懒加载 | ✅ 触发 | ❌ 不触发 |
+| 性能 | 略慢（方法调用） | 略快 |
+
+**使用原则**
+
+| 场景 | 用哪个 | 为什么 |
+| --- | --- | --- |
+| 外部访问 | `self.xxx` | 没得选 |
+| `init` 方法里 | **`_xxx`** | 避免触发子类重写的 setter——此时子类还没初始化完 |
+| `dealloc` 里 | **`_xxx`** | 对象正在销毁，走 setter 可能访问到已释放的东西 |
+| 其他内部方法 | `self.xxx` | 保证 KVO 和懒加载正常工作 |
+
+「KVO 不触发」那一条和[第 19 题的实测](#19-kvo-的底层实现原理是什么-)是同一件事：直接写 ivar 绕过了被 KVO 替换的 setter。
+
+### 120. static 局部变量和普通局部变量有什么区别？
+
+| | 普通局部变量 | `static` 局部变量 |
+| --- | --- | --- |
+| 存储位置 | **栈** | **数据段**（.data / .bss） |
+| 初始化次数 | 每次函数调用 | **仅一次**（程序启动时） |
+| 生命周期 | 函数调用期间 | 整个进程 |
+| 默认初值 | 不确定（垃圾值） | 0 / nil / NULL |
+| 作用域 | 函数内 | 函数内（**不变**） |
+
+注意最后一行：`static` 改变的是**生命周期和链接属性**，**不改变作用域**。
+
+> ✅ **实测**（[objc-value-semantics.m](ios-snippets/objc-value-semantics.m)）
+>
+> ```
+>   第 1 次调用  static=1  普通=1
+>   第 2 次调用  static=2  普通=1
+>   第 3 次调用  static=3  普通=1
+> ```
+
+**Block 捕获时的差异**（接[第 20 题](#20-oc-中的-block-是函数指针还是对象底层怎么实现的-)）：
+
+| | 普通局部变量 | `static` 局部变量 |
+| --- | --- | --- |
+| 捕获方式 | 值拷贝（const copy） | **指针捕获** |
+| Block 内可改 | ❌ 需要 `__block` | **✅ 可以** |
+| 原因 | 值已拷进 Block 结构体 | 地址固定在数据段，直接通过指针访问 |
+
+→ [原文：static 关键字详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/static关键字详解.md)
+
+### 121. 不同 `.m` 文件中定义了同名的 static 全局变量会冲突吗？
+
+**不会。** 核心在于 `static` 改变了变量的**链接属性（Linkage）**：
+
+| | 不加 `static` | 加 `static` |
+| --- | --- | --- |
+| 链接属性 | **external linkage** | **internal linkage** |
+| 符号表 | 导出到全局符号表 | 标记为**本地符号**，不导出 |
+| 同名后果 | 链接器合并 `.o` 时发现重复 → `duplicate symbol` 错误 | 各文件的同名变量在符号表里是**各自独立的条目**，链接器不会尝试合并，内存中也是独立存储 |
+
+这正是[第 25 题](#25-objc-和-swift-的符号名有什么区别)里 ObjC 类名冲突的同一套机制——只不过类符号 `_OBJC_CLASS_$_X` 没法加 `static`，所以只能靠前缀约定。
+
+→ [原文：static 关键字详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/static关键字详解.md)
+
+### Swift
+
+### 122. 为什么同一 Target 下的 Swift 文件不需要 import？
+
+因为 **Swift 以「模块」而非「源文件」作为基本的编译和可见性单元。**
+
+Xcode 里每个 Build Target（App 或 Framework）就是一个模块。同模块内所有 `.swift` 文件共享统一命名空间，编译器把它们当一个整体分析。
+
+Swift 默认访问级别是 `internal`，它的定义就是**「模块内可见」**。所以 `FileA.swift` 里定义的 `class MyClass`（没标访问级别），在同模块的 `FileB.swift` 里直接就能用。
+
+这和 ObjC 的「以源文件为单位、靠头文件声明」是完全不同的模型。
+
+→ [原文：Swift 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift中import详解.md)
+
+### 123. Swift `import` 和 OC `@import` 有什么区别？
+
+**区别只有两点**：
+
+**① 可导入的模块类型不同**
+
+- `@import` —— **只能**导入 Clang Module（需要 `module.modulemap` 定义）
+- `import` —— 既能导入 Swift 模块（`.swiftmodule`），也能通过 **ClangImporter** 导入 Clang 模块
+
+**② Swift 支持声明级别导入**
+
+```swift
+import class UIKit.UIViewController    // 只导入特定类型，可用于解决命名冲突
+import struct Darwin.size_t
+```
+
+`@import` 只能导入整个模块或子模块，精确不到单个类型。
+
+**相同点**：都在**语义分析阶段**处理（不是预处理器）、都支持自动链接、都支持子模块导入、都享受模块缓存的编译加速。
+
+→ [原文：Swift 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift中import详解.md)
+
+### 124. Swift Module 和 Clang Module 有什么区别？
+
+| | Clang Module | Swift Module |
+| --- | --- | --- |
+| **定义方式** | 要**手写** `module.modulemap` | 编译器**自动**序列化公开 API |
+| **文件格式** | `.pcm`，只含 AST 和类型信息 | `.swiftmodule`，除 AST 外还含 **SIL 和内联函数体**，支持跨模块优化 |
+| **ABI 稳定** | 二进制格式，强依赖编译器版本，**无法跨版本共享** | 额外提供 `.swiftinterface` **文本**格式，支持 Library Evolution，可跨编译器版本 |
+
+**互操作是单向的**：
+
+- Swift → Clang：✅ 通过 ClangImporter 直接解析 `.pcm` 和 `module.modulemap`
+- Clang → Swift：❌ Clang **无法**直接解析 `.swiftmodule`。OC 导入 Swift Framework 时，实际是通过 Xcode 自动生成的 `module.modulemap`（引用 `-Swift.h` 头文件）实现的，**本质上 Clang 读的仍然是 OC 头文件**
+
+`.swiftinterface` 那一条是[第 48 题](#48-swift-二进制兼容带来的好处是什么)里「模块稳定性」的具体载体。
+
+→ [原文：Swift 中 import 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift中import详解.md)
+
+### 125. Swift 中 Copy-on-Write 的底层原理是什么？🔥
+
+COW 是 Swift 在**值语义**和**性能**之间的平衡。按值语义，`Array`/`Dictionary`/`Set` 赋值后应该彼此独立；但每次赋值都深拷贝，大集合成本高得离谱。COW 的思路：**赋值时先共享底层存储，真正修改时才拷贝。**
+
+关键在于 `Array` **不是**把元素都塞进栈上的变量本身。外层 `Array` 是个很小的结构体，里面存着指向**堆上 buffer** 的引用 + 元素数量 + 容量。赋值时复制的只是这个小结构体，两个变量暂时指向同一块堆存储。
+
+修改时（`append`、`remove`、下标赋值）先检查底层存储是否被多个变量共享：
+
+```swift
+struct MyArray<Element> {
+    private var storage: ArrayStorage<Element>
+
+    mutating func append(_ element: Element) {
+        if !isKnownUniquelyReferenced(&storage) {   // ← 核心
+            storage = storage.copy()
+        }
+        storage.append(element)
+    }
+}
+```
+
+`isKnownUniquelyReferenced(&storage)` 判断这块 class 形式的底层存储**是否只有当前这一个强引用**。唯一 → 直接原地改；不唯一 → 先复制一份新 storage 再改。
+
+四步概括：创建变量持有堆 buffer → 赋值只复制外层结构体，buffer 共享 → 修改前检查唯一性 → 必要时才拷贝。
+
+> ✅ **实测**（[swift-memory-arc.swift](ios-snippets/swift-memory-arc.swift)）直接把缓冲区地址打出来了：
+>
+> ```
+>   arr1 缓冲区 = 0x0000000bdfdf5100
+>   arr2 缓冲区 = 0x0000000bdfdf5100   <- 和 arr1 相同，还没复制
+>   arr2.append(6) 之后：
+>   arr1 缓冲区 = 0x0000000bdfdf5100
+>   arr2 缓冲区 = 0x0000000be2d97ac0   <- 变了，此刻才真复制
+>   arr1 = [1, 2, 3, 4, 5]
+>   arr2 = [1, 2, 3, 4, 5, 6]
+> ```
+>
+> 以及 `isKnownUniquelyReferenced` 本身：
+>
+> ```
+>   唯一引用时 isKnownUniquelyReferenced = true
+>   多一个引用后                        = false
+> ```
+>
+> **赋值时地址相同、`append` 后才变**——「值语义但不真复制」在这两行地址里看得清清楚楚。
+
+→ [原文：值类型和引用类型的区别](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/值类型和引用类型的区别.md)
+
+### 126. Swift 宏解决的核心问题是什么？
+
+**编译期代码生成**：让开发者写一段「会生成 Swift 代码的代码」，由编译器在**类型检查前**展开成真正的 Swift 源码，再继续走类型检查、SIL 生成和优化。
+
+在宏出现之前，Swift 的元编程工具各有明显边界：
+
+| 工具 | 能做 | 做不到 |
+| --- | --- | --- |
+| `@propertyWrapper` | 给**单个属性**加读写行为（`@State`、`@Published`） | 生成新方法、让类型自动遵循协议、批量改写成员 |
+| `@resultBuilder` | 把闭包里的表达式收集成 DSL（`ViewBuilder`） | 只作用于闭包内部，**改造不了类型声明** |
+| `Mirror` / KeyPath | 运行时反射或半反射 | 性能、类型安全、可维护性都不适合大量生成样板 |
+| `Codable` 自动合成 | —— | **属于编译器魔法，普通开发者写不出同等能力** |
+| Sourcery / SwiftGen | 生成代码 | 在编译器**之外**运行，只能做文本级处理，缺少语法树上下文，和 IDE / 增量编译 / 诊断结合不自然 |
+
+宏的价值是：**把「只有编译器能做的源码变换」开放给了开发者**，同时保留 Swift 的强类型、作用域、诊断和 IDE 展开体验。它不是运行时反射，也不是字符串模板，而是**基于 SwiftSyntax 的语法树变换**。
+
+→ [原文：Swift 宏](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift宏.md)
+
+### 127. Swift 宏和 OC 的 `#define` 有什么本质区别？
+
+都叫「宏」，本质完全不同。
+
+| | `#define` | Swift 宏 |
+| --- | --- | --- |
+| **执行阶段** | 预处理阶段（编译器还没理解代码） | 编译流程**内部**，类型检查**前**展开 |
+| **操作对象** | **文本 / token** | **SwiftSyntax 语法节点** |
+| **输入输出** | 字符串 → 字符串 | **语法树 → 语法树** |
+| **类型安全** | 替换时完全不知道类型 | 宏的声明签名参与类型检查，展开结果必须是合法 Swift |
+| **卫生性** | 无，容易变量名冲突、重复求值 | 有部分卫生机制，可用 `context.makeUniqueName`，附加宏还要通过 `names:` 声明生成的外部名字 |
+| **调试** | 展开结果对 IDE 和调试器不友好 | Xcode 可 **Expand Macro** 看展开后代码，有诊断系统定位错误 |
+| **运行模型** | 预处理器 | 第三方宏以**独立编译器插件进程**运行，通过 JSON-RPC 与 `swiftc` 通信 |
+
+→ [原文：Swift 宏](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift宏.md)
+
+### 128. Swift 宏分为哪两大类？附加宏有哪些常见 role？
+
+**独立宏（Freestanding）** —— 以 `#` 开头，不依附任何声明：
+
+- **表达式宏**：生成表达式，如 `#stringify(1 + 2)` 展开成 `(1 + 2, "1 + 2")`
+- **声明宏**：生成声明，如 SwiftUI 的 `#Preview`
+
+**附加宏（Attached）** —— 以 `@` 开头，附着在已有声明上，按 role 决定能生成/改写什么：
+
+| role | 作用 | 例子 |
+| --- | --- | --- |
+| `peer` | 在被标注声明的**同级**生成新声明 | 给 completionHandler 风格方法生成 `async` 重载 |
+| `member` | 给类型内部**新增成员** | `@Observable` 生成 `_$observationRegistrar`、`access`、`withMutation` |
+| `accessor` | 给属性**生成访问器** | `@ObservationTracked` 改写 getter/setter 做依赖收集 |
+| `memberAttribute` | 给类型里的成员**批量加属性** | `@Observable` 给存储属性加 `@ObservationTracked` |
+| `extension` | 生成扩展，通常用于**自动遵循协议** | Swift 5.10 后协议遵循能力并入此 role |
+| `body` | 生成或替换**函数体** | Swift Testing 的 `@Test` |
+| `preamble` | 在函数体**开头**插代码 | 轻量日志、埋点、权限检查 |
+
+**一个宏可以同时有多个 role**，`@Observable` 就是典型，见[第 131 题](#131-observable-大致做了什么为什么说它体现了宏的组合能力)。
+
+→ [原文：Swift 宏](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift宏.md)
+
+### 129. Swift 宏的执行流程是什么？为什么宏不能直接拿到完整类型信息？
+
+**流程七步**：
+
+1. 编译器读源文件，解析成 Swift 语法结构
+2. **类型检查前**遇到宏调用（`#stringify` / `@Observable`）
+3. `swiftc` 启动或复用对应的宏插件进程
+4. 通过 **JSON-RPC** 把宏调用节点、被标注声明节点等语法信息发给插件
+5. 插件用 SwiftSyntax 分析输入，构造新的 `ExprSyntax` / `DeclSyntax`
+6. 插件把展开后的 Swift 代码片段返回
+7. 编译器拼回源码对应位置，继续类型检查、SIL、优化
+
+**关键就在第 2 步：宏在类型检查前展开。** 所以宏实现里看到的是**语法**，不是已解析完成的**类型语义**。
+
+宏能看到源码写了 `var items: [Item]`，拿到的是 `VariableDeclSyntax`、`TypeSyntax` 这类节点。它知道字面上写了 `[Item]`，但**无法可靠判断**：
+
+- `Item` 到底是哪个模块里的类型
+- 泛型 `T` 最终会被推导成什么
+- 某个类型是否**真的**遵循 `Codable` / `Sendable`
+- 某个表达式重载解析后会调用哪个函数
+
+**所以宏适合基于「声明形状」生成代码**——这个 struct 有哪些属性、这个函数最后一个参数是不是叫 completion、这个属性有没有显式类型标注。**不适合做类型系统推理**，比如「如果属性类型遵循某协议就生成 A 否则生成 B」。
+
+工程上的分工：**宏负责把代码写出来，类型系统负责证明这些代码是否合法。**
+
+→ [原文：Swift 宏](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift宏.md)
+
+### 130. 为什么第三方宏要跑在独立进程里？这对工程有什么影响？
+
+**三个原因：**
+
+1. **安全** —— 宏本质是**编译期可执行代码**，第三方宏包可以包含任意 Swift 逻辑。直接跑在编译器进程里风险太大。独立进程配沙盒可以限制文件、网络能力。Xcode 首次用第三方宏时弹的 `Trust & Enable` 就是在提醒你：**你正在允许这个包在编译期执行代码**
+2. **崩溃隔离** —— 宏作者写崩了、死循环了，不该把整个 `swiftc` 带崩
+3. **演进和复用** —— 宏插件作为 Swift Package 的 `.macro` target 独立编译分发，业务 target 只依赖暴露宏声明的普通 library target，不用直接接触 SwiftSyntax 细节
+
+**工程代价：**
+
+- 启动插件进程 + JSON-RPC 通信，**宏用多了会增加编译耗时**
+- 第三方宏依赖 `swift-syntax`，而它的**主版本必须和 Swift 编译器版本匹配**——升 Xcode 时容易牵一发动全身
+- CI 上必须管理宏的信任和供应链安全，锁 `Package.resolved`，谨慎用 `--skip-macro-validation`
+- 宏插件**不进入 App 运行时产物**，但影响编译期行为，所以 **code review 不能只看业务代码**
+
+→ [原文：Swift 宏](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift宏.md)
+
+### 131. `@Observable` 大致做了什么？为什么说它体现了宏的组合能力？
+
+开发者只写：
+
+```swift
+@Observable
+class UserViewModel {
+    var name: String = ""
+    var age: Int = 0
+}
+```
+
+宏做了三类事：
+
+1. **生成观察所需的隐藏成员** —— `_$observationRegistrar`，以及 `access(keyPath:)`、`withMutation(keyPath:_:)` 辅助方法，用于记录读取和包裹写入
+2. **给存储属性加追踪能力** —— 通过 `memberAttribute` 给属性加 `@ObservationTracked`；而 `@ObservationTracked` 本身是 **accessor 宏**，把普通存储属性改写成带 getter/setter 的形式
+3. **让类型遵循框架协议** —— 生成扩展使其遵循 `Observable`，进入 SwiftUI/Observation 的依赖追踪体系
+
+简化展开：
+
+```swift
+class UserViewModel {
+    @ObservationIgnored
+    private let _$observationRegistrar = ObservationRegistrar()
+
+    @ObservationTracked
+    var name: String = "" {
+        get {
+            access(keyPath: \.name)
+            return _name
+        }
+        set {
+            withMutation(keyPath: \.name) { _name = newValue }
+        }
+    }
+    private var _name: String
+}
+
+extension UserViewModel: Observable {}
+```
+
+**组合能力体现在**：它不是简单生成一段代码，而是**同时用了 `member` + `memberAttribute` + `extension` 三个 role，还配合另一个 accessor 宏改写属性访问**。把过去依赖 runtime、KVO、属性包装器和手写样板的机制，全部迁到了编译期生成的强类型 Swift 代码。
+
+→ [原文：Swift 宏](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift宏.md)
+
+### 132. 使用 Swift 宏会带来哪些工程风险？什么时候不应该写宏？
+
+**四类风险：**
+
+1. **编译性能** —— 要编译宏插件、启动进程、通信、解析和生成 SwiftSyntax。少量没问题，**大型项目里大量使用复杂宏会明显拖慢 clean build 和增量编译**
+2. **版本耦合** —— `swift-syntax` 版本必须和 Swift 编译器版本匹配。Xcode 一升，宏包依赖的 `swift-syntax` 还停在旧主版本就可能**直接编译失败**。要把 Xcode、Swift tools version、swift-syntax、宏库版本**一起管理**
+3. **可读性和调试成本** —— 宏让源文件里「看见的代码」少于「实际参与编译的代码」。**调用端简洁、维护端痛苦**是宏 API 设计不好时的典型症状
+4. **安全与供应链** —— 编译期执行代码，第三方宏包需要被信任
+
+**不适合写宏的场景：**
+
+- 普通函数、泛型、协议扩展就能清楚表达的逻辑
+- **只是为了少写几行代码，却显著降低可读性**
+- 需要大量类型语义推理的（见[第 129 题](#129-swift-宏的执行流程是什么为什么宏不能直接拿到完整类型信息)）
+- 生成代码过于复杂、调用方很难通过 `Expand Macro` 理解实际行为
+- 性能敏感的大型工程里，高频、复杂、无法明确 `names:` 的宏
+
+**适合的场景有共同特征**：样板代码重复、生成规则稳定、输入可从语法结构判断、展开结果容易解释、且生成代码能**显著改善调用端 API**。例如模型代码、测试断言、依赖注入样板、Mock/Spy 生成、预览声明、属性访问追踪。
+
+→ [原文：Swift 宏](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift宏.md)
+
+### OC 与 Swift 对比
+
+### 133. Objective-C 与 Swift 有什么主要区别？🔥
+
+> ⚠️ 源仓库这一题只有标题和链接、**没有正文**，以下是我自己整理的。
+
+| 维度 | Objective-C | Swift |
+| --- | --- | --- |
+| **类型系统** | 动态类型为主，`id` 可指向任意对象，编译期检查弱 | 强静态类型 + 类型推断，编译期检查严格 |
+| **空安全** | 无。`nil` 可以随便传，给 nil 发消息静默失败 | **Optional 强制显式处理**，编译期消除大部分空指针问题 |
+| **值类型** | 几乎全是对象（堆分配） | struct / enum 是一等公民，**优先栈分配 + COW** |
+| **方法派发** | 几乎全走 `objc_msgSend` 消息派发 | 四种派发（见[第 38 题](#38-swift-有哪些方法派发方式-)），大量静态派发可内联 |
+| **内存管理** | ARC，引用计数在 isa/SideTable | ARC，纯 Swift 类引用计数内联在对象头；编译器优化更激进 |
+| **错误处理** | `NSError **` 出参 + `@try/@catch`（少用） | `throws` / `try` / `Result`，编译器强制处理 |
+| **泛型** | 仅轻量泛型（`NSArray<NSString *> *`），**运行时被擦除** | 真泛型，支持特化，零成本抽象 |
+| **协议** | 只能定义方法/属性要求 | 可带**默认实现**、关联类型、条件遵循，支持面向协议编程 |
+| **运行时能力** | 极强：Swizzling、动态加类加方法、完整反射 | 弱：Mirror 只读；要动态能力得 `@objc dynamic` 退回 ObjC runtime |
+| **命名空间** | **无**，靠类名前缀（NS/UI/AF） | 有，模块名自动区分 |
+| **并发** | GCD / NSOperation + 手动加锁 | 额外有 async/await、actor、结构化并发、编译期数据竞争检查 |
+| **枚举** | 就是整数常量 | 可带关联值、可有方法、可遵循协议 |
+| **字符串** | `NSString`，UTF-16，下标按 code unit | `String`，Unicode 正确性优先，按 Character 迭代 |
+| **函数式** | 有限（Block） | 一等函数、闭包、`map`/`filter`/`reduce`、模式匹配 |
+
+**取舍的一句话总结**：ObjC 把安全性让给了灵活性——它的动态能力（Swizzling、字典转模型、热修复思路）Swift 原生给不了；Swift 把灵活性让给了安全性和性能——编译期能消除的问题更多，生成的代码也更快。
+
+**混编时要注意的几点**：
+
+- Swift 类要被 ObjC 用，必须继承 `NSObject` 或标 `@objc`，且成员类型要是 **ObjC 可表示**的（struct、enum 带关联值、泛型都传不过去）
+- ObjC 的 `nullable`/`nonnull` 标注直接决定 Swift 侧是不是 Optional——**没标注就全是隐式解包 `!`**，很容易崩
+- `NSClassFromString` 对 Swift 类要带模块名前缀（见[第 107 题](#107-nsclassfromstring-在什么场景下使用有什么注意事项)）
+
+→ [原文：Objective-C 与 Swift 区别](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C与Swift区别.md)
