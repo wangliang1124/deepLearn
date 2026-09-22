@@ -4332,3 +4332,466 @@ Socket 是操作系统提供的网络通信 API。TCP Socket 用 `SOCK_STREAM`�
 同一份用户数据：JSON 约 68 字节，Protobuf 约 30 字节。加上 HTTP/2 的头部压缩和连接复用，gRPC 在微服务间通信性能通常是 REST 的 **2~10 倍**。
 
 → [原文：计算机网络](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/计算机网络.md)
+
+---
+
+## 十二、架构设计
+
+### 158. 为什么 iOS 中的 MVC 容易变成 Massive View Controller？如何改进？🔥
+
+**根源有两条**：Apple 的 MVC 里 View 和 Model 不能直接通信，所有交互都得经 Controller 中转；而 `UIViewController` **本身**又负责生命周期、View 层级、系统交互、导航、弹窗。
+
+于是实际开发中它很容易同时干这些活：
+
+- 接收用户事件（按钮点击、列表选择、输入变化）
+- 管理 UI 布局和状态
+- 调网络请求、数据库、缓存
+- 处理业务逻辑和数据校验
+- Model → View 的转换
+- 页面跳转、弹窗、权限申请
+- 实现 `UITableViewDataSource` / `Delegate` 和各种自定义 Delegate
+
+**四个后果**：代码难读、逻辑难复用、依赖 UIKit 导致单元测试困难、改一个功能容易影响别的。
+
+**六条改进**
+
+| 做法 | 怎么做 |
+| --- | --- |
+| **抽 Service 层** | 网络/缓存/数据库访问挪到 `UserService`、`OrderService`、`Repository` |
+| **抽 DataSource/Delegate** | 复杂列表把 `UITableViewDataSource` 封成独立对象，VC 只做协调 |
+| **抽 View** | 复杂 UI 封成自定义 `UIView`，VC 只调 `configure` 或绑数据 |
+| **抽数据转换** | Model → 展示文案/颜色/按钮状态的逻辑放到 ViewModel 或 Presenter 式小对象 |
+| **拆子 VC** | 复杂页面拆成多个子模块，容器 VC 负责组合 |
+| **导航交给 Router/Coordinator** | 减少 VC 之间直接创建和强依赖 |
+
+**关键认识**：**MVC 本身不是错的，问题是 ViewController 缺少约束时容易变成所有逻辑的容器。** 改进的重点是让它回到**协调者**角色，而不是业务逻辑的承载者。
+
+页面继续复杂下去再考虑演进到 MVP / MVVM / MVI / VIPER。
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+### 159. MVP 和 MVVM 有什么区别？Presenter 和 ViewModel 分别应该持有哪些对象？🔥
+
+两者都为解决 VC 职责过重，但**通信方式和依赖关系不同**。
+
+#### MVP：核心是 Presenter
+
+View 是**被动**的，只负责展示和事件转发。Presenter 负责业务逻辑、展示逻辑、调用 Model/Service，并**通过协议**调用 View 方法更新 UI。
+
+**引用关系**：
+
+```
+ViewController  ──强持有──→  Presenter
+Presenter       ──弱持有──→  View 协议          ← 关键：弱引用，否则循环
+Presenter       ──强持有──→  Service / Model
+Presenter       ──弱持有──→  Router / Coordinator 协议（如果有导航）
+```
+
+好处是 Presenter **只依赖协议不依赖具体 View**，可以用 Mock View 做单元测试。缺点是 View 协议容易随页面复杂度膨胀，View 和 Presenter 仍是明确的双向通信，导航逻辑不单独抽离也容易乱。
+
+#### MVVM：核心是 ViewModel
+
+**ViewModel 不持有 View，也不依赖 UIKit。** 它负责状态管理、数据转换、展示逻辑，通过可观察属性/闭包/Combine/RxSwift 向 VC 输出状态。
+
+**引用关系**：
+
+```
+ViewController  ──强持有──→  View、ViewModel
+ViewModel       ──强持有──→  Service / Model
+ViewModel       ──✗ 不持有──  ViewController / View     ← 关键
+ViewController  ──绑定观察──→ ViewModel 输出，并把用户事件转发过去
+```
+
+#### 对比
+
+| | MVP | MVVM |
+| --- | --- | --- |
+| 核心对象 | Presenter | ViewModel |
+| View 更新方式 | Presenter **调用** View 协议方法 | View **绑定** ViewModel 状态 |
+| 是否持有 View | **弱持有** View 协议 | **完全不持有** |
+| View 角色 | 更强调 Passive View | 通过绑定响应状态变化 |
+| 测试重点 | 测 Presenter 是否调用了正确的 View 方法 | 测 ViewModel 的输入输出和状态变化 |
+| 常见问题 | View 协议膨胀、导航归属不清 | 绑定复杂、ViewModel 膨胀、内存管理 |
+
+**选择**：想要明确的命令式 UI 更新、团队不想引入响应式绑定 → MVP；状态驱动 UI、团队有 SwiftUI 或响应式经验 → MVVM。
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+### 160. MVVM 相比 MVC 的优势是什么？
+
+核心是**把展示逻辑、状态管理、数据转换从 VC 里抽出来**，让 VC 回到轻量的页面协调者角色。
+
+**分工**：
+
+- **View/ViewController** —— UI 展示、生命周期、View 层级、建立绑定、转发用户事件
+- **ViewModel** —— 展示逻辑、状态管理、输入输出转换、调 Model/Service 取数据
+- **Model/Service** —— Model 是业务数据结构，Service 负责网络/缓存/数据库和业务规则
+
+**六个优势**
+
+1. **减轻 VC 职责** —— VC 只负责绑定、转发和 UIKit 生命周期
+2. **提高可测试性** —— ViewModel 通常不依赖 UIKit，可以直接构造 Mock Service 测。比如「邮箱和密码合法时登录按钮是否可用」不需要启动真实页面
+3. **展示逻辑更易复用** —— 格式化文案、按钮状态、空页面判断、错误提示映射封装在 ViewModel 里，同一套输出可被 UIKit 页面、SwiftUI 页面复用
+4. **更适合状态驱动 UI** —— ViewModel 暴露 `isLoading`、`users`、`errorMessage`、`isLoginEnabled` 等可观察状态，减少「某个分支忘了刷 UI」「loading 和 error 同时出现」的问题
+5. **View 与 Model 解耦更彻底** —— `firstName + lastName`、日期格式化、价格展示都由 ViewModel 统一产出，View 不关心原始 Model 结构
+6. **更适配响应式和 SwiftUI** —— 天然契合 Combine、RxSwift、`ObservableObject`、`@Published`、`@Observable`
+
+⚠️ **但 MVVM 不是免费的**：简单页面用它会增加不必要的 ViewModel 和绑定代码；复杂页面把所有业务规则塞进 ViewModel 就变成 **Massive ViewModel**——只是把 MVC 的问题平移了。
+
+继续拆分的方向：复杂业务规则下沉到 Service/UseCase/Domain 层；数据访问放 Repository；复杂导航交给 Coordinator（MVVM-C）；状态特别复杂时演进到 MVI 或 TCA。
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+### 161. MVI 相比 MVVM 解决了什么问题？Reducer 为什么要设计成纯函数？🔥
+
+MVI 是**单向数据流**架构：
+
+```
+View → Intent/Action → Store → Reducer → State → View
+```
+
+界面由**一个完整的 State** 描述，用户操作、生命周期事件、网络结果都建模成 Action。所有状态变化都进 Reducer，由它根据「当前 State + Action」算出新 State，View 再按新 State 重新渲染。
+
+**解决 MVVM 的三个问题**
+
+| 问题 | MVVM 的毛病 | MVI 怎么解 |
+| --- | --- | --- |
+| **状态一致性** | ViewModel 有多个独立属性（`users`、`isLoading`、`error`、`selectedIndex`），在不同方法里被改，入口一多就容易漏。比如重试时设了 `isLoading = true` 却忘了清上次的 `error` | 状态集中到**一个 State 对象**，在 Reducer 里统一处理转换 |
+| **变化难追踪** | 状态可能从 ViewModel 任意方法被改 | 所有变化必须通过 Action 进 Reducer，于是能记录「**哪个 Action 让 State 从 A 变成 B**」，支持日志、调试、时间旅行 |
+| **副作用分散** | 网络、数据库、定时器散落在各方法里 | Reducer **只做状态计算**，副作用放 Store 或 Effect 层，完成后再发新 Action 回 Reducer |
+
+**Reducer 为什么必须是纯函数**
+
+纯函数意味着：输入相同的 `State + Action`，输出一定相同；不发网络、不读写数据库、不改全局变量、不操作 UI、不依赖当前时间和随机数。
+
+**这是 MVI 可预测和可测试的关键**——测 Reducer 不需要 Mock 网络或 UIKit，只要构造旧 State 和 Action，断言新 State 是否符合预期。
+
+Swift 里通常用 `struct State` 配值语义：
+
+```swift
+var newState = state
+newState.isLoading = true
+return newState
+```
+
+虽然属性是 `var`，但 `struct` 是值类型，语义上仍是「旧 State 生成新 State」，不会改到外部持有的旧 State。
+
+⚠️ **要避免**：用 `class` 做 State，或用 `inout` 直接改外部状态——那样会破坏可追溯性。
+
+**代价**：样板代码更多，State、Action、Reducer 都要显式定义。简单页面属于过度设计；但对**复杂状态、多入口、多异步副作用**的页面收益明显。
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+### 162. TCA 和普通 MVI 有什么关系？TCA 的各个概念分别是什么？
+
+**TCA（The Composable Architecture）可以理解为 Swift 生态里对 MVI/Redux/Elm 思想的成熟实现。** 同样基于单向数据流，但提供了更完整的工程化能力：Effect 系统、依赖注入、Feature 组合、导航状态管理、TestStore。
+
+**七个核心概念**
+
+| 概念 | 是什么 |
+| --- | --- |
+| **State** | 描述某 Feature 当前所需的**全部**状态，通常是值类型结构体。应**尽量最小化**，只保留渲染 UI 和驱动业务必要的数据 |
+| **Action** | 枚举，描述所有可能发生的事件。命名应描述「**发生了什么**」，如 `loginButtonTapped`、`userResponse` |
+| **Reducer** | 接收 State 和 Action，**同步**更新 State，并返回 Effect。业务逻辑的核心位置 |
+| **Store** | 持有 State，接收 View 发的 Action，驱动 Reducer，把 State 变化通知 View |
+| **Effect** | 封装异步操作和副作用（网络、定时器、文件）。完成后可以继续发 Action 回 Reducer |
+| **Dependency** | 内置依赖注入，把网络、数据库、UUID、日期等外部依赖替换成生产/测试/预览实现 |
+| **Scope** | 把父 Feature 的一部分 State 和 Action 映射成子 Feature 的 Store，实现**组合** |
+
+**一次典型数据流**：`store.send(.buttonTapped)` → Store 交给 Reducer → Reducer 同步改 State → State 变化驱动 View 重渲染 → Reducer 返回的 Effect 被 Store 执行 → Effect 完成后发新 Action，再次进 Reducer。
+
+**相比手写 MVI 的五个优势**
+
+1. **组合能力强** —— `Scope` 组合固定子 Feature，`forEach` 组合列表项，`ifLet` 组合可选子 Feature
+2. **副作用标准化** —— Effect 支持异步、合并、串联、**取消**，适合搜索防抖、轮询、长连接
+3. **依赖注入完善** —— `@Dependency` 替换外部依赖，测试时显式注入 Mock
+4. **测试能力强** —— TestStore 可断言发送 Action 后 State 如何变化、Effect 会回传什么 Action，支持**穷尽式测试**
+5. **SwiftUI/UIKit 都能用** —— Reducer 层与 UI 框架无关
+
+**缺点也很明确**：学习曲线高，代码风格和普通 UIKit/MVVM 差异大，简单页面显得重，团队需要统一理解。
+
+**TCA 不是 MVVM 的简单替代品，而是一套强约束的状态管理和模块组合框架**，适合状态复杂、测试要求高、Feature 需要组合的大中型项目。
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+### 163. VIPER 每一层的职责是什么？适合什么场景，缺点是什么？
+
+五层：View、Interactor、Presenter、Entity、Router。核心目标是**单一职责和高可测试性**。
+
+| 层 | 职责 |
+| --- | --- |
+| **View** | UI 展示，接收用户输入转发给 Presenter。通常由 `UIViewController` 实现 View 协议 |
+| **Presenter** | 展示逻辑。接 View 事件 → 调 Interactor → 把 Entity 转成 ViewModel → 调 View 协议更新 UI |
+| **Interactor** | 业务逻辑和数据获取，**完全不知道 UI 存在** |
+| **Entity** | 纯数据模型，不含 UI 逻辑 |
+| **Router** | 模块组装和页面导航 |
+
+**数据流**：View 触发事件 → Presenter → Interactor → Service 取数据回调 Presenter → Presenter 转成 ViewModel → 调 View 协议更新 UI →（需跳转时）Presenter 调 Router。
+
+**适合**：
+
+- 金融、交易、医疗等业务复杂且测试要求高的模块
+- 团队规模大，需要多人并行开发同一模块的不同层
+- 模块生命周期长，**后续维护成本比初始开发速度更重要**
+- 页面逻辑、业务逻辑、导航逻辑都复杂，需要清晰边界
+
+**缺点是代码量大**：一个简单页面也要创建多个协议和类，样板代码明显增加；模块间通信要通过 Router/Delegate/闭包设计清楚，否则很繁琐。**对简单页面用 VIPER 通常是过度设计。**
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+### 164. iOS 组件化中常见的组件通信方案有哪些？🔥
+
+**目标**：让业务组件之间不直接依赖。首页组件不该直接 `import UserModule` 再创建 `UserProfileViewController`——否则用户组件一改就影响首页组件编译，模块边界也没了。
+
+#### ① URL Router
+
+通过 URL 注册和打开页面或服务，如 `user://profile?id=123`。
+
+**原理**：维护一张**路由表**，Key 是 URL Pattern，Value 是 Handler 闭包或页面工厂。组件启动时注册自己能处理的 URL；调用方把 URL 交给 Router，Router 解析 scheme/host/path/query，匹配 Pattern 执行 Handler。**调用方只依赖 Router。**
+
+- ✅ 简单直观、支持跨 App 跳转、适合服务端下发动态路由
+- ❌ **参数依赖字符串，类型不安全**，复杂对象传递不优雅，URL 维护成本高
+- 适合：页面跳转、H5 与 Native 统一路由、动态化跳转
+
+#### ② Target-Action
+
+通过 Runtime 根据字符串找目标类和方法，代表是 CTMediator。
+
+**原理**：约定目标组件暴露固定命名的 Target 类和 Action 方法，如 `Target_User` 类实现 `Action_profileWithParams:`。调用方传 `target = "User"`、`action = "profile"` 和参数字典，Mediator 内部拼类名方法名，用 `NSClassFromString`、`NSSelectorFromString`、`perform` 动态调用。通常还会给 Mediator 写 Category 把字符串调用包装成有明确方法名的 API。
+
+- ✅ **无需启动时注册**，编译期无直接依赖
+- ❌ 依赖字符串和 Runtime，**Swift 纯项目需额外处理**（见[第 107 题](#107-nsclassfromstring-在什么场景下使用有什么注意事项)的模块名前缀问题），运行时才发现错误
+- 适合：希望减少注册成本、以 ObjC 兼容为基础的项目
+
+#### ③ Protocol-Class
+
+定义独立的**协议层** + **服务容器**。
+
+**原理**：协议层只放对外接口（`UserRouterProtocol`、`UserServiceProtocol`），调用方依赖这些协议；用户组件内部提供 `UserRouterImpl`，启动时把 `UserRouterProtocol → UserRouterImpl` 注册到容器。调用方通过 `getService(UserRouterProtocol.self)` 取出实例。**编译期依赖的是抽象协议，不是具体业务组件。**
+
+- ✅ **类型安全**、接口清晰、便于 Mock 测试
+- ❌ 需维护独立 Protocol 组件，服务需显式注册，协议变更影响多个组件
+- 适合：中大型项目、重视类型安全和测试
+
+#### ④ DI（依赖注入）
+
+Protocol-Class 的增强版。不仅按协议解析实现，还能**自动构建依赖树**并管理生命周期（单例、瞬态、作用域）。
+
+**原理**：对象创建权交给 DI 容器。各模块注册「协议 → 实现、如何构造、生命周期」。需要 `UserServiceProtocol` 时不自己 new，由容器解析注入；如果 `UserServiceImpl` 又依赖 `UserRepositoryProtocol`，后者又依赖 `NetworkServiceProtocol`，**容器会递归解析整条依赖链**。
+
+- ✅ 依赖关系清晰、测试替换 Mock 方便、复杂依赖链好维护
+- ❌ 学习和配置成本高，**过度使用会让依赖来源变得不直观**
+- 适合：依赖复杂、需要生命周期管理、测试体系成熟的大型项目
+
+**四者递进关系**：URL Router（最松散、最动态）→ Target-Action（免注册）→ Protocol-Class（类型安全）→ DI（自动依赖树）。
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
+
+### 165. 如何从 0 到 1 实现 APM 系统？🔥
+
+> 这是本章篇幅最大的一题，源仓库给了非常完整的方案。这里保留主干和关键决策点，细节（ClickHouse 表结构、完整 JSON schema、mermaid 架构图）请看原文。
+
+#### 整体形态
+
+```
+C 端 iOS SDK              服务端数据平台              B 端治理平台
+低开销采集真实现场    →    接入/清洗/聚合/存储/    →    发现/定位/分发/
+                          符号化/告警/配置下发         修复/验证/防劣化
+```
+
+#### 第一步：定义指标体系
+
+**核心原则：不能只看平均值**，要按 P50/P90/P99 × 版本/机型/OS/网络/地域/渠道/页面/业务模块切分。
+
+| 维度 | 指标 |
+| --- | --- |
+| 稳定性 | Crash Rate、Watchdog Rate、FOOM Rate、总异常退出率 |
+| 流畅性 | FPS、掉帧率、卡顿率、Freeze 率 |
+| 启动 | 冷/温/热启动、首屏、TTI |
+| 网络 | DNS、TCP、TLS、TTFB、总耗时、错误率、慢请求率、流量 |
+| 页面体验 | 加载 P90、秒开率、首屏、白屏率 |
+| 资源 | 内存峰值、CPU、磁盘 IO、电量、热状态 |
+
+面向管理层的汇总口径：
+
+```
+Abnormal Exit Rate = Crash Rate + Watchdog Rate + FOOM Rate
+Crash-free Users   = 1 - crashed_users / active_users
+Slow Resource Rate = slow_resource_count / total_resource_count
+View Blank Rate    = blank_view_count / total_view_count
+```
+
+#### 第二步：设计 C 端 SDK
+
+SDK 和业务 App **共进程**，所以原则是：低开销、可控制、可降级、可追责、可合规。**架构上必须插件化，而不是一个巨大单例**：
+
+```swift
+protocol APMPlugin {
+    var name: String { get }
+    var defaultEnabled: Bool { get }
+    func start(context: APMContext, config: APMPluginConfig)
+    func stop()
+    func update(config: APMPluginConfig)
+}
+```
+
+分层：SDK Core（初始化、生命周期、远程配置、插件调度、自监控）/ Context Manager（各类 ID）/ Event Processor（标准化、脱敏、采样、去重、优先级）/ Local Store（分级落盘）/ Uploader（批量、压缩、加密、重试、幂等、熔断）。
+
+⚠️ **初始化要拆成两阶段**：Crash handler、上次运行状态、最小上下文、本地配置**尽早**启动；FPS、网络 hook、历史包扫描、批量上报、MemoryGraph 这类有开销的放到**首帧后或空闲时**。
+
+**SDK 自己也要被监控**：初始化耗时、队列大小、丢弃数、上报失败率、禁用插件列表、SDK 自身 Crash 率。
+
+#### 第三步：核心采集能力
+
+**Crash** —— 同时覆盖 Mach Exception、Unix Signal、NSException / C++ terminate。崩溃现场**只能做 async-signal-safe 的最小写入**：不能 `malloc`、不能调 ObjC/Swift、不能发网络、不能符号化，**下次启动再转成标准事件上报**。
+
+```c
+void crash_handler(int sig, siginfo_t *info, void *ucontext) {
+    static char buffer[65536];
+    int fd = open("/path/to/apm_crash.log", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    write_header(fd, buffer, sig, info);
+    write_thread_states(fd);
+    write_backtraces(fd);
+    write_image_infos(fd);
+    fsync(fd); close(fd);
+    raise(sig);
+}
+```
+
+⚠️ Mach 端口注册时**要保存旧 handler 并转发**，否则会破坏 Bugly、Sentry 等其它 SDK。详见[第 168–169 题](#168-mach-异常和-unix-信号有什么关系为什么崩溃-sdk-通常两者都捕获-)。
+
+**Watchdog / 卡死** —— 不能只抓一次堆栈。RunLoop Observer + 子线程 Ping 检测主线程长时间停在 `beforeSources` 或 `afterWaiting`，触发后**每 500ms 多次采样**主线程栈，并记录线程状态、CPU、最近页面、最近操作、网络和磁盘现场。服务端聚合多次采样找出现频率最高或阻塞最长的关键帧。死锁场景可以扫描等待锁的线程，解析锁 owner tid，**构建「等待 → 持有」有向图找环**（呼应[第 91 题](#91-死锁如何治理)）。
+
+**FOOM** —— 系统没有回调，只能**排除法**。每次启动保存上次运行状态，下次启动时判断：
+
+```swift
+func suspectedFOOM(last: LastState, current: LastState) -> Bool {
+    if last.didCrash || last.didExitNormally { return false }
+    if last.appVersion != current.appVersion { return false }   // 排除升级
+    if last.osVersion  != current.osVersion  { return false }   // 排除系统重启
+    if last.batteryLevel < 0.02 { return false }                // 排除电量耗尽
+    return last.isForeground                                     // 必须在前台
+}
+```
+
+FOOM 详情**没有崩溃栈**，所以必须保存内存水位、页面路径、大对象 TopN、机型内存档位和 MetricKit memory diagnostics。
+
+**卡顿/FPS** —— 见[第 73 题](#73-如何检测-ios-应用的卡顿有哪些检测方案-)。⚠️ ProMotion 机型要注意自适应刷新率，**静止页面低 FPS 不一定是卡顿**，要区分 FPS、掉帧、单帧耗时和滚动场景。
+
+**网络** —— 优先用 `URLSessionTaskMetrics` 拿 DNS/TCP/TLS/TTFB/download/total 分段耗时。要拦截内容可用 `NSURLProtocol`（注意防重复拦截）。WKWebView 走独立 WebContent 进程，需要**注入 JS SDK** 采集 Navigation Timing、Resource Timing、Paint、Long Task。
+
+**MetricKit** —— 必接，作为低开销系统基线。但它**缺少业务上下文，不能替代实时 SDK**。
+
+#### 第四步：统一 RUM 数据模型
+
+**别让 Crash、网络、页面、卡顿各自孤立上报**，要用 RUM 把用户链路串起来：
+
+```
+Application → Release/Build/Env → User/Device → Session → View
+                                                            ├─ Action
+                                                            ├─ Resource
+                                                            ├─ Error
+                                                            ├─ LongTask/Freeze
+                                                            └─ Custom Event
+```
+
+所有事件用统一 envelope，payload 按类型扩展。三个关键字段：`event_id` 用于**幂等去重**（重试时不能变）、`event_time` 是端侧时间（服务端另写 `receive_time`）、`schema_version` 支撑长期演进。
+
+**上报按数据价值分级**：
+
+| 级别 | 内容 | 策略 |
+| --- | --- | --- |
+| Critical | Crash、Watchdog、FOOM | 尽量全量、可靠落盘 |
+| Important | 网络错误、慢请求、核心页面性能 | 较高采样 |
+| Sampled | 普通 FPS、CPU、资源请求 | 低采样 |
+| Debug | MemoryGraph、Coredump、Zombie | 只灰度或触发式开启 |
+
+⚠️ **采样必须按设备或用户 hash 稳定采样**，不能每条事件随机——否则一个用户的页面、网络、错误会被切碎，B 端还原不出用户故事：
+
+```swift
+func sampled(deviceId: String, key: String, rate: Double, day: String) -> Bool {
+    let seed = "\(deviceId)-\(key)-\(day)"
+    let hash = UInt64(seed.hashValue.magnitude)
+    return Double(hash % 10_000) / 10_000.0 < rate
+}
+```
+
+上传用 protobuf + gzip/zstd + HTTPS。失败重试用**指数退避 + jitter**；4xx schema 错误不重试，401/403 刷新配置或停传，413 拆包，429 遵守 `Retry-After`，5xx 重试。
+
+⚠️ **APM 自身的请求、文件和线程都要打白名单**，防止网络/磁盘/CPU 监控产生**回环**。
+
+#### 第五步：服务端数据平台
+
+**接入网关只做轻逻辑**：鉴权、限流、解压解密、Schema 校验、大小限制、租户隔离、时间校正、快速 ACK，然后写 Kafka/Pulsar。
+
+**清洗层**：decode、PII 脱敏、normalize、维度补全、去重、路由。维度补全包括 IP→地域运营商、机型→性能档位、版本→Git commit 和灰度批次、URL→path template 和接口 owner、栈帧→模块和团队。
+
+**存储不能只靠 MySQL**：
+
+| 数据 | 选型 |
+| --- | --- |
+| 明细事件、多维聚合 | ClickHouse / Doris |
+| 指标时序 | TSDB |
+| 堆栈和错误文本 | Elasticsearch / OpenSearch |
+| dSYM、原始包、MemoryGraph、Coredump | 对象存储 |
+| 项目配置、权限、Issue 元数据 | PostgreSQL / MySQL |
+| 热点缓存、限流 | Redis |
+
+**符号化服务**：CI 自动上传 dSYM、BCSymbolMap 和源码版本，按 `release + build + UUID` 绑定。客户端上报 image UUID、slide、PC address、architecture、OS version，服务端用 `atos` 或 `llvm-symbolizer` 符号化，支持 Swift demangle、系统符号库和**历史重符号化**。**没有 dSYM 的 Crash 平台只能统计，不能定位。**
+
+**Issue 聚合是治理的最小单元**。平台不该把每条 Crash 都丢给研发，而要按 fingerprint 聚成 Issue：
+
+| Issue 类型 | fingerprint 怎么算 |
+| --- | --- |
+| Crash | 异常类型 + signal + 崩溃线程标记 + **前几个 in-app frame** |
+| Watchdog | 多次采样的公共栈 + 阻塞类型 |
+| 慢接口 | host + path template + status/error |
+| FOOM | 页面 + 内存峰值特征 + 机型档位 + 模块特征 |
+
+Issue 还要维护状态、Owner、影响用户、趋势、首现版本、最近版本、样本事件、关联 Session、修复版本、重复/噪声标记。
+
+#### 第六步：B 端治理平台
+
+**B 端不是把数据画成图，而是服务工作流。**
+
+首页只放能代表用户体验和发布风险的指标，且**所有异常项都要能一键下钻**到 Issue/Session/版本/机型/页面/接口。
+
+**Issue 详情页要回答六个问题**：影响多少人、从什么时候开始、在哪些版本机型页面发生、疑似原因是什么、谁负责、修复后是否恢复。
+
+**Session 页**按时间线串起页面、操作、网络、错误和长任务：
+
+```
+10:01:02  Session Start  cold_launch
+10:01:03  View Home appear
+10:01:04  Resource GET /home 340ms 200
+10:01:08  Action tap_product
+10:01:09  View ProductDetail appear
+10:01:10  Resource GET /product/{id} 1.2s 200
+10:01:12  LongTask main 680ms
+10:01:15  Action tap_buy
+10:01:16  Resource POST /order 3.2s 500
+10:01:17  Error EXC_BAD_ACCESS
+```
+
+**告警要少而准、可行动**。内容必须包含：发生了什么、影响多少用户、从何时开始、影响哪些版本/机型/地区、疑似 Top 维度、Owner、下一步入口。要做同 Issue 合并、静默窗口、升级策略、恢复通知、误报反馈。**不可行动的指标只进报表，不进告警。**
+
+**发布防劣化是 APM 的高价值场景**：灰度阶段用**同时间窗口、同机型、同 OS、同网络、同地域、同渠道**做新旧版本对照，门禁指标包括 Crash-free users、FOOM rate、Watchdog rate、Launch P90、View slow rate、Network error rate、关键路径成功率。显著劣化就暂停放量。
+
+#### 落地路线
+
+| 阶段 | 目标 | 做什么 |
+| --- | --- | --- |
+| **L1** | 能看到 | MetricKit、Crash、启动、基础网络错误、最小质量大盘 |
+| **L2** | 覆盖完整 | Watchdog、FOOM、卡顿、页面耗时、业务 Trace、RUM ID |
+| **L3** | 能归因 | 符号化、Issue 聚类、Session 时间线、共性维度、主线程采样、火焰图 |
+| **L4** | 能闭环 | Owner、工单、IM、告警、修复版本、灰度验证 |
+| **L5** | 能治理 | SLO、发布门禁、自动拦截、质量报表、业务结果关联 |
+
+#### 四个最容易失败的点
+
+1. **指标口径不统一**，只采技术点、没有 RUM 关联 ID → B 端无法还原用户故事
+2. **SDK 过重**，Hook、高频采样、写盘、上报把 App 自己拖慢 → 必须远程配置、灰度、熔断、自监控
+3. **服务端只存原始日志**，没有实时聚合、符号化、Issue 聚类、多模存储 → 查不快、告不准、无法重放
+4. **B 端只有看板**，没有 Owner、告警、工单、修复验证、发布门禁 → 最后没人真正治理
+
+→ [原文：iOS 架构概述](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/architecture/iOS架构概述.md)
