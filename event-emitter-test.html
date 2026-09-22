@@ -13,7 +13,7 @@
         我是按钮
     </button>
     <script type="module">
-        import EventEmitter from './EventEmitter.js'
+        import EventEmitter from './event-emitter.js'
 
         function handleClick() {
             EventEmitter.emit('click', { a: 'test', b: [1, 2, 3] }, '6666')
@@ -24,7 +24,7 @@
     </script>
 </body>
 <script type="module">
-    import EventEmitter from './EventEmitter.js'
+    import EventEmitter from './event-emitter.js'
 
     // test
     function test() {

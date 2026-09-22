@@ -43,7 +43,7 @@ additionalSafeAreaInsets.right = 44.0
 ```
 
 !['safearea'](./assets/img/safearea.webp)
-!['safearea'](./assets/img/safearea横屏.webp)
+!['safearea'](./assets/img/safearea-landscape.webp)
 
 > 最近很火的 Safe Area 到底是什么 https://www.jianshu.com/p/63c0b6cc66fd
 > iOS11适配-Safe Area https://blog.csdn.net/u011656331/article/details/78365326

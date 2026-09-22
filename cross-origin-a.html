@@ -9,7 +9,7 @@
 </head>
 
 <body>
-    <iframe id="iframe" src="http://127.0.0.1:8081/CrossOrigin-b.html" style="display:none;"></iframe>
+    <iframe id="iframe" src="http://127.0.0.1:8081/cross-origin-b.html" style="display:none;"></iframe>
     <script>
         var iframe = document.getElementById('iframe');
 
@@ -38,7 +38,7 @@
             iframe.onload = function () {
                 if (state === 0) {
                     // 第1次onload(跨域页)成功后，切换到同域代理页面
-                    iframe.contentWindow.location = 'http://127.0.0.1:8080/CrossOrigin-c.html';
+                    iframe.contentWindow.location = 'http://127.0.0.1:8080/cross-origin-c.html';
                     state = 1;
                 } else if (state === 1) {
                     // 第2次onload(同域proxy页)成功后，读取同域window.name中数据
@@ -58,10 +58,10 @@
         };
 
         // 请求跨域b页面数据
-        proxy('http://127.0.0.1:8081/CrossOrigin-b.html', function (data) {
+        proxy('http://127.0.0.1:8081/cross-origin-b.html', function (data) {
             console.log(data);
         });
-        proxy('http://127.0.0.1:8081/CrossOrigin-b.html', function (data) {
+        proxy('http://127.0.0.1:8081/cross-origin-b.html', function (data) {
             console.log(data);
         });
     </script>
