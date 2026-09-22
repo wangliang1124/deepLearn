@@ -2480,3 +2480,316 @@ iOS 的内存压缩机制会把长时间未访问的 Dirty Memory 压缩。如�
 > 💡 补充一个本地就能用的土办法：给关键类加 `deinit`/`dealloc` 打印。[swift-memory-arc.swift](ios-snippets/swift-memory-arc.swift) 就是靠这个把循环引用演示出来的——**该打印的 deinit 没出现，就是泄漏了**。不用开 Instruments，跑一遍就知道。
 
 → [原文：iOS 中的内存管理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/iOS中的内存管理.md)
+
+---
+
+## 七、多线程与并发
+
+### 88. 死锁的条件是什么？如何破坏？🔥
+
+**Coffman 四个必要条件**——注意是「必要」，破坏任意一个就不会死锁：
+
+| 条件 | 怎么破 |
+| --- | --- |
+| **互斥** | 读写锁、无锁结构、值类型 |
+| **持有并等待** | 一次性申请所有资源，或 `tryLock` + 回退 |
+| **不可抢占** | 加锁超时、可取消任务 |
+| **循环等待** | **全局统一加锁顺序**（最常用，比如按对象地址排序） |
+
+实践中**破「循环等待」是性价比最高的**——定一个全局顺序，所有代码按同一顺序加锁、反向释放，成本低且不影响性能。
+
+→ [原文：死锁](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/死锁/死锁.md)
+
+### 89. `DispatchQueue.main.sync` 为什么会死锁？什么时候不会？🔥
+
+`sync` 的语义是：**把 block 排到队列尾部，然后阻塞当前线程等它完成。**
+
+主队列是**串行**的。如果调用方当前就在主线程：主线程卡在 `sync` 上等 block 完成 → 主队列要等当前任务（就是正卡着的这个）结束才能调度那个 block → 循环等待。
+
+**不死锁的情况**：在**子线程**调用 `main.sync`。此时当前线程不是主队列的执行线程，阻塞它不影响主队列继续调度。
+
+> ✅ **实测**（[swift-concurrency.swift](ios-snippets/swift-concurrency.swift)）并发队列嵌套 `sync` **不会**死锁，因为并发队列不要求串行执行，能另开线程：
+>
+> ```
+>   并发队列嵌套 sync：跑通了，没死锁
+>   从外部线程 sync 进串行队列：正常
+> ```
+>
+> 对照着记：**死锁的充分条件是「串行队列 + 在它自己的执行线程上 sync 它自己」**，三个条件缺一不可。
+
+→ [原文：死锁](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/死锁/死锁.md)
+
+### 90. iOS 中死锁的常见场景有哪些？🔥
+
+十个，前四个是高频考点。
+
+**① GCD 串行队列对自身 `sync`** —— 最经典。
+
+```swift
+DispatchQueue.main.sync { updateUI() }        // 主线程调用 → 死锁
+
+let queue = DispatchQueue(label: "cache")
+queue.async {
+    queue.sync { saveCache() }                // 同一串行队列 sync 自己 → 死锁
+}
+```
+
+**② 锁的循环等待** —— 最标准的死锁模型，同时满足「持有并等待」和「循环等待」。
+
+```swift
+DispatchQueue.global().async { lockA.lock(); lockB.lock() }   // 等 B
+DispatchQueue.global().async { lockB.lock(); lockA.lock() }   // 等 A
+```
+
+**③ 非递归锁的同线程重入** —— `NSLock`、默认 `pthread_mutex_t`、`os_unfair_lock` **都不是递归锁**。
+
+```swift
+func update() {
+    lock.lock(); defer { lock.unlock() }
+    reload()          // reload 内部再次 lock → 同线程重入 → 死锁
+}
+```
+
+修法：把公共逻辑抽到**不加锁的 private 方法**；确实需要递归语义时才用 `NSRecursiveLock`。
+
+**④ 用 `DispatchSemaphore.wait()` 把异步接口同步化** —— 常见于包装网络请求、Core Bluetooth、`evaluateJavaScript`、delegate 回调。
+
+```swift
+func syncFetch() -> Data? {
+    let sem = DispatchSemaphore(value: 0)
+    asyncFetch { data in
+        DispatchQueue.main.async { result = data; sem.signal() }
+    }
+    sem.wait()        // 在主线程调用时，main.async 根本没机会执行 → 永远等不到
+    return result
+}
+```
+
+现代 Swift 应该用 `async/await` 或 `withCheckedContinuation` 桥接，而不是这样。
+
+**⑤ FMDB / Core Data 嵌套队列** —— `inDatabase:` / `inTransaction:` / `performAndWait:` 本质都依赖串行队列同步执行，嵌套就等价于场景 ①。
+
+```swift
+context.performAndWait {
+    updateObject()
+    context.performAndWait { saveObject() }   // 同一个 context 嵌套 → 死锁
+}
+```
+
+**⑥ 持锁时调用外部回调/发通知/派发同步任务** —— 锁内执行用户闭包、通知回调、delegate、KVO 这类**不可控代码**非常危险：外部代码可能反向调用当前对象，也可能申请另一把锁。
+
+正确做法：**锁内只读写共享状态、生成快照，锁外再执行回调。**
+
+**⑦ `+initialize` / `+load` 里的跨类依赖** —— runtime 执行 `+initialize` 时有内部锁保护。A 初始化触发 B，B 初始化又反向依赖 A，多线程同时触发就可能死锁。初始化逻辑应该只初始化自己。
+
+**⑧ 主线程等后台线程持有的锁，最终被 watchdog 杀掉** —— 未必是经典 Coffman 死锁，但用户感知一样：主线程卡在 `os_unfair_lock_lock` / `pthread_mutex_lock` / `semaphore_wait`，后台持锁跑长任务，界面长时间无响应。
+
+**⑨ signal handler 里再次申请锁** —— 崩溃采集路径如果调用 `malloc`、`NSLog`、ObjC runtime、dyld 这些**非 async-signal-safe** 的 API，可能在原线程已持锁时再次申请同一把锁，导致**采集链路自己死锁**。详见[第 169 题](#169-signal-handler-为什么要求异步信号安全哪些操作不能在里面做-)。
+
+**⑩ Swift Concurrency 误用** —— actor 的可重入设计能减少传统死锁，但不等于不会卡死：
+
+```swift
+@MainActor func loadSync() {
+    let sem = DispatchSemaphore(value: 0)
+    Task { @MainActor in updateUI(); sem.signal() }
+    sem.wait()    // MainActor 被阻塞，Task 永远排不上 → 死锁
+}
+```
+
+**一句话总结这十条：绝大多数都是「同步等待一个需要当前线程/队列才能完成的事」。**
+
+→ [原文：死锁](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/死锁/死锁.md)
+
+### 91. 死锁如何治理？
+
+治理不是写几条编码规范，而是**事前 / 事中 / 事后**的闭环。
+
+#### 事前：预防与准入
+
+1. **选更安全的并发模型** —— 新 Swift 代码优先 `actor` / async-await / `@MainActor` / 值类型 / 串行队列封装。**锁越少，循环等待的机会越少**
+2. **统一加锁顺序** —— 可能同时拿多把锁时定义全局顺序（按模块层级、资源 id、对象地址），所有代码同序加锁、反向释放
+3. **缩短临界区** —— 临界区只做共享状态读写，不做 IO、网络、大事务、图片解码、复杂计算，更不在持锁时等另一把锁/队列/信号量
+4. **锁内不调用外部代码** —— 锁内复制快照，锁外回调
+5. **避免同步等待异步结果** —— 要桥接旧接口就用 `withCheckedContinuation`，让调用方 `await` 挂起而非阻塞线程
+6. **团队红线 + Code Review 清单** —— 禁止主线程 `semaphore.wait()`、禁止串行队列 sync 自身、禁止 `performAndWait` 嵌套、禁止持锁发通知、禁止 `+initialize` 跨类依赖。落地靠 SwiftLint、pre-commit、TSan CI、Swift 严格并发检查
+
+#### 事中：检测与现场保留
+
+1. **主线程卡死监控** —— RunLoop observer / 主线程 ping / MetricKit / Sentry App Hangs。卡死时抓**全线程**堆栈、线程状态、队列 label、CPU 使用、关键寄存器
+2. **等待必须有超时和失败路径** —— 能用 `tryLock` 就别无限等。超时不是为了吞问题，是为了避免主线程永久阻塞，同时记录锁等待耗时、线程 id、队列 label、业务上下文
+3. **主线程路径特殊保护** —— 同步封装先判断是否已在主线程；UI 状态用 `@MainActor` 约束
+4. **高风险封装加断言和埋点** —— Debug 下断言「不能从同一队列同步进入」；线上控制采样
+5. **监控链路自身要安全** —— 见上面场景 ⑨
+
+#### 事后：归因与防劣化
+
+1. **先区分死锁 / 死循环 / 单纯耗时** —— 这是最关键的第一步：
+
+   | 现象 | CPU | 线程状态 | 栈顶特征 |
+   | --- | --- | --- | --- |
+   | **死锁** | 接近 0 | WAITING / BLOCKED | `__psynch_mutexwait`、`semaphore_wait_trap`、`dispatch_sync_wait`、`os_unfair_lock_lock` |
+   | **死循环** | 高 | running | 业务代码循环 |
+   | **单纯耗时** | 中高 | running | IO、计算、主线程大任务 |
+
+2. **全线程堆栈聚合 + 死锁图** —— 只看主线程不够，要找到「主线程在等谁、那个线程又在等谁」。拿得到锁 owner 时可以建「线程等待锁、锁被线程持有」的有向图判环
+3. **按根因修复并补测试** —— 别只加个超时了事。统一锁顺序、拆掉同步等待、缩短临界区、把锁内回调挪出去。能复现的要补并发压力测试或 TSan 测试任务
+4. **灰度验证** —— 看卡死率、watchdog 崩溃率、App Hang 数量的**趋势**，死锁类问题依赖时序，低频但影响严重
+5. **复盘回灌准入体系** —— 变成 SwiftLint 规则、CI 的 TSan Job、Review checklist，并在基础库里提供安全封装，减少业务层直接碰锁
+
+→ [原文：死锁](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-advanced/死锁/死锁.md)
+
+### 92. OSSpinLock 为什么被废弃？什么是优先级反转？🔥
+
+**自旋锁**等待时不让线程休眠，而是**忙等**（busy-wait）不断检查锁是否可用。好处是没有线程切换开销，临界区极短时快；坏处是等待期间**持续占 CPU**。
+
+`OSSpinLock` 被废弃，是因为在 iOS 的优先级调度下会触发**优先级反转**：
+
+```
+1. 低优先级线程拿到自旋锁，开始执行临界区
+2. 高优先级线程要同一把锁，开始自旋等待（忙等，霸占 CPU）
+3. 中优先级线程抢占了低优先级线程的 CPU（中 > 低）
+   → 低优先级线程分不到时间片，锁一直释放不掉
+4. 结果：高优先级空转烧 CPU，低优先级饿死，形成活锁
+```
+
+**关键点在于**：自旋锁的忙等让高优先级线程一直「正在运行」，调度器因此不会去调度低优先级线程，那把锁就永远释放不了。
+
+**替代方案**
+
+| 方案 | 为什么安全 |
+| --- | --- |
+| **`os_unfair_lock`**（推荐） | 等待时线程被内核挂起而非忙等，且系统做优先级继承 |
+| `pthread_mutex` | 支持**优先级继承**——高优先级线程等锁时，系统临时提升持锁低优先级线程的优先级，让它赶紧跑完释放 |
+| `NSLock` | 底层就是 `pthread_mutex`，同样有优先级继承 |
+| Actor | Swift Concurrency 运行时自动处理优先级 |
+
+→ [原文：多线程](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/多线程.md)
+
+### 93. 如何实现读写锁？
+
+核心需求：**多个线程可同时读，写必须独占。**
+
+最常用的实现是**并发队列 + barrier**：
+
+```swift
+final class ReadWriteStore {
+    private let queue = DispatchQueue(label: "com.example.rwlock", attributes: .concurrent)
+    private var _data: Any?
+
+    func readData() -> Any? {
+        queue.sync { _data }                    // 多个读可并发
+    }
+
+    func writeData(_ data: Any?) {
+        queue.async(flags: .barrier) {          // barrier 独占执行
+            self._data = data
+        }
+    }
+}
+```
+
+- 读用 `sync` 提交到并发队列 → 多个读并发跑
+- 写用 `async(flags: .barrier)` → barrier 等前面所有任务跑完后**独占执行**，完成后后续任务才继续
+
+另一个选择是 `pthread_rwlock_t`，但 GCD barrier 方式代码更简洁、不容易写错，**推荐优先用它**。
+
+→ [原文：多线程](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/多线程.md)
+
+### 94. 不同队列和执行方式的组合会怎样？🔥
+
+这张表要能默写出来：
+
+| | 串行队列 | 并发队列 | 主队列 |
+| --- | --- | --- | --- |
+| **sync** | 不开新线程，串行执行 | 不开新线程，**串行执行** | **在主线程调用会死锁** |
+| **async** | 开 **1** 条新线程，串行执行 | 开**多**条新线程，并发执行 | 不开新线程，串行执行 |
+
+逐条说明：
+
+- **串行 + sync** —— 任务在**当前线程**执行（`sync` 从不开新线程），一个跑完才下一个
+- **串行 + async** —— 开一条新线程，任务在该线程按序执行。**只开一条**，因为串行队列同一时间只执行一个任务
+- **并发 + sync** —— 任务在**当前线程**执行。虽然是并发队列，但 `sync` 会阻塞等待，效果**等同串行**。这是最容易答错的一格
+- **并发 + async** —— 开多条线程并发执行，最常用的并发场景
+- **主队列 + sync** —— 主线程调用会死锁；**子线程调用不会**，任务在主线程执行
+- **主队列 + async** —— 任务在主线程串行执行，回主线程刷 UI 就用它
+
+**一句话记忆：`sync` 永远不开新线程；开不开新线程、开几条，只由队列类型和 `async` 决定。**
+
+→ [原文：多线程](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/多线程.md)
+
+### 95. 如何保证线程安全？🔥
+
+| 方案 | 适用场景 | 例子 |
+| --- | --- | --- |
+| **锁**（`NSLock` / `pthread_mutex` / `os_unfair_lock`） | 保护临界区，短暂的共享数据访问 | 属性读写、计数器递增 |
+| **`@synchronized`** | 性能要求不高的简单场景 | 单例初始化（OC）、简单临界区 |
+| **`dispatch_semaphore`** | 控制**最大并发数**、资源池 | 限制同时下载数、连接池 |
+| **串行队列** | 把所有对共享资源的操作集中到一个队列 | 日志写入、数据库操作 |
+| **并发队列 + barrier** | **多读单写** | 缓存读写、配置管理 |
+| **`atomic` 属性** | 仅保护单个属性的 getter/setter | 简单标志位 |
+| **Actor**（Swift 5.5+） | Swift 里的推荐方案，**编译器保证** | ViewModel 状态、共享数据存储 |
+
+⚠️ **`atomic` 的陷阱**：它只保证单次 getter/setter 原子，**复合操作仍然不安全**。`self.count += 1` 是「读-改-写」三步，`atomic` 救不了。
+
+> ✅ **实测**（[swift-concurrency.swift](ios-snippets/swift-concurrency.swift)）这个坑有多大，看数字：
+>
+> ```
+> == 没有保护的共享可变状态 = 数据竞争 ==
+>   期望 100000，实际 72525
+>   丢失了 27475 次自增
+>
+> == 加锁修好 ==
+>   期望 100000，实际 100000
+>
+> == actor ==
+>   actor 计数：期望 1000，实际 1000
+> ```
+>
+> 10 万次并发自增**丢了 27475 次**，超过四分之一。`value += 1` 看着像一步，实际是读-改-写三步，随时可能被打断。
+
+→ [原文：多线程](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/多线程.md)
+
+### 96. Actor 的优势是什么？结构化并发解决了什么问题？🔥
+
+#### Actor 的优势
+
+传统多线程要开发者手动选锁、管加锁解锁时机，漏一处就是数据竞争，而且这类 bug **难复现难调试**（见上题：同样的代码每次跑丢的数量都不一样）。Actor 从语言层面解决：
+
+- **编译时安全** —— 从 actor 外部访问可变状态必须 `await`，忘了**编译器直接报错**，而不是等运行时崩
+- **无需手动加锁** —— 内部状态自动隔离，消除「忘记解锁」「死锁」这类人为错误
+- **消除数据竞争** —— Swift 6 严格并发检查 + Actor + `Sendable` 三者配合，可在**编译期**消除 Data Race
+- **抽象层次更高** —— 锁保护的是「代码段」，你得记住哪些代码要加锁；**Actor 保护的是「数据」**，只要数据在 actor 内就自动安全
+- **可组合性好** —— actor 之间通过 `await` 交互，得益于可重入设计，不会有传统锁的嵌套死锁问题
+
+#### 结构化并发解决了什么
+
+GCD 时代 `dispatch_async` 派发出去的任务**与创建它的上下文完全脱钩**，带来四个问题：
+
+| 问题 | 具体表现 |
+| --- | --- |
+| **任务泄漏** | 派发出去的任务没有所有者，无法确保它一定完成或被取消 |
+| **取消困难** | 要手动持有 `DispatchWorkItem` 再 `cancel()`，而且**子任务不会自动取消** |
+| **错误处理分散** | 每个闭包回调各自处理错误，无法自动向上传播 |
+| **生命周期不可控** | 闭包捕获了 `self`，异步任务的生命周期可能超出预期 |
+
+结构化并发（`async let`、`TaskGroup`）把**任务生命周期绑定到作用域**来解决——作用域结束时所有子任务必然已完成或已取消。
+
+> ✅ **实测**（[swift-concurrency.swift](ios-snippets/swift-concurrency.swift)）
+>
+> 并行效果，三个各 100ms 的任务：
+>
+> ```
+>   串行 await（累加耗时）：    结果 1 2 3，耗时 313 ms
+>   async let（并行，取最长）：  结果 1 2 3，耗时 103 ms
+> ```
+>
+> 取消自动沿结构向下传播：
+>
+> ```
+>   任务取消会沿结构向下传播：
+>     子任务感知到取消并退出
+> ```
+>
+> 父 Task 一 `cancel()`，TaskGroup 里正在 `Task.sleep` 的子任务立刻抛出并退出——**这正是 GCD 做不到的那件事**。
+
+→ [原文：多线程](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/多线程.md)
