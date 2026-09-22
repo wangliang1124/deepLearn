@@ -562,3 +562,710 @@ dispatch_async(dispatch_get_global_queue(0, 0), ^{
 - GCD Timer 用 `dispatch_source_cancel`。⚠️ 不能直接释放处于 suspended 状态的 `dispatch_source_t`，会 `EXC_BAD_INSTRUCTION` 崩溃，要先 `resume` 再 `cancel`
 
 → [原文：Timer 的注意事项](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Timer的注意事项.md)
+
+---
+
+## 四、底层原理
+
+### 18. KVC 的底层原理是什么？🔥
+
+KVC 靠 `NSKeyValueCoding` 协议（`NSObject` 默认遵循），底层用的是 ObjC runtime 的方法查找和 ivar 访问能力。考点全在**查找顺序**上。
+
+**`setValue:@"Tom" forKey:@"name"`**
+
+1. 找 setter：`setName:` → `_setName:`，命中任意一个就 `objc_msgSend` 调用，结束
+2. 没找到 setter，问 `+accessInstanceVariablesDirectly`（默认 `YES`）。返回 `NO` 就直接跳到第 4 步
+3. 找 ivar：`_name` → `_isName` → `name` → `isName`，命中就 `object_setIvar` 直接赋值
+4. 都没有 → `setValue:forUndefinedKey:`，默认抛 `NSUndefinedKeyException`
+
+**`valueForKey:@"name"`**
+
+1. 找 getter：`getName` → `name` → `isName` → `_name`。返回值是基本类型会自动包成 `NSNumber` / `NSValue`
+2. 没找到就检查**集合代理方法**：NSArray 模式要同时有 `countOfName` + `objectInNameAtIndex:`；NSSet 模式要同时有 `countOfName` + `enumeratorOfName` + `memberOfName:`。满足就返回代理对象（`NSKeyValueArray` / `NSKeyValueSet`）
+3. 问 `+accessInstanceVariablesDirectly`
+4. 找 ivar：`_name` → `_isName` → `name` → `isName`
+5. 都没有 → `valueForUndefinedKey:`，抛 `NSUndefinedKeyException`
+
+注意两个顺序不一样：setter 找两个名字，getter 找四个；ivar 的查找顺序两边倒是一致的。
+
+⚠️ 给**基本类型**属性 `setValue:nil forKey:` 会走 `setNilValueForKey:`，默认抛 `NSInvalidArgumentException`。重写它给个默认值可以免崩。
+
+**Swift 里的区别**：继承 `NSObject` 且属性标了 `@objc dynamic` 的走同一套。而 Swift 原生 KeyPath（`\Person.name`）是**完全不同的机制**——编译期类型安全，用编译器算好的偏移量直接读写内存，不解析字符串也不查方法，更快但没有运行时动态性。
+
+→ [原文：KVC 底层原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/KVC底层原理.md)
+
+### 19. KVO 的底层实现原理是什么？🔥
+
+核心是 **isa-swizzling**。
+
+**① 动态建子类.** 调 `addObserver:` 时，runtime 查有没有 `NSKVONotifying_ClassName`，没有就 `objc_allocateClassPair` 创建 + `objc_registerClassPair` 注册，然后把对象的 **isa 指向这个子类**。
+
+```
+添加观察前：instance.isa → Account
+添加观察后：instance.isa → NSKVONotifying_Account → Account（superclass）
+```
+
+**② 重写 setter.** 把被观察属性的 setter IMP 换成 Foundation 内部的 `_NSSetXXXValueAndNotify` 系列（按类型选，对象用 `_NSSetObjectValueAndNotify`，int 用 `_NSSetIntValueAndNotify`）。逻辑等价于：
+
+```objc
+- (void)setBalance:(int)balance {
+    [self willChangeValueForKey:@"balance"];
+    [super setBalance:balance];        // 调原始 setter
+    [self didChangeValueForKey:@"balance"];
+}
+```
+
+**③ 还重写了三个辅助方法.**
+
+- `class` —— 返回原始父类而非 `NSKVONotifying_` 子类，对外瞒住实现细节
+- `dealloc` —— 销毁时做 KVO 清理
+- `_isKVOA` —— 返回 YES，供 runtime 内部识别
+
+**④ 观察者信息存哪.** 存在被观察对象的 `observationInfo` 里（`NSObject` 上声明的属性），指向 Foundation 的 `NSKeyValueObservationInfo`，内含一组 `NSKeyValueObservance` 记录（observer、keyPath、options、context）。`didChangeValueForKey:` 触发时从里面找出该 keyPath 的所有记录逐一回调。
+
+> ✅ **实测**（[objc-kvo-internals.m](ios-snippets/objc-kvo-internals.m)）上面四条全部命中：
+>
+> ```
+> == 添加观察者之前 ==
+>       object_getClass() = Account                      (真实 isa)
+>       [obj class]       = Account                      (对外宣称)
+>       setBalance: IMP   = 0x102dc8994
+>       setNotObserved:   = 0x102dc89d4
+>
+> == 添加观察者之后 ==
+>       object_getClass() = NSKVONotifying_Account       (真实 isa)
+>       [obj class]       = Account                      (对外宣称)
+>       setBalance: IMP   = 0x1858efad0      ← 换了！地址落在 Foundation 镜像里
+>       setNotObserved:   = 0x102dc89d4      ← 没被观察的属性，IMP 原封不动
+>
+>   动态子类的 superclass = Account
+>
+>   动态子类重写了哪些方法：
+>       setBalance:
+>       class
+>       dealloc
+>       _isKVOA
+> ```
+>
+> 注意三处细节：`[obj class]` **撒了谎**（仍报 `Account`），`object_getClass()` 才说实话；只有**被观察**的那个属性的 setter 被换了；移除观察者后 isa 会换回 `Account`。
+
+**几个必答的补充点：**
+
+- **直接改 ivar 不触发 KVO**（绕过了 setter）。但用 KVC 的 `setValue:forKey:` 即使没 setter 也会触发，因为 KVC 内部自动包了 `willChangeValueForKey:` / `didChangeValueForKey:`
+
+  > ✅ 实测：`*(int *)((void *)acc + ivar_getOffset(iv)) = 777;` 把值改成了 777，**没有任何回调**；随后手动调一对 `willChange`/`didChange`，回调立刻来了（`balance: 777 -> 777`）。
+
+- 重写 `automaticallyNotifiesObserversForKey:` 返回 `NO` 可关掉自动通知，改为手动控制时机（合并多次变更、只在真正变化时才通知）
+- **集合属性直接操作不触发**，要通过 `mutableArrayValueForKey:` 之类的代理方法，它会自动包 `willChange:valuesAtIndexes:forKey:` / `didChange:...`
+
+→ [原文：KVO 底层原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/KVO底层原理.md)
+
+### 20. OC 中的 Block 是函数指针还是对象？底层怎么实现的？🔥
+
+**是对象。** 准确说：Block 是一个**带 isa 的 C 结构体**，结构体里存着一个函数指针 `FuncPtr` 和捕获的上下文。所以它是「对象形式包装的函数指针 + 上下文」，不是裸函数指针。
+
+```c
+struct __block_impl {
+    void *isa;         // ← 有 isa，所以是 OC 对象
+    int   Flags;
+    int   Reserved;
+    void *FuncPtr;     // ← 函数指针在这儿
+};
+
+struct __main_block_impl_0 {
+    struct __block_impl        impl;
+    struct __main_block_desc_0 *Desc;   // 大小、copy/dispose 辅助函数
+    int a;                              // 捕获的变量排在后面
+};
+```
+
+调 `block()` 实际是取出 `FuncPtr` 调用，并把 Block 自身作为第一个参数传进去，所以函数体里能通过 `__cself` 访问捕获的变量。
+
+> ✅ **实测**（[objc-block-internals.m](ios-snippets/objc-block-internals.m)）把 block 强转成上面的结构体，直接把 isa 和 invoke 读出来了：
+>
+> ```
+>   Block 的 isa    = __NSGlobalBlock__
+>   Block 的 invoke = 0x102c84cb8  <- 真正的函数指针在这个字段里
+>   继承链：__NSGlobalBlock__ -> NSBlock -> NSObject
+> ```
+
+**三种 Block**
+
+| 类型 | 存储 | 什么时候是它 | copy 行为 |
+| --- | --- | --- | --- |
+| `__NSGlobalBlock__` | 数据区 | 不捕获局部自动变量（只用全局/static 也算） | 什么都不做，返回自身 |
+| `__NSStackBlock__` | 栈 | 捕获了局部自动变量且还没被 copy | 拷到堆上，变成 Malloc |
+| `__NSMallocBlock__` | 堆 | Stack Block 被 copy 之后 | 引用计数 +1 |
+
+> ✅ **实测** —— 这里有个**比教科书答案更细的坑**：ARC 下你几乎看不到 `__NSStackBlock__`。
+>
+> ```
+>   不捕获外部变量                 : __NSGlobalBlock__
+>   捕获变量 + 赋给强引用          : __NSMallocBlock__   <- ARC 自动 copy 了
+>   捕获变量 + __unsafe_unretained : __NSMallocBlock__   <- 居然还是被 copy 了
+>   捕获变量 + 转裸结构体指针       : __NSStackBlock__    <- 这才看到栈 Block
+> ```
+>
+> 只要把 block 当 ObjC 指针传递或赋值，编译器就插 `_Block_copy`。连 `__unsafe_unretained` 都拦不住——**必须绕开 ObjC 指针转换**（转成裸结构体指针）才能观察到栈 Block。这也解释了为什么 Block 属性要声明成 `copy`：目的就是把可能在栈上的 Block 挪到堆上。
+
+**变量捕获规则**
+
+| 变量类型 | 捕获方式 | Block 内能改吗 | 为什么 |
+| --- | --- | --- | --- |
+| 局部自动变量 | **值拷贝** | 不能 | 结构体里存的是创建时的副本 |
+| `static` 局部变量 | 指针拷贝 | 能 | 在数据区，生命周期够长 |
+| 全局 / 静态全局 | 不捕获，直接访问 | 能 | 地址编译期就定了 |
+| `__block` 变量 | 包成 byref 结构体，捕获指针 | 能 | 通过 `__forwarding` 访问同一份 |
+| 对象类型局部变量 | 指针值拷贝 + 引用管理 | 能改**内容**，不能改指向 | copy 到堆时走 `_Block_object_assign` |
+
+> ✅ **实测**值拷贝：
+>
+> ```
+>   block 外把 normal 改成了 999
+>     block 里看到 normal = 1
+> ```
+
+**`__block` 的底层：`__forwarding` 转发**
+
+`__block` 不是简单的"按引用捕获"，而是把变量包进一个结构体：
+
+```c
+struct __Block_byref_a_0 {
+    void                     *__isa;
+    struct __Block_byref_a_0 *__forwarding;   // ← 关键
+    int                       __flags;
+    int                       __size;
+    int                       a;
+};
+```
+
+初始时 `__forwarding` 指向栈上的自己。当捕获它的 Block 从栈 copy 到堆，byref 结构体**也跟着 copy 到堆**，同时把**栈上那份的 `__forwarding` 改指向堆上那份**：
+
+```
+栈上 byref                          堆上 byref
+┌──────────────────────┐          ┌──────────────────────┐
+│ __forwarding ─────────────────→ │ __forwarding ──┐     │
+│ a = 10（已失效）      │          │ a = 10         │     │
+└──────────────────────┘          └────────────────┼─────┘
+                                                   └──→ 自己
+```
+
+之后不管从 Block 内还是外访问 `a`，编译器都转成 `a.__forwarding->a`，于是**都落到堆上那一份**，读写一致。
+
+> ✅ **实测**：`__block int mutable_ = 1;` 经过 block 里的 `+= 100`，外部读到 `101`。
+
+⚠️ `__block` 修饰对象时，ARC 下**默认仍是强引用**。`__block` 只解决"能不能改指针指向"，不解决循环引用——这是最常见的误解。
+
+→ [原文：Block 底层原理](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Block底层原理.md)
+
+### 21. Mach-O 文件由哪几部分组成？🔥
+
+三段：
+
+```
+┌──────────────────────────┐
+│           Header         │  文件的"身份证"
+├──────────────────────────┤
+│       Load Commands      │  文件的"目录"
+├──────────────────────────┤
+│            Data          │  真正的代码和数据
+└──────────────────────────┘
+```
+
+- **Header** —— 魔数、CPU 类型、文件类型（可执行/动态库/…）、Load Commands 数量
+- **Load Commands** —— 描述布局和依赖。常见的：`LC_SEGMENT_64`（段的位置/大小/权限）、`LC_LOAD_DYLIB`（依赖哪些动态库）、`LC_SYMTAB`（符号表）、`LC_DYSYMTAB`（动态符号表）、`LC_MAIN`（入口）、`LC_CODE_SIGNATURE`（代码签名）
+- **Data** —— 按 Segment / Section 两级组织
+
+常见 Segment：
+
+| Segment | 权限 | 里面有什么 |
+| --- | --- | --- |
+| `__PAGEZERO` | 不可访问 | 空的。从地址 0x0 起的保护区，**解引用 NULL 会落在这里，立刻 `EXC_BAD_ACCESS`** |
+| `__TEXT` | 读 + 执行 | `__text`（机器码）、`__stubs`（桩）、`__cstring`、`__const`、`__objc_methname`、`__swift5_typeref` |
+| `__DATA_CONST` | 读写 → 启动后转只读 | `__got`（非延迟绑定指针）、`__const`、`__objc_classlist`、`__swift5_proto` |
+| `__DATA` | 读 + 写 | `__data`（已初始化全局变量）、`__bss`（未初始化）、`__swift5_types`、`__la_symbol_ptr`（延迟绑定指针） |
+| `__DATA_DIRTY` | 读 + 写 | 运行时一定会改的数据，单独分页以优化 COW |
+| `__LINKEDIT` | 只读 | 符号表、字符串表、代码签名 |
+
+`__DATA_CONST` 和 `__DATA_DIRTY` 是 iOS 13+ 对 `__DATA` 的细分：`__DATA_CONST` 启动完成后转只读，**可被多进程共享**，省内存。
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 22. Segment 和 Section 是什么关系？
+
+两级结构，**Segment 是 Section 的容器**：
+
+- **Segment** 是**内存映射**的基本单位，定义读/写/执行权限，页对齐（iOS 上通常 16KB）
+- **Section** 是**数据组织**的逻辑单位，同一 Segment 内的所有 Section 共享该 Segment 的权限
+
+```
+__TEXT Segment（可读、可执行、不可写）
+├── __text       编译后的机器码
+├── __stubs      动态库调用桩
+├── __cstring    C 字符串常量
+└── __const      常量数据
+        ↑ 这四个都继承 __TEXT 的权限
+```
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 23. 为什么 iOS App 不能用 dlopen 加载任意动态库？
+
+代码签名机制要求所有可执行代码都经过签名验证。App 只能加载两类：
+
+- 系统动态库（Apple 已签名）
+- 嵌在 App Bundle 里、跟 App 一起签名的动态库
+
+从别处下载一个 dylib 再 `dlopen`，签名过不了 —— 这也正是 iOS 上做不了「热更新原生代码」的根本原因。
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 24. Rebase 和 Bind 哪个开销更大？
+
+**Bind 更大。**
+
+- Rebase 只是加法：编译期地址 + slide
+- Bind 要**查符号表、做字符串比较**，然后才能绑定
+
+所以优化时减少外部符号引用（Bind）比减少内部指针（Rebase）收益更明显。
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 25. ObjC 和 Swift 的符号名有什么区别？
+
+| | Objective-C | Swift |
+| --- | --- | --- |
+| 命名规则 | 简单直接，类名/方法名就是符号的一部分 | 复杂 mangling，编码模块、类型、完整函数签名 |
+| 含模块名 | ❌ | ✅ |
+| 同名类 | 全局命名空间，**整个 App 不能有同名类** | 不同模块可以同名 |
+| 避冲突方式 | 靠类名前缀约定（NS、UI、AF…） | 模块名自动区分 |
+
+```
+Objective-C:
+  -[MyClass doSomething]  →  -[MyClass doSomething]
+  类符号                   →  _OBJC_CLASS_$_MyClass
+
+Swift:
+  func foo()              →  $s4Main3fooyyF
+  MyModule.MyClass        →  $s8MyModule7MyClassC...
+```
+
+ObjC 符号不含模块信息，所以不同库里的同名类会冲突：静态链接时报 `duplicate symbol '_OBJC_CLASS_$_MyClass'`；动态库在运行时注册同名类，**行为未定义**。这就是 ObjC 前缀约定的由来。
+
+Swift 符号可以用 `swift demangle` 还原：
+
+```bash
+$ swift demangle '$s4Main3fooyyF'
+$s4Main3fooyyF ---> Main.foo() -> ()
+```
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 26. XCFramework 解决了什么问题？
+
+Xcode 11 引入，解决 Fat Framework 的四个老毛病：
+
+| 问题 | Fat Framework | XCFramework |
+| --- | --- | --- |
+| 架构冲突 | 真机和模拟器都可能有 arm64（Apple Silicon 的模拟器），**分不开** | 不同变体分目录存放，可共存 |
+| 上架 | 含模拟器架构会被拒，得手动 strip | 自动选对架构 |
+| 多平台 | 没法同时装 iOS 和 macOS 版 | iOS / macOS / watchOS / tvOS 都行 |
+| Swift 版本 | 要求同版本 Swift 编译 | 支持 Module Stability，可跨版本 |
+
+```
+MyFramework.xcframework/
+├── Info.plist                      描述所有变体
+├── ios-arm64/                      真机
+├── ios-arm64_x86_64-simulator/     模拟器（Intel + Apple Silicon）
+└── macos-arm64_x86_64/
+```
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 27. CocoaPods 有哪些库的链接方式？各有什么优缺点？
+
+| Podfile 配置 | 产物 | 链接 | 优点 | 缺点 |
+| --- | --- | --- | --- | --- |
+| 默认（无选项） | `.a` | 静态 | 体积小、启动快 | 不支持 Module，**Swift Pod 不可用** |
+| `use_frameworks!` | `.framework` | 动态 | 支持 Swift、自带 Module、资源打包方便 | **启动慢**，动态库多了还会撞上数量限制 |
+| `use_frameworks! :linkage => :static` | `.framework` | 静态 | 启动快 + 支持 Swift + 自带 Module | 体积略大于纯 `.a` |
+| `use_modular_headers!` | `.a` + `module.modulemap` | 静态 | 体积最小、启动快、支持 Module | 部分 Pod 不兼容，资源要额外配 |
+
+实践上**推荐第三行**（`:linkage => :static`）：拿到了 Swift 支持和 Module，又没有动态库的启动开销。
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 28. 静态链接和动态链接有什么区别？🔥
+
+| | 静态链接 | 动态链接 |
+| --- | --- | --- |
+| **时机** | 编译期 | 运行时由 dyld 完成 |
+| **符号解析** | 链接器直接重定位，地址写死进可执行文件 | 只记录符号引用，运行时 Bind 填地址 |
+| **代码位置** | 库代码复制进可执行文件 | 留在独立的 `.dylib` / `.framework` 里 |
+| **App 体积** | 第三方库合并进主二进制 | 第三方动态库要打进 ipa，**体积相近甚至略大**（多了元数据） |
+| **内存** | 每个进程各一份 | 系统动态库可跨进程共享物理内存（dyld shared cache）；**App 内嵌的动态库仍是每进程一份** |
+| **启动速度** | 快 | 慢（要 Rebase + Bind） |
+
+两个容易答错的点：**动态库不一定更省体积**（内嵌的还得打包）；**内嵌动态库不共享内存**（只有系统库走 shared cache 才共享）。
+
+→ [原文：Mach-O 的链接、装载与库](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Mach-O的链接、装载与库.md)
+
+### 29. mmap 有哪些优势？适用于哪些场景？🔥
+
+**五个优势：**
+
+1. **零拷贝** —— 传统 IO 是「磁盘 → 内核缓冲区 → 用户缓冲区」两次拷贝；mmap 直接把文件映射到地址空间，访问即读写，**0 次拷贝**
+2. **按需加载** —— 映射时不加载内容，访问到哪页才触发缺页中断读哪页，内存占用与实际访问量成正比
+3. **编程模型简单** —— 像操作内存一样操作文件，不用管缓冲区、分块、seek
+4. **多进程共享** —— `MAP_SHARED` 的映射可被多进程共享。iOS 上主要用于 App 与 Extension（Widget、Share Extension）间共享数据
+5. **崩溃现场可恢复** —— 预映射 ring buffer 写 breadcrumbs、页面路径、网络摘要，进程崩了已写入的映射页通常比用户态缓冲区更容易捞回来。⚠️ 但 mmap **不保证绝对持久化**，完整 Crash Report 还是要写独立文件
+
+**适用：** APM 现场缓存、高性能 KV（MMKV）、大文件处理（日志分析、视频）、离线资源包、数据库（SQLite 也用 mmap）、App ↔ Extension 共享。
+
+**不适用：** 小文件频繁创建删除（mmap 本身有创建开销，不划算）、需要追加写入的文件（mmap 要预先指定大小）。
+
+→ [原文：mmap 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/mmap详解.md)
+
+### 30. mmap 可以映射比物理内存大的文件吗？
+
+**可以。** mmap 只是建立**虚拟地址**映射，物理内存按需分配。只有访问到的页才加载进物理内存，系统会自动换出不常用的页。
+
+映射 10GB 文件在 2GB 内存的设备上完全没问题——只要你不一次性访问全部内容。
+
+→ [原文：mmap 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/mmap详解.md)
+
+### 31. mmap 映射的文件被删除会怎样？
+
+**映射仍然有效。** 这是 Unix 文件系统的引用计数特性：`unlink` 只是删掉目录项，只要还有引用（这里是 mmap 的映射）文件本体就不会真正释放。映射区域照常可读写，直到 `munmap` 后数据才丢失。
+
+→ [原文：mmap 详解](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/mmap详解.md)
+
+### 32. NSObject 中的 isa 是什么？🔥
+
+`isa` 是 `objc_object` 结构体的**第一个成员**，是对象与它的类之间的连接。
+
+它是**动态派发的起点**：调 `[obj doSomething]` 时运行时不是直接跳到函数地址，而是先通过 `isa` 找到类对象，在类对象的方法列表里查，找不到再沿 `superclass` 往上回溯。没有 `isa`，运行时就不知道对象属于哪个类，任何方法查找都无从谈起。
+
+**Non-Pointer isa（64 位优化）**：32 位时代 `isa` 就是个普通 `Class` 指针。64 位上苹果把它改成了联合体 `isa_t`，用位域把 64 位切成多个字段：
+
+- `shiftcls`（33 位）—— 类对象指针
+- `extra_rc`（19 位）—— 引用计数
+- `has_assoc` —— 有无关联对象
+- `weakly_referenced` —— 是否被弱引用
+- 等等
+
+原本要 22~26 字节才能存下的信息压进了 8 字节。对象一多，省的内存很可观。
+
+> ✅ **实测**（[objc-isa-metaclass.m](ios-snippets/objc-isa-metaclass.m)）见下一题。
+
+→ [原文：Objective-C 底层原理-NSObject](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C底层原理-NSObject.md)
+
+### 33. 实例对象、类对象、元类对象之间的 isa 和继承关系是怎样的？🔥
+
+这是经典的「isa 指向图」。两条链：
+
+**isa 链**
+
+- 实例对象 isa → **类对象**（查实例方法）
+- 类对象 isa → **元类对象**（查类方法）
+- 元类对象 isa → **根元类**（NSObject 的元类）
+- 根元类 isa → **自己**，闭环
+
+**superclass 继承链**
+
+- 类对象：`SubClass → SuperClass → … → NSObject → nil`
+- 元类：`SubClass元类 → SuperClass元类 → … → 根元类 → NSObject类对象 → nil`
+
+⚠️ 最后那步是重点：**根元类的 superclass 指向 NSObject 类对象，不是 nil。** 这让 `NSObject` 的实例方法能给类方法调用兜底——`[NSObject description]` 在根元类里找不到 `+description`，就沿 superclass 回溯到 `NSObject` 类对象，找到并执行了 `-description`。
+
+> ✅ **实测**（[objc-isa-metaclass.m](ios-snippets/objc-isa-metaclass.m)）
+>
+> 有个必须注意的陷阱：**元类和类同名**，只打印 `class_getName` 根本分不清，得靠 `class_isMetaClass()` 区分。加上标记后：
+>
+> ```
+> == isa 链 ==
+> dog 实例  .isa = Dog [类]
+> Dog 类    .isa = Dog [元类]
+> Dog 元类  .isa = NSObject [元类]   <- 所有元类的 isa 都指向根元类
+> NSObject元类.isa= NSObject [元类]   <- 根元类的 isa 指向自己
+>
+> == 继承链（类对象）==
+>   Dog [类]
+>   Animal [类]
+>   NSObject [类]
+>
+> == 继承链（元类）==
+>   Dog [元类]
+>   Animal [元类]
+>   NSObject [元类]
+>   NSObject [类]          ← 根元类的 superclass 落回了 NSObject 类对象
+>
+> == 两个关键闭环 ==
+> 根元类的 isa 指向自己吗？        是
+> 根元类的 superclass 是 NSObject？ 是
+>
+> == [obj class] vs object_getClass() ==
+> [dog class]                  = Dog [类]
+> [Dog class]                  = Dog [类]    <- 类对象调 class 返回自己，拿不到元类
+> object_getClass([Dog class]) = Dog [元类]   <- 这才是元类
+>
+> 类对象也是对象：Dog 是 NSObject 的实例吗？ 是
+> ```
+>
+> 最后一条附带说明了「万物皆对象」：类对象本身也是 `NSObject` 的实例。
+
+→ [原文：Objective-C 底层原理-NSObject](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C底层原理-NSObject.md)
+
+### 34. 什么是 Tagged Pointer？和 Non-Pointer isa 有什么区别？🔥
+
+两者都是 64 位下对指针空间的优化，但**优化的东西完全不同**：
+
+- **Non-Pointer isa** 优化的是**已经在堆上的对象的 isa 指针**。对象照样 `malloc` 在堆上，只是把 isa 那 64 位拆成位域顺便存点元信息
+- **Tagged Pointer** 优化的是**小值对象本身**。`NSNumber`、短 `NSString`、`NSDate` 这类值足够小的，直接把类型标签和数据编码进那 64 位里，**根本不在堆上分配**。这个"指针"不指向任何内存，它本身就是数据
+
+| | Non-Pointer isa | Tagged Pointer |
+| --- | --- | --- |
+| 优化对象 | 堆对象 isa 里的空闲位 | 小值对象的指针本身 |
+| 有堆分配吗 | 有 | **没有** |
+| 引用计数 | 要维护（内嵌 isa 或侧表） | 不需要 |
+| 适用范围 | 所有 ObjC 对象 | `NSNumber`、短 `NSString`、`NSDate` 等 |
+| 怎么判断 | isa 的 `nonpointer` 位 | 指针**最高位**（arm64）/ **最低位**（x86_64） |
+
+Tagged Pointer 收益更大，因为它把堆分配、引用计数、释放整条流程全跳过了。
+
+> ✅ **实测**（[objc-tagged-pointer.m](ios-snippets/objc-tagged-pointer.m)）实际跑出来比标准答案更细致，有两个意外：
+>
+> ```
+>   @1  （编译期字面量）
+>       tagged=no   class=NSConstantIntegerNumber     ← 意外①
+>   [NSNumber numberWithInt:1] （运行时构造）
+>       tagged=YES  class=__NSCFNumber
+>   @(arc4random()%100) （运行时求值）
+>       tagged=YES  class=__NSCFNumber
+>   numberWithLongLong:~1.2e18 （运行时构造的大数）
+>       tagged=no   class=__NSCFNumber                ← 超出可内联位宽，退回堆对象
+>   @"abc"  （编译期字面量）
+>       tagged=no   class=__NSCFConstantString        ← 意外②
+>   运行时短字符串（3 字符）
+>       tagged=YES  class=NSTaggedPointerString
+>   运行时长字符串（26 字符）
+>       tagged=no   class=__NSCFString
+> ```
+>
+> **意外①②：编译期字面量根本不走 Tagged Pointer**，它们是 `NSConstantIntegerNumber` / `__NSCFConstantString` 这类常量对象，编译期就分配好了。只有**运行时构造**的小值才会被 tag。很多资料拿 `@1` 举例说它是 Tagged Pointer，在当前系统上是不对的。
+>
+> 另外两条：值相同的 Tagged Pointer **指针也相同**；短字符串 3 字符被 tag、26 字符不被 tag，能看出位宽上限。
+
+**Swift 里的对应**：Swift 值类型（`Int`、`Double`）天生栈分配，不需要 Tagged Pointer；但桥接成 `NSNumber` 时仍复用这套机制。Swift `String` 有自己的小字符串内联优化（15 字节以内直接存在结构体里），思路一脉相承。
+
+→ [原文：Objective-C 底层原理-NSObject](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C底层原理-NSObject.md)
+
+### 35. Tagged Pointer 对象能否被弱引用？对 retain/release 有什么影响？
+
+**弱引用：不支持。** 它不是堆对象，没有 SideTable，也永远不会被释放，没法在 `weak_table` 里注册。runtime 创建弱引用时用 `isTaggedPointerOrNil()` 检查，是 Tagged Pointer 就直接返回原值，不做任何注册。
+
+**retain/release：空操作。** 没有引用计数概念，runtime 先判断是不是 Tagged Pointer，是就直接返回。`dealloc` **永远不会被调用**。
+
+这些特判正是它性能优势的来源——省掉了引用计数的原子操作和侧表查找。
+
+> ✅ **实测**（[objc-tagged-pointer.m](ios-snippets/objc-tagged-pointer.m)）
+>
+> ```
+> tagged 对象 retainCount = 9223372036854775807（恒为最大值，不走 SideTable）
+>
+> weak 赋值后仍可读：7
+> 能赋值，但它不是堆对象、没有 dealloc，weak 永远不会被置 nil。
+> ```
+>
+> `9223372036854775807` 就是 `LONG_MAX`。注意措辞要准确：`__weak` 赋值**语法上不报错也能读**，但因为对象永不销毁，那个"自动置 nil"的语义永远不会发生——不是"不能写"，而是"写了没意义"。
+
+→ [原文：Objective-C 底层原理-NSObject](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C底层原理-NSObject.md)
+
+### 36. 实例对象和类对象在底层有什么区别？内存结构分别是怎样的？
+
+底层结构体不同，但**都以 `isa` 开头**——这就是「万物皆对象」的基础。
+
+**实例对象**（`objc_object`），从低地址到高地址：
+
+1. `isa` 指针（8 字节）→ 类对象，用于查实例方法
+2. 父类的实例变量（按继承链从上往下排）
+3. 本类的实例变量
+4. 内存对齐填充
+
+**类对象**（`objc_class`，继承自 `objc_object`）：
+
+1. `isa` 指针（8 字节）→ 元类对象，用于查类方法
+2. `superclass` 指针（8 字节）→ 父类，建立继承链
+3. `cache` —— 方法缓存，存最近调过的方法
+4. `bits` → `class_rw_t` → `class_ro_t`，含方法列表、属性列表、协议列表、ivar 描述
+
+区别一句话：实例对象存**数据**，能有无数个；类对象存**描述信息**，每个类在内存中**只有唯一一份**。
+
+→ [原文：Objective-C 底层原理-NSObject](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Objective-C底层原理-NSObject.md)
+
+### 37. 纯 Swift 类和继承自 NSObject 的 Swift 类在底层有什么区别？
+
+**① 实例头部不同.**
+
+- 继承 NSObject：头部是 `isa` 指针（兼容 ObjC runtime），引用计数存在 isa 的 `extra_rc` 位域和 SideTable 里
+- 纯 Swift：头部是 `HeapMetadata` 指针 + 8 字节 `InlineRefCountBits`（bit 0-31 unowned 计数，bit 32 isDeiniting，bit 33-62 strong 计数，bit 63 UseSlowRC 标志），**默认内联存储**不用查外部结构，缓存更友好
+
+  ⚠️ 当对象被 weak 引用时，bit 63 置 1，这 8 字节**切换成指向 `HeapObjectSideTableEntry` 的指针**，此后所有引用计数统一由 SideTable 管。**这个切换不可逆。**
+
+**② 类型元数据结构不同.**
+
+- 继承 NSObject：混合结构。前半是标准 `objc_class` 布局（isa/superclass/cache_t/class_data_bits_t → class_rw_t，ObjC 可见的方法/属性/协议列表），后半追加 Swift 的 vtable、typeDescriptor、协议一致性记录。ObjC runtime 只看前半，Swift runtime 看后半，互不干扰
+- 纯 Swift：纯 `ClassMetadata`（kind/superclass/flags/instanceSize/vtable），没有 `cache_t` 和 `class_rw_t`，vtable 直接内嵌，更紧凑
+
+**③ 有无 ObjC 元类参与派发.** 继承 NSObject 的有 ObjC 元类，`@objc`/`dynamic` 类方法通过元类方法列表供 `objc_msgSend` 查找。纯 Swift 类不依赖 ObjC 元类，可重写的 `class func` 和实例方法统一放 vtable。
+
+**④ 方法派发.** 两者都支持 vtable / 静态 / 见证表派发。区别在于继承 NSObject 的天然接入 ObjC runtime，可以用 `@objc dynamic` 强制走消息派发，从而支持 Selector、method swizzling、KVO。纯 Swift 类的 Swift-only 成员默认不走 `objc_msgSend`；显式加 `@objc`/`dynamic` 能桥接过去，但**不会因此自动获得完整的 NSObject/KVO 语义**。
+
+→ [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
+
+### 38. Swift 有哪些方法派发方式？🔥
+
+四种：
+
+| 派发方式 | 怎么找到实现 | 什么时候用它 |
+| --- | --- | --- |
+| **静态派发** | 编译期就确定地址，直接嵌进调用指令 | struct/enum 的所有方法、`final` 类和 `final` 方法、`private` 方法、`static func` |
+| **函数表派发**（vtable） | 查类元数据里的 vtable | 类在 class body 里声明的实例方法（默认）、可被 override 的 `class func` |
+| **消息派发** | `objc_msgSend` 动态查找 | ObjC 方法，以及 Swift 里显式 `@objc dynamic` 且 ObjC 可表示的成员 |
+| **见证表派发**（witness table） | 查协议见证表 | 通过**协议类型**调用协议要求的方法 |
+
+见证表有个设计细节值得答：它**不存在类型元数据里**，而是作为独立全局符号——见证表本身（函数指针数组）在 `__DATA,__const`，协议一致性记录在 `__TEXT,__swift5_proto`。原因是一个类型可以遵循多个协议，都塞进元数据会让结构大小不固定；独立存储后元数据保持固定布局，靠一致性记录间接关联。
+
+**协议方法的派发取决于调用上下文：**
+
+| 上下文 | 派发方式 |
+| --- | --- |
+| 具体类型调用 `Circle().draw()` | 静态派发 |
+| 协议类型调用 `(c as Drawable).draw()` | 见证表派发 |
+| 泛型约束 + **特化成功** | 静态派发（等价于直接生成了具体类型的专用版本） |
+| 泛型约束 + 未特化 | 见证表派发（通用版本，见证表当隐藏参数传入） |
+
+**泛型特化的条件**：同模块 + 开优化（`-O`）能特化；跨模块默认不行，除非标了 `@inlinable`；**Debug（`-Onone`）不执行特化**。
+
+#### ⚠️ 两个必踩的坑：协议扩展 和 类扩展
+
+**协议要求方法**（写在 `protocol` 声明体里的）会进见证表，动态派发，能正确找到具体类型的实现。
+
+**协议扩展方法**（只在 `extension` 里定义、不在协议要求里的）**不在任何派发表中**，编译后就是个普通函数符号，所有调用由编译器按变量的**声明类型**静态绑定。
+
+> ✅ **实测**（[swift-dispatch.swift](ios-snippets/swift-dispatch.swift)）同一个 `EnglishGreeter` 实例，换个变量类型结果就变了：
+>
+> ```
+>   用具体类型调用（编译期就知道类型，都走自己的实现）：
+>     EnglishGreeter.inProtocol()
+>     EnglishGreeter.onlyInExtension()
+>   用协议类型调用：
+>     EnglishGreeter.inProtocol()      ← 见证表，找到了具体实现
+>     默认实现 onlyInExtension()        ← 静态派发，调到了 extension 的默认实现！
+> ```
+>
+> 类扩展同理，而且**编译器根本不让你 `override` 它**：
+>
+> ```
+>   声明为 Base、实际是 Derived：
+>     Derived.inClassBody()    ← vtable 派发
+>     Base.inExtension()       ← 静态派发
+> ```
+>
+> **SIL 层面的铁证**：把这份代码 `swiftc -emit-sil` 后统计派发指令：
+>
+> ```
+>    1 witness_method   →  #Greeter.inProtocol        （协议要求）
+>    2 class_method     →  #Base.inClassBody, #Dyn.viaVTable
+>    3 objc_method      →  #Dyn.viaObjC!foreign       （@objc dynamic）
+> ```
+>
+> `onlyInExtension`、`inExtension`、`viaFinal` **压根没出现在这三类指令里**——它们编译成了 `function_ref`，纯静态派发。
+
+想自己验派发方式，这条命令最直接：
+
+```bash
+swiftc -emit-sil x.swift | grep -E 'class_method|witness_method|function_ref|objc_method'
+#   function_ref   → 直接派发
+#   class_method   → 函数表派发
+#   witness_method → 见证表派发
+#   objc_method    → 消息派发
+```
+
+→ [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
+
+### 39. 纯 Swift 类的编译器有哪些性能优化手段？
+
+1. **栈提升（Stack Promotion）** —— 类实例满足条件（够小、不逃逸、不含内部堆引用）时，把堆分配优化成栈分配，**零 ARC 开销**
+2. **引用计数消除（RC Elimination）** —— 数据流分析识别并删掉成对的 retain/release，比如短暂引用、不逃逸的函数参数
+3. **生命周期合并（Lifetime Merging）** —— 追踪变量词法作用域，两个变量生命周期不重叠时复用内存槽位
+
+相比 ObjC，Swift 编译器能做的 ARC 优化激进得多。ObjC 的 ARC 优化相对保守，每次赋值和传递都严格 retain/release；Swift 靠追踪 RC Identity 和数据流分析，在保证正确的前提下尽量消掉冗余。
+
+→ [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
+
+### 40. 为什么协议类型作为函数参数比泛型约束慢？底层区别是什么？🔥
+
+```swift
+func drawA(_ shape: any Shape) { shape.draw() }    // 存在类型
+func drawB<T: Shape>(_ shape: T) { shape.draw() }  // 泛型约束
+```
+
+区别在**参数的底层表示**。
+
+`drawA` 的参数是存在类型，编译器把传入的值装进**存在容器（Existential Container）**——固定大小的结构：
+
+```
+24 字节内联缓冲区 (inlineBuffer[3])
++ 8 字节类型元数据指针
++ 8 字节见证表指针
+──────────────────────────────
+= 40 字节（单协议）
+```
+
+具体类型 ≤ 24 字节就直接存在 `inlineBuffer` 里；超过就堆分配，`inlineBuffer[0]` 存堆指针。调 `draw()` 时从容器里取见证表，函数指针间接跳转——见证表派发，**无法内联**。
+
+`drawB` 则可以泛型特化：调用处类型已知时直接生成专用版本，参数就是具体类型，没有容器包装，`draw()` 变成静态派发、可内联。
+
+性能差异来自三处：**容器的构造和拷贝**（大值还要堆分配）、**见证表间接跳转**、**无法内联导致后续优化全都做不了**。
+
+> ✅ **实测**（[swift-existential-generic.swift](ios-snippets/swift-existential-generic.swift)）
+>
+> 容器大小对上了：
+>
+> ```
+>   MemoryLayout<Small>.size      = 8 字节
+>   MemoryLayout<Large>.size      = 40 字节
+>   MemoryLayout<any Shape>.size  = 40 字节  <- 恒定，5 个 word
+> ```
+>
+> 性能差距 —— **但必须用 `-O` 测，否则结论是反的**：
+>
+> ```
+>              存在类型    泛型约束    比值
+>   -O          5.3 ms     0.5 ms    10.31x
+>   -Onone     30.8 ms    24.2 ms     1.27x
+> ```
+>
+> 因为**泛型特化是优化器的功能，`-Onone` 下压根不发生**。拿 `swift x.swift`（默认 `-Onone`）跑基准测试会得出"差不多嘛"的错误结论。
+
+**补充**：协议带类约束（`AnyObject`）时用更紧凑的**类存在容器**（8 字节对象引用 + 8 字节见证表指针），不需要 inlineBuffer。特例：`Any` 是零协议约束的存在容器（32 字节），`AnyObject` 是零协议约束的类存在容器（**仅 8 字节**）。
+
+→ [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
+
+### 41. 用 `as?` 转协议类型时，Swift 运行时怎么判断类型是否遵循该协议？
+
+靠**协议一致性（Protocol Conformance）查找**。编译器为每一对（类型, 协议）生成一条**一致性记录**，存在 Mach-O 的 `__TEXT,__swift5_proto` 段，记录该类型对该协议的见证表位置。
+
+运行时 `swift_conformsToProtocol` 四步走：
+
+1. **查缓存** —— 全局一致性缓存（哈希表，key 是 (类型, 协议) 对），命中直接返回见证表地址
+2. **扫描一致性记录** —— 未命中就遍历所有已加载镜像的 `__TEXT,__swift5_proto` 段逐条匹配
+3. **处理条件一致性** —— 记录若标了条件一致性（如 `extension Array: Equatable where Element: Equatable`），递归检查泛型参数是否满足
+4. **写缓存** —— 匹配成功后缓存，后续查询接近 O(1)
+
+一个值得提的设计：一致性记录用 **RelativePointer（相对指针）** 而非绝对指针，存的是偏移量。好处是**不需要 dyld 重定位**，所以能放在只读的 `__TEXT` 段，只读页可多进程共享，省内存。
+
+这套机制不只服务 `as?`/`as!`，泛型约束检查、协议类型赋值等所有「判断类型是否遵循协议」的场景都走它。
+
+→ [原文：Swift 底层原理-结构体、类和协议](https://github.com/ChaselAn/awesome-ios-interview/blob/master/articles/ios-basics/Swift底层原理-结构体、类和协议.md)
